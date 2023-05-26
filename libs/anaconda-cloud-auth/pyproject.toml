@@ -1,0 +1,97 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "setuptools-scm"]
+
+[project]
+authors = [
+  {name = "Matt Kramer", email = "mkramer@anaconda.com"}
+]
+dependencies = [
+  "cryptography",
+  "keyring",
+  "python-dotenv",
+  "pydantic",
+  "pkce",
+  "pyjwt",
+  "ory-client",
+  "requests",
+  "anaconda-cloud-cli"
+]
+description = "A client auth library for Anaconda.cloud APIs"
+dynamic = ["version"]
+license = {text = "BSD-3-Clause"}
+name = "anaconda-cloud-auth"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.entry-points."anaconda_cloud_cli.subcommand"]
+auth = "anaconda_cloud_auth.cli:app"
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "pytest",
+  "tox",
+  "types-requests"
+]
+publish = [
+  "build",
+  "twine",
+  "wheel"
+]
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.isort]
+force_single_line = true
+known_secondparty = ["anaconda_cloud_cli"]
+profile = "black"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SECONDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.mypy]
+disallow_untyped_defs = true
+files = [
+  "src/**/*.py",
+  "tests/**/*.py"
+]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "rich_click.*"
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: Integration tests requiring a browser"
+]
+norecursedirs = ["env", "envs"]
+
+[tool.setuptools_scm]
+root = "../.."
+tag_regex = "^(anaconda-cloud-auth-)?(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
+
+[tool.tox]
+legacy_tox_ini = """
+  [tox]
+  envlist = py310,py311,mypy
+  isolated_build = True
+
+  [gh-actions]
+  python =
+      3.10: py310, mypy
+      3.11: py311
+
+  [testenv]
+  deps =
+      mypy
+      pytest
+  commands = pytest -m "not integration"
+
+  [testenv:mypy]
+  deps =
+      mypy
+      pytest
+      types-requests
+  commands = mypy
+"""

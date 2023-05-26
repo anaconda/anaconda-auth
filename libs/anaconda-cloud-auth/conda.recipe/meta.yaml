@@ -1,0 +1,44 @@
+{% set pyproject = load_file_data('../pyproject.toml', from_recipe_dir=True) %}
+{% set project = pyproject['project'] %}
+
+{% set name = project['name'] %}
+{% set version = VERSION %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  script: {{ PYTHON }} -m pip install . -vv
+  noarch: python
+  entry_points:
+    {% for name, reference in project['scripts'].items() %}
+    - {{ name }} = {{ reference }}
+    {% endfor %}
+
+requirements:
+  host:
+    - python {{ project['requires-python'] }}
+    - pip
+    - setuptools
+  run:
+    - python {{ project['requires-python'] }}
+    {% for dep in project['dependencies'] %}
+    - {{ dep.lower() }}
+    {% endfor %}
+
+test:
+  imports:
+    - anaconda_cloud_auth
+  commands:
+    - acli --version
+    - python -c "from anaconda_cloud_cli import __version__; assert __version__ == \"{{ VERSION }}\""
+
+about:
+#  home: {{ project['urls']['repository'] }}
+  summary: {{ project['description'] }}
+  license: {{ project['license']['text'] }}
+  license_file: LICENSE
