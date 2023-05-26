@@ -3,11 +3,10 @@ from typing import Optional
 
 import typer
 
-from anaconda_cloud_cli import console
-
 from anaconda_cloud_auth import Client
 from anaconda_cloud_auth import login
 from anaconda_cloud_auth import logout
+from anaconda_cloud_auth.console import console
 
 app = typer.Typer(add_completion=False)
 

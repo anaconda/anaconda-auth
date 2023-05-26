@@ -13,9 +13,8 @@ from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 from pydantic import BaseModel
 
-from anaconda_cloud_cli import console
-
 from anaconda_cloud_auth.config import get_config
+from anaconda_cloud_auth.console import console
 
 logger = logging.getLogger(__name__)
 

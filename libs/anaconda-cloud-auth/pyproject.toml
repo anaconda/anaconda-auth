@@ -14,8 +14,7 @@ dependencies = [
   "pkce",
   "pyjwt",
   "ory-client",
-  "requests",
-  "anaconda-cloud-cli"
+  "requests"
 ]
 description = "A client auth library for Anaconda.cloud APIs"
 dynamic = ["version"]
@@ -28,6 +27,7 @@ requires-python = ">=3.10"
 auth = "anaconda_cloud_auth.cli:app"
 
 [project.optional-dependencies]
+cli = ["typer"]
 dev = [
   "mypy",
   "pytest",

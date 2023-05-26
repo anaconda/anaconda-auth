@@ -15,9 +15,8 @@ import requests
 import typer
 from requests.auth import HTTPBasicAuth
 
-from anaconda_cloud_cli import console
-
 from anaconda_cloud_auth.config import get_config
+from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.handlers import run_server
 from anaconda_cloud_auth.jwt import OryJWKClient
 from anaconda_cloud_auth.token import TokenInfo
