@@ -11,8 +11,8 @@ from anaconda_cloud_auth import Client
 from anaconda_cloud_auth import login
 from anaconda_cloud_auth import logout
 from anaconda_cloud_auth import token
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
-from anaconda_cloud_auth.token import TokenNotFoundError
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch

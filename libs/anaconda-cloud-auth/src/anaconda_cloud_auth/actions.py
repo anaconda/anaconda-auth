@@ -12,15 +12,16 @@ from urllib.parse import urlencode
 import jwt
 import pkce
 import requests
-import typer
 from requests.auth import HTTPBasicAuth
 
 from anaconda_cloud_auth.config import get_config
 from anaconda_cloud_auth.console import console
+from anaconda_cloud_auth.exceptions import AuthenticationError
+from anaconda_cloud_auth.exceptions import InvalidTokenError
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.handlers import run_server
 from anaconda_cloud_auth.jwt import OryJWKClient
 from anaconda_cloud_auth.token import TokenInfo
-from anaconda_cloud_auth.token import TokenNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -74,23 +75,21 @@ def _validate_token_info(token_info: TokenInfo) -> None:
             audience=config.client_id,
         )
     except jwt.exceptions.PyJWTError as e:
-        raise typer.Abort(f"Error decoding token: {e}")
+        raise InvalidTokenError(f"Error decoding token: {e}")
 
     # at this point, the jwt token should be verified and good to go
     # but we still need to verify the access token
     algorithm_used = jwt.get_unverified_header(token_info.id_token)["alg"]
 
     if token_info.access_token is None:
-        raise typer.Abort("No access token found to validate")
+        raise TokenNotFoundError("No access token found to validate")
 
     try:
         _validate_access_token(
             token_info.access_token, algorithm_used, id_info["at_hash"]
         )
     except jwt.InvalidSignatureError:
-        raise typer.Abort("Access token has an invalid hash.")
-    except Exception:
-        raise typer.Abort()
+        raise InvalidTokenError("Access token has an invalid hash.")
 
 
 def _send_auth_code_request(
@@ -152,7 +151,7 @@ def _do_auth_flow(
     res = run_server(redirect_uri)
 
     if res.state != state or not res.auth_code:
-        raise typer.Abort(
+        raise AuthenticationError(
             "State does not match or does not include an authorization code."
         )
 
@@ -180,7 +179,7 @@ def _do_auth_flow(
         refresh_token = result.get("refresh_token")
 
     if "error" in result:
-        raise typer.Abort(
+        raise AuthenticationError(
             f"Error getting JWT: {result.get('error')} - {result.get('error_description')}"
         )
 
@@ -264,17 +263,6 @@ def login(use_ory: bool = False, simple: bool = False) -> TokenInfo:
 
     if simple:
         return _login_with_username()
-
-    try:
-        TokenInfo.load()
-    except TokenNotFoundError:
-        pass  # Proceed to login
-    else:
-        force_login = typer.confirm(
-            "You are already logged in. Would you like to force a new login?"
-        )
-        if not force_login:
-            raise typer.Exit()
 
     config = get_config(use_ory=use_ory)
     oidc_config = config.oidc

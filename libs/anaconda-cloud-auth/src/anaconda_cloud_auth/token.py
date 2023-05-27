@@ -8,13 +8,13 @@ from pathlib import Path
 
 import keyring
 import requests
-import typer
 from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 from pydantic import BaseModel
 
 from anaconda_cloud_auth.config import get_config
 from anaconda_cloud_auth.console import console
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +63,6 @@ class AnacondaKeyring(KeyringBackend):
             data.get(service, {}).pop(username)
         except KeyError:
             raise PasswordDeleteError
-
-
-class TokenNotFoundError(Exception):
-    pass
 
 
 class TokenInfo(BaseModel):
@@ -149,8 +145,9 @@ class TokenInfo(BaseModel):
             try:
                 new_token_info = TokenInfo.load()
             except TokenNotFoundError:
-                console.print("No token found, please login with `acli auth login`")
-                raise typer.Abort()
+                message = "No token found, please login with `acli auth login`"
+                console.print(message)
+                raise TokenNotFoundError(message)
 
             # Store the new token information for later retrieval
             self.access_token = new_token_info.access_token
