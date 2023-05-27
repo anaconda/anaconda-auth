@@ -9,8 +9,9 @@ from pathlib import Path
 import keyring
 import requests
 from keyring.backend import KeyringBackend
-from keyring.errors import PasswordDeleteError
+from keyring.errors import PasswordDeleteError, PasswordSetError
 from pydantic import BaseModel
+from jaraco.classes.properties import classproperty
 
 from anaconda_cloud_auth.config import get_config
 from anaconda_cloud_auth.console import console
@@ -24,10 +25,48 @@ KEYRING_CLIENT = "anaconda_cloud_auth"
 
 LocalKeyringData = dict[str, dict[str, str]]
 
+def _as_base64_string(payload: str) -> str:
+    """Encode a string to a base64 string"""
+    return base64.b64encode(payload.encode('utf-8')).decode("utf-8")
+
+class NavigatorFallback(KeyringBackend):
+    priority = 0.1
+
+    @classproperty
+    def viable(cls) -> bool:
+        try:
+            import anaconda_navigator
+            return True
+        except ModuleNotFoundError:
+            return False
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise PasswordSetError('This keyring cannot set passwords')
+
+    def get_password(self, service: str, username: str) -> str | None:
+        from anaconda_navigator.api.nucleus.token import NucleusToken
+        if service != KEYRING_NAME and username != KEYRING_CLIENT:
+            return None
+        else:
+            token = NucleusToken.from_file()
+            if token is not None:
+                token_info = {
+                    "access_token": token.access_token,
+                    "refresh_token": token.refresh_token,
+                    "expires_at": token.expiration_date.astimezone().isoformat(),
+                    "username": token.username,
+                    "id_token": None
+                }
+                payload = json.dumps(token_info)
+                encoded = _as_base64_string(payload)
+                return encoded
+            else:
+                return None
+
 
 class AnacondaKeyring(KeyringBackend):
     keyring_path = Path("~/.anaconda/keyring").expanduser()
-    priority = 0.1
+    priority = 0.2
 
     def _read(self) -> LocalKeyringData:
         if not self.keyring_path.exists():
@@ -91,7 +130,7 @@ class TokenInfo(BaseModel):
     def write(self) -> None:
         """Write the token information to the system keyring."""
         payload = self.json()
-        encoded = base64.b64encode(payload.encode("utf-8")).decode("utf-8")
+        encoded = _as_base64_string(payload)
         keyring.set_password(KEYRING_NAME, KEYRING_CLIENT, encoded)
         logger.debug("🔒 Token has been safely stored in system keychain 🎉")
 

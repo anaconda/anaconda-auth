@@ -61,6 +61,14 @@ python_version = "3.10"
 ignore_missing_imports = true
 module = "rich_click.*"
 
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "anaconda_navigator.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "jaraco.classes.properties.*"
+
 [tool.pytest.ini_options]
 markers = [
   "integration: Integration tests requiring a browser"
