@@ -27,7 +27,7 @@ requires-python = ">=3.10"
 auth = "anaconda_cloud_auth.cli:app"
 
 [project.optional-dependencies]
-cli = ["typer"]
+cli = ["anaconda-cloud-cli"]
 dev = [
   "mypy",
   "pytest",
