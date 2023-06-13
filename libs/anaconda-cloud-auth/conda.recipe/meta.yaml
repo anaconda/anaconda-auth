@@ -12,18 +12,17 @@ source:
   path: ..
 
 build:
-  script: {{ PYTHON }} -m pip install . -vv
+  script: 
+    - SETUPTOOLS_SCM_PRETEND_VERSION={{version}} {{ PYTHON }} -m pip install . -vv
   noarch: python
-  entry_points:
-    {% for name, reference in project['scripts'].items() %}
-    - {{ name }} = {{ reference }}
-    {% endfor %}
 
 requirements:
   host:
     - python {{ project['requires-python'] }}
     - pip
-    - setuptools
+    {% for dep in pyproject['build-system']['requires'] %}
+    - {{ dep.lower() }}
+    {% endfor %}
   run:
     - python {{ project['requires-python'] }}
     {% for dep in project['dependencies'] %}
@@ -34,8 +33,7 @@ test:
   imports:
     - anaconda_cloud_auth
   commands:
-    - acli --version
-    - python -c "from anaconda_cloud_cli import __version__; assert __version__ == \"{{ VERSION }}\""
+    - python -c "from anaconda_cloud_auth import __version__; assert __version__ == \"{{ version }}\""
 
 about:
 #  home: {{ project['urls']['repository'] }}

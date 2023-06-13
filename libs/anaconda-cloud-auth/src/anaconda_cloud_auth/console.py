@@ -1,5 +1,6 @@
 from typing import Any
 from typing import Protocol
+from getpass import getpass
 
 
 class TConsole(Protocol):
@@ -24,7 +25,10 @@ class SimpleConsole:
 
     @staticmethod
     def input(*args: Any, **kwargs: Any) -> Any:
-        return input(args[0])
+        if kwargs.pop('password', False):
+            return getpass(args[0])
+        else:
+            return input(args[0])
 
 
 console: TConsole

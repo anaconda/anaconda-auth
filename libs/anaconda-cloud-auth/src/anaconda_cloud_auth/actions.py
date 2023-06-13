@@ -241,6 +241,7 @@ def _login_with_username() -> TokenInfo:
         },
     )
     response_data = response.json()
+    response.raise_for_status()
 
     access_token = response_data["access_token"]
     refresh_token = response.cookies.get("refresh_token")

@@ -49,7 +49,9 @@ class CLIAuthConfig(BaseSettings):
 
 class OpenIDConfiguration(BaseModel):
     # TODO: Remove the hard-coded default, return from IAM
-    issuer: str = "https://anaconda.cloud"
+    issuer: str = os.getenv(
+        "BASE_URL", "https://anaconda.cloud"
+    )
 
     # TODO: Remove the hard-coded default, return from IAM
     authorization_endpoint: str = os.getenv(

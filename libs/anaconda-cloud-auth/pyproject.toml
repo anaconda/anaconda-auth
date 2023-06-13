@@ -1,13 +1,12 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = ["setuptools", "setuptools-scm"]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-vcs>=0.3", "setuptools-scm>=7.1"]
 
 [project]
 authors = [
   {name = "Matt Kramer", email = "mkramer@anaconda.com"}
 ]
 dependencies = [
-  "cryptography",
   "keyring",
   "python-dotenv",
   "pydantic",
@@ -75,9 +74,26 @@ markers = [
 ]
 norecursedirs = ["env", "envs"]
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/anaconda_cloud_auth/_version.py"
+
+[tool.hatch.version.raw-options]
 root = "../.."
-tag_regex = "^(anaconda-cloud-auth-)?(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
+git_describe_command = "git describe --dirty --tags --long --match 'anaconda-cloud-auth-*'"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/anaconda_cloud_auth",
+  "/.env.template",
+  "/pyproject.toml",
+  "/tests",
+  "/Makefile",
+  "/environment-dev.yml"
+]
+
 
 [tool.tox]
 legacy_tox_ini = """
