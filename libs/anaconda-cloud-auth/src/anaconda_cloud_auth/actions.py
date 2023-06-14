@@ -6,7 +6,7 @@ import webbrowser
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from typing import Optional
+from typing import Optional, Union
 from urllib.parse import urlencode
 
 import jwt
@@ -284,7 +284,7 @@ def login(use_ory: bool = False, simple: bool = False) -> TokenInfo:
     return token_info
 
 
-def logout() -> TokenInfo | None:
+def logout() -> Union[TokenInfo, None]:
     """Log out of Anaconda.cloud."""
     try:
         token_info = TokenInfo.load()

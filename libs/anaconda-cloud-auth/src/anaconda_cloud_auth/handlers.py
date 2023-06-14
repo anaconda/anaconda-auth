@@ -5,7 +5,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from socket import socket
-from typing import Any
+from typing import Dict, Any, List, Tuple
 from typing import Union
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
@@ -19,18 +19,18 @@ class Result:
 
     auth_code: str = ""
     state: str = ""
-    scopes: list[str] = field(default_factory=list)
+    scopes: List[str] = field(default_factory=list)
 
 
-TRequest = Union[socket, tuple[bytes, socket]]
+TRequest = Union[socket, Tuple[bytes, socket]]
 
 
 class AuthCodeRedirectServer(HTTPServer):
     """A simple http server to handle the incoming auth code redirect from Ory"""
 
-    def __init__(self, oidc_path: str, server_address: tuple[str, int]):
+    def __init__(self, oidc_path: str, server_address: Tuple[str, int]):
         super().__init__(server_address, AuthCodeRedirectRequestHandler)
-        self.result: Result | None = None
+        self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
 
@@ -66,7 +66,7 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         """Override base method to suppress log message."""
 
-    def _handle_auth(self, query_params: dict[str, list[str]]) -> None:
+    def _handle_auth(self, query_params: Dict[str, List[str]]) -> None:
         if "code" in query_params:
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-type", "text/html")
@@ -104,11 +104,8 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
         query_params = parse_qs(parsed_url.query)
 
         # Only accept requests to self.oidc_path
-        match parsed_url.path:
-            case self.oidc_path:
-                self._handle_auth(query_params)
-            case _:
-                pass
+        if parsed_url.path is not None:
+            self._handle_auth(query_params)
 
 
 class AuthenticationError(Exception):

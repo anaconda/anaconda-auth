@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urljoin
 
 import requests
@@ -20,13 +20,13 @@ class BearerAuth(AuthBase):
 
 
 class Client(requests.Session):
-    def __init__(self, base_url: str | None = None):
+    def __init__(self, base_url: Union[str, None] = None):
         super().__init__()
         self.base_url = base_url or os.getenv("BASE_URL", "https://anaconda.cloud")
         self.auth = BearerAuth()
 
     def request(
-        self, method: str | bytes, url: str | bytes, *args: Any, **kwargs: Any
+        self, method: Union[str, bytes], url: Union[str, bytes], *args: Any, **kwargs: Any
     ) -> Response:
         if self.base_url is not None:
             joined_url = urljoin(self.base_url, str(url))

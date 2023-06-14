@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import List, Optional, Union, Type
 
 import pydantic
 import requests
@@ -64,19 +64,19 @@ class OpenIDConfiguration(BaseModel):
 
     jwks_uri: str
 
-    subject_types_supported: list[str] = []
-    response_types_supported: list[str] = []
-    claims_supported: list[str] = []
-    grant_types_supported: list[str] = []
-    response_modes_supported: list[str] = []
-    scopes_supported: list[str] = []
-    token_endpoint_auth_methods_supported: list[str] = []
-    userinfo_signing_alg_values_supported: list[str] = []
-    id_token_signing_alg_values_supported: list[str] = []
-    userinfo_signed_response_alg: list[str] = []
-    id_token_signed_response_alg: list[str] = []
-    request_object_signing_alg_values_supported: list[str] = []
-    code_challenge_methods_supported: list[str] = []
+    subject_types_supported: List[str] = []
+    response_types_supported: List[str] = []
+    claims_supported: List[str] = []
+    grant_types_supported: List[str] = []
+    response_modes_supported: List[str] = []
+    scopes_supported: List[str] = []
+    token_endpoint_auth_methods_supported: List[str] = []
+    userinfo_signing_alg_values_supported: List[str] = []
+    id_token_signing_alg_values_supported: List[str] = []
+    userinfo_signed_response_alg: List[str] = []
+    id_token_signed_response_alg: List[str] = []
+    request_object_signing_alg_values_supported: List[str] = []
+    code_challenge_methods_supported: List[str] = []
 
     request_parameter_supported: bool = False
     request_uri_parameter_supported: bool = False
@@ -89,7 +89,7 @@ class OpenIDConfiguration(BaseModel):
 
     @classmethod
     def from_auth_config(
-        cls: type["OpenIDConfiguration"], auth_config: CLIAuthConfig
+        cls: Type["OpenIDConfiguration"], auth_config: CLIAuthConfig
     ) -> "OpenIDConfiguration":
         oidc_config: dict = requests.get(auth_config.well_known_url).json()
         return cls.parse_obj(oidc_config)
@@ -101,7 +101,7 @@ class OpenIDConfiguration(BaseModel):
 
 
 # Global config object, loaded once.
-_config: CLIAuthConfig | None = None
+_config: Union[CLIAuthConfig, None] = None
 
 
 def get_config(use_ory: bool = False) -> CLIAuthConfig:

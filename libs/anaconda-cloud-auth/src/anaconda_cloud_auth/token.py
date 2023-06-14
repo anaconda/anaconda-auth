@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from pathlib import Path
+from typing import Dict, Union
 
 import keyring
 import requests
@@ -23,7 +24,7 @@ KEYRING_NAME = "Anaconda Cloud"
 KEYRING_CLIENT = "anaconda_cloud_auth"
 
 
-LocalKeyringData = dict[str, dict[str, str]]
+LocalKeyringData = Dict[str, Dict[str, str]]
 
 def _as_base64_string(payload: str) -> str:
     """Encode a string to a base64 string"""
@@ -43,7 +44,7 @@ class NavigatorFallback(KeyringBackend):
     def set_password(self, service: str, username: str, password: str) -> None:
         raise PasswordSetError('This keyring cannot set passwords')
 
-    def get_password(self, service: str, username: str) -> str | None:
+    def get_password(self, service: str, username: str) -> Union[str, None]:
         from anaconda_navigator.api.nucleus.token import NucleusToken
         if service != KEYRING_NAME and username != KEYRING_CLIENT:
             return None
@@ -92,7 +93,7 @@ class AnacondaKeyring(KeyringBackend):
 
         self._write(data)
 
-    def get_password(self, service: str, username: str) -> str | None:
+    def get_password(self, service: str, username: str) -> Union[str, None]:
         data = self._read()
         return data.get(service, {}).get(username, None)
 
@@ -105,11 +106,11 @@ class AnacondaKeyring(KeyringBackend):
 
 
 class TokenInfo(BaseModel):
-    access_token: str | None = None
-    refresh_token: str | None = None
+    access_token: Union[str, None] = None
+    refresh_token: Union[str, None] = None
     expires_at: datetime = datetime(1, 1, 1, tzinfo=timezone.utc)
-    username: str | None = None
-    id_token: str | None = None
+    username: Union[str, None] = None
+    id_token: Union[str, None] = None
 
     @classmethod
     def load(cls) -> "TokenInfo":
