@@ -1,5 +1,5 @@
 try:
-    from ._version import version as __version__
+    from anaconda_cloud_auth._version import version as __version__
 except ImportError:  # pragma: nocover
     __version__ = "unknown"
 

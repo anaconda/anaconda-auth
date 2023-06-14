@@ -1,5 +1,6 @@
 import os
-from typing import Any, Union
+from typing import Any
+from typing import Union
 from urllib.parse import urljoin
 
 import requests
@@ -26,7 +27,11 @@ class Client(requests.Session):
         self.auth = BearerAuth()
 
     def request(
-        self, method: Union[str, bytes], url: Union[str, bytes], *args: Any, **kwargs: Any
+        self,
+        method: Union[str, bytes],
+        url: Union[str, bytes],
+        *args: Any,
+        **kwargs: Any,
     ) -> Response:
         if self.base_url is not None:
             joined_url = urljoin(self.base_url, str(url))

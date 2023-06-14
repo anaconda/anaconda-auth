@@ -1,5 +1,8 @@
 import os
-from typing import List, Optional, Union, Type
+from typing import List
+from typing import Optional
+from typing import Type
+from typing import Union
 
 import pydantic
 import requests
@@ -49,9 +52,7 @@ class CLIAuthConfig(BaseSettings):
 
 class OpenIDConfiguration(BaseModel):
     # TODO: Remove the hard-coded default, return from IAM
-    issuer: str = os.getenv(
-        "BASE_URL", "https://anaconda.cloud"
-    )
+    issuer: str = os.getenv("BASE_URL", "https://anaconda.cloud")
 
     # TODO: Remove the hard-coded default, return from IAM
     authorization_endpoint: str = os.getenv(

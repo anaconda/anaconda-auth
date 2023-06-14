@@ -5,7 +5,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from socket import socket
-from typing import Dict, Any, List, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
 from typing import Union
 from urllib.parse import parse_qs
 from urllib.parse import urlparse

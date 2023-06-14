@@ -42,6 +42,26 @@ publish = [
 [tool.distutils.bdist_wheel]
 universal = true
 
+[tool.hatch.build.hooks.vcs]
+version-file = "src/anaconda_cloud_auth/_version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/anaconda_cloud_auth",
+  "/.env.template",
+  "/pyproject.toml",
+  "/tests",
+  "/Makefile",
+  "/environment-dev.yml"
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+git_describe_command = "git describe --dirty --tags --long --match 'anaconda-cloud-auth-*'"
+root = "../.."
+
 [tool.isort]
 force_single_line = true
 known_secondparty = ["anaconda_cloud_cli"]
@@ -73,27 +93,6 @@ markers = [
   "integration: Integration tests requiring a browser"
 ]
 norecursedirs = ["env", "envs", ".tox"]
-
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "src/anaconda_cloud_auth/_version.py"
-
-[tool.hatch.version.raw-options]
-root = "../.."
-git_describe_command = "git describe --dirty --tags --long --match 'anaconda-cloud-auth-*'"
-
-[tool.hatch.build.targets.sdist]
-include = [
-  "/src/anaconda_cloud_auth",
-  "/.env.template",
-  "/pyproject.toml",
-  "/tests",
-  "/Makefile",
-  "/environment-dev.yml"
-]
-
 
 [tool.tox]
 legacy_tox_ini = """

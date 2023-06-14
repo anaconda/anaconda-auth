@@ -5,14 +5,16 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict
+from typing import Union
 
 import keyring
 import requests
-from keyring.backend import KeyringBackend
-from keyring.errors import PasswordDeleteError, PasswordSetError
-from pydantic import BaseModel
 from jaraco.classes.properties import classproperty
+from keyring.backend import KeyringBackend
+from keyring.errors import PasswordDeleteError
+from keyring.errors import PasswordSetError
+from pydantic import BaseModel
 
 from anaconda_cloud_auth.config import get_config
 from anaconda_cloud_auth.console import console
@@ -26,9 +28,11 @@ KEYRING_CLIENT = "anaconda_cloud_auth"
 
 LocalKeyringData = Dict[str, Dict[str, str]]
 
+
 def _as_base64_string(payload: str) -> str:
     """Encode a string to a base64 string"""
-    return base64.b64encode(payload.encode('utf-8')).decode("utf-8")
+    return base64.b64encode(payload.encode("utf-8")).decode("utf-8")
+
 
 class NavigatorFallback(KeyringBackend):
     priority = 0.1
@@ -36,16 +40,18 @@ class NavigatorFallback(KeyringBackend):
     @classproperty
     def viable(cls) -> bool:
         try:
-            import anaconda_navigator
+            import anaconda_navigator  # noqa: F401
+
             return True
         except ModuleNotFoundError:
             return False
 
     def set_password(self, service: str, username: str, password: str) -> None:
-        raise PasswordSetError('This keyring cannot set passwords')
+        raise PasswordSetError("This keyring cannot set passwords")
 
     def get_password(self, service: str, username: str) -> Union[str, None]:
         from anaconda_navigator.api.nucleus.token import NucleusToken
+
         if service != KEYRING_NAME and username != KEYRING_CLIENT:
             return None
         else:
@@ -56,7 +62,7 @@ class NavigatorFallback(KeyringBackend):
                     "refresh_token": token.refresh_token,
                     "expires_at": token.expiration_date.astimezone().isoformat(),
                     "username": token.username,
-                    "id_token": None
+                    "id_token": None,
                 }
                 payload = json.dumps(token_info)
                 encoded = _as_base64_string(payload)

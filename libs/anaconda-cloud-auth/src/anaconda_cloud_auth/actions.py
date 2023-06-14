@@ -6,7 +6,8 @@ import webbrowser
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from typing import Optional, Union
+from typing import Optional
+from typing import Union
 from urllib.parse import urlencode
 
 import jwt
