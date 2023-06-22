@@ -35,7 +35,7 @@ def _as_base64_string(payload: str) -> str:
 
 
 class NavigatorFallback(KeyringBackend):
-    priority = 0.1
+    priority = 0.1  # type: ignore
 
     @classproperty
     def viable(cls) -> bool:
@@ -73,7 +73,7 @@ class NavigatorFallback(KeyringBackend):
 
 class AnacondaKeyring(KeyringBackend):
     keyring_path = Path("~/.anaconda/keyring").expanduser()
-    priority = 0.2
+    priority = 0.2  # type: ignore
 
     def _read(self) -> LocalKeyringData:
         if not self.keyring_path.exists():

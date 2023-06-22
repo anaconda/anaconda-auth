@@ -23,7 +23,6 @@ readme = "README.md"
 requires-python = ">=3.8"
 
 [project.entry-points."anaconda_cloud_cli.subcommand"]
-auth = "anaconda_cloud_auth.cli:app"
 
 [project.optional-dependencies]
 cli = ["anaconda-cloud-cli"]

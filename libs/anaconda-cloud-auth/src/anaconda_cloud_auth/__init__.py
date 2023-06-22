@@ -3,8 +3,13 @@ try:
 except ImportError:  # pragma: nocover
     __version__ = "unknown"
 
-from anaconda_cloud_auth.actions import login
-from anaconda_cloud_auth.actions import logout
-from anaconda_cloud_auth.client import Client
+# We must ensure we load all environment variables before the config is loaded
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from anaconda_cloud_auth.actions import login  # noqa: E402
+from anaconda_cloud_auth.actions import logout  # noqa: E402
+from anaconda_cloud_auth.client import Client  # noqa: E402
 
 __all__ = ["__version__", "login", "logout", "Client"]
