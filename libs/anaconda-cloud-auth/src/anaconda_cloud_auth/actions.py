@@ -7,9 +7,9 @@ from datetime import timezone
 from typing import Union
 from urllib.parse import urlencode
 
-import pkce
 import requests
 
+from anaconda_cloud_auth._vendor import pkce
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.exceptions import AuthenticationError

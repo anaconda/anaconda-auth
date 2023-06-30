@@ -7,7 +7,6 @@ dependencies = [
   "keyring",
   "python-dotenv",
   "pydantic",
-  "pkce",
   "pyjwt",
   "requests",
   "cryptography>=3.4.0"  # see pyjwt
@@ -118,3 +117,15 @@ deps =
     rich
 commands = mypy
 """
+
+[tool.vendoring]
+destination = "src/anaconda_cloud_auth/_vendor/"
+namespace = "anaconda_cloud_auth._vendor"
+protected-files = ["__init__.py", "requirements.txt"]
+requirements = "src/anaconda_cloud_auth/_vendor/requirements.txt"
+
+[tool.vendoring.license.directories]
+setuptools = "pkg_resources"
+
+[tool.vendoring.license.fallback-urls]
+pkce = "https://github.com/RomeoDespres/pkce/raw/master/LICENSE"
