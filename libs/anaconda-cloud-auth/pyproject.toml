@@ -6,7 +6,7 @@ requires = ["hatchling", "hatch-vcs>=0.3", "setuptools-scm>=7.1"]
 dependencies = [
   "keyring",
   "python-dotenv",
-  "pydantic",
+  "pydantic <2.0",
   "pyjwt",
   "requests",
   "cryptography>=3.4.0"  # see pyjwt
