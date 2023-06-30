@@ -8,11 +8,10 @@ from jwt import PyJWKClientError
 from jwt import PyJWKSet
 
 
-class OryJWKClient(PyJWKClient):
+class JWKClient(PyJWKClient):
     def fetch_data(self) -> Dict[str, Any]:
         # This method fails in the original class due to using urlopen.
-        # The jwks uri in Ory likely blocks the user-agent used by
-        # urlopen
+        # The jwks URI likely blocks the user-agent used by urlopen
         jwk_set: Union[Dict[str, Any], None] = None
         try:
             jwk_set = requests.get(self.uri).json()

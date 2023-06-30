@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(autouse=True)
 def empty_test_keyring(monkeypatch: MonkeyPatch) -> Iterator[None]:
+    """Ensure the test keyring is empty at the beginning of each test"""
     monkeypatch.setattr(token, "KEYRING_NAME", "Anaconda Cloud Test")
     with pytest.raises(TokenNotFoundError):
         TokenInfo.load()
@@ -28,6 +29,17 @@ def empty_test_keyring(monkeypatch: MonkeyPatch) -> Iterator[None]:
         TokenInfo().delete()
     except TokenNotFoundError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def set_environment_variables(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_API_DOMAIN", "nucleus-latest.anacondaconnect.com"
+    )
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_AUTH_DOMAIN", "nucleus-latest.anacondaconnect.com/api/iam"
+    )
+    monkeypatch.setenv("ANACONDA_CLOUD_AUTH_CLIENT_ID", "cloud-cli-test-4")
 
 
 @pytest.mark.integration
@@ -64,6 +76,7 @@ def test_get_auth_info(is_not_none: Any) -> None:
     login()
     client = Client()
     response = client.get("/api/account")
+    assert response.status_code == 200
     assert response.json() == {
         "user": is_not_none,
         "profile": is_not_none,

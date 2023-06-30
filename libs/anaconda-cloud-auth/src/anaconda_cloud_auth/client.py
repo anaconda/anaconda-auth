@@ -1,5 +1,5 @@
-import os
 from typing import Any
+from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
 
@@ -8,6 +8,7 @@ from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
 
+from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.token import TokenInfo
 
 
@@ -21,9 +22,12 @@ class BearerAuth(AuthBase):
 
 
 class Client(requests.Session):
-    def __init__(self, base_url: Union[str, None] = None):
+    def __init__(self, domain: Optional[str] = None):
         super().__init__()
-        self.base_url = base_url or os.getenv("BASE_URL", "https://anaconda.cloud")
+
+        kwargs = {"domain": domain} if domain else {}
+        self.config = APIConfig(**kwargs)
+        self._base_url = f"https://{self.config.domain}"
         self.auth = BearerAuth()
 
     def request(
@@ -33,8 +37,5 @@ class Client(requests.Session):
         *args: Any,
         **kwargs: Any,
     ) -> Response:
-        if self.base_url is not None:
-            joined_url = urljoin(self.base_url, str(url))
-        else:
-            joined_url = str(url)
+        joined_url = urljoin(self._base_url, str(url))
         return super().request(method, joined_url, *args, **kwargs)

@@ -28,7 +28,7 @@ def auth_login(
         if not force_login:
             raise typer.Exit()
 
-    login(use_ory=ory, simple=simple)
+    login(simple=simple)
     console.print("Successfully logged into Anaconda Cloud", style="green")
 
 

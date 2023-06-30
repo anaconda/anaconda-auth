@@ -3,17 +3,14 @@ build-backend = "hatchling.build"
 requires = ["hatchling", "hatch-vcs>=0.3", "setuptools-scm>=7.1"]
 
 [project]
-authors = [
-  {name = "Matt Kramer", email = "mkramer@anaconda.com"}
-]
 dependencies = [
   "keyring",
   "python-dotenv",
   "pydantic",
   "pkce",
   "pyjwt",
-  "ory-client",
-  "requests"
+  "requests",
+  "cryptography>=3.4.0"  # see pyjwt
 ]
 description = "A client auth library for Anaconda.cloud APIs"
 dynamic = ["version"]

@@ -1,6 +1,4 @@
 import logging
-from dataclasses import dataclass
-from dataclasses import field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
@@ -13,16 +11,19 @@ from typing import Union
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+from pydantic.main import BaseModel
+
+from anaconda_cloud_auth.exceptions import AuthenticationError
+
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Result:
+class Result(BaseModel):
     """This class is needed to capture the auth code redirect data"""
 
     auth_code: str = ""
     state: str = ""
-    scopes: List[str] = field(default_factory=list)
+    scopes: List[str] = []
 
 
 TRequest = Union[socket, Tuple[bytes, socket]]
@@ -111,11 +112,7 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
             self._handle_auth(query_params)
 
 
-class AuthenticationError(Exception):
-    pass
-
-
-def run_server(redirect_uri: str) -> Result:
+def capture_auth_code(redirect_uri: str, state: str) -> str:
     parsed_url = urlparse(redirect_uri)
 
     host_name, port = parsed_url.netloc.split(":")
@@ -127,7 +124,15 @@ def run_server(redirect_uri: str) -> Result:
     with AuthCodeRedirectServer(oidc_path, (host_name, server_port)) as web_server:
         web_server.handle_request()
 
-    if web_server.result is None:
+    result = web_server.result
+
+    if result is None:
         raise AuthenticationError("Could not complete authentication")
 
-    return web_server.result
+    if result.auth_code is None:
+        raise AuthenticationError("No authorization code")
+
+    if result.state != state:
+        raise AuthenticationError("State does not match")
+
+    return result.auth_code

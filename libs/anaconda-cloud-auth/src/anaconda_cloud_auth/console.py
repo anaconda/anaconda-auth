@@ -24,8 +24,8 @@ class SimpleConsole:
         print(*args, **kwargs)
 
     @staticmethod
-    def input(*args: Any, **kwargs: Any) -> Any:
-        if kwargs.pop("password", False):
+    def input(*args: Any, password: bool = False, **kwargs: Any) -> Any:
+        if password:
             return getpass(args[0])
         else:
             return input(args[0])
