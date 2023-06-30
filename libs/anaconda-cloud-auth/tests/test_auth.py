@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 from typing import Any
@@ -47,28 +46,9 @@ def test_login_legacy_iam(is_not_none: Any) -> None:
     login()
     token_info = TokenInfo.load()
     assert token_info == {
-        "access_token": is_not_none,
-        "refresh_token": is_not_none,
-        "expires_at": is_not_none,
         "username": None,
-        "id_token": None,
+        "api_key": is_not_none,
     }
-
-
-@pytest.mark.integration
-def test_refresh_legacy_iam(is_not_none: Any) -> None:
-    token_info = login()
-    old_token_dict = TokenInfo.load().dict()
-
-    # We need to wait at least 1 second to ensure the timestamp changes (one-second accuracy)
-    time.sleep(1)
-    token_info.refresh()
-
-    new_token_dict = TokenInfo.load().dict()
-    assert old_token_dict != new_token_dict
-    assert old_token_dict["access_token"] != new_token_dict["access_token"]
-    assert old_token_dict["refresh_token"] == new_token_dict["refresh_token"]
-    assert old_token_dict["expires_at"] < new_token_dict["expires_at"]
 
 
 @pytest.mark.integration

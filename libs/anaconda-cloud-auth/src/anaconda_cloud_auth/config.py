@@ -1,5 +1,4 @@
 from typing import List
-from typing import Optional
 
 import requests
 from pydantic import BaseModel
@@ -19,8 +18,8 @@ class AuthConfig(BaseSettings):
         env_prefix = "ANACONDA_CLOUD_AUTH_"
         env_file = ".env"
 
-    domain: str = "id.anaconda.cloud"
-    client_id: Optional[str] = None
+    domain: str = "anaconda.cloud/api/iam"
+    client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = ".well-known/openid-configuration"
 
