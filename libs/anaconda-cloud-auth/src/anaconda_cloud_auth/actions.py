@@ -114,9 +114,10 @@ def _send_auth_code_request(
     webbrowser.open(url)
 
 
-def _do_auth_flow() -> str:
+def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    auth_config = AuthConfig()
+    if auth_config is None:
+        auth_config = AuthConfig()
 
     token_endpoint = auth_config.oidc.token_endpoint
     authorization_endpoint = auth_config.oidc.authorization_endpoint
@@ -159,9 +160,11 @@ def _do_auth_flow() -> str:
     return access_token
 
 
-def _login_with_username() -> str:
+def _login_with_username(auth_config: Optional[AuthConfig] = None) -> str:
     """Prompt for username and password and log in with the password grant flow."""
-    auth_config = AuthConfig()
+    if auth_config is None:
+        auth_config = AuthConfig()
+
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
     response = requests.post(
@@ -192,22 +195,27 @@ def _get_api_key(access_token: str) -> str:
     return response.json()["api_key"]
 
 
-def login(simple: bool = False) -> TokenInfo:
+def login(auth_config: Optional[AuthConfig] = None, simple: bool = False) -> TokenInfo:
     """Log into Anaconda.cloud and store the token information in the keyring."""
+    if auth_config is None:
+        auth_config = AuthConfig()
+
     if simple:
-        access_token = _login_with_username()
+        access_token = _login_with_username(auth_config=auth_config)
     else:
-        access_token = _do_auth_flow()
+        access_token = _do_auth_flow(auth_config=auth_config)
     api_key = _get_api_key(access_token)
-    token_info = TokenInfo(api_key=api_key)
+    token_info = TokenInfo(api_key=api_key, domain=auth_config.domain)
     token_info.save()
     return token_info
 
 
-def logout() -> Union[TokenInfo, None]:
+def logout(auth_config: Optional[AuthConfig] = None) -> Union[TokenInfo, None]:
     """Log out of Anaconda.cloud."""
+    if auth_config is None:
+        auth_config = AuthConfig()
     try:
-        token_info = TokenInfo.load()
+        token_info = TokenInfo.load(domain=auth_config.domain)
         token_info.delete()
     except TokenNotFoundError:
         return None

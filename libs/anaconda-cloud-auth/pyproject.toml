@@ -25,6 +25,7 @@ cli = ["anaconda-cloud-cli"]
 dev = [
   "mypy",
   "pytest",
+  "pytest-mock",
   "tox",
   "types-requests"
 ]
@@ -106,12 +107,14 @@ python =
 deps =
     mypy
     pytest
+    pytest-mock
 commands = pytest -m "not integration"
 
 [testenv:mypy]
 deps =
     mypy
     pytest
+    pytest-mock
     types-requests
     typer
     rich

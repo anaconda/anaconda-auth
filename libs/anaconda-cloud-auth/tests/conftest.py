@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Any
 
@@ -7,13 +6,6 @@ from _pytest.monkeypatch import MonkeyPatch
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# TODO: Figure out a better way to set these dynamically, and mock out the service
-os.environ.setdefault("BASE_URL", "http://test-anaconda.cloud")
-os.environ.setdefault("IAM_CLIENT_ID", "test-client-id")
-os.environ.setdefault("IAM_CLIENT_SECRET", "test-client-secret")
-os.environ.setdefault("ORY_AUTH_DOMAIN", "")
-os.environ.setdefault("ORY_CLIENT_ID", "test-client-id")
 
 
 @pytest.fixture()

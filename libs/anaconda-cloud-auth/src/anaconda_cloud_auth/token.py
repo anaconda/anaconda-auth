@@ -18,7 +18,6 @@ from anaconda_cloud_auth.exceptions import TokenNotFoundError
 logger = logging.getLogger(__name__)
 
 KEYRING_NAME = "Anaconda Cloud"
-KEYRING_CLIENT = "anaconda_cloud_auth"
 
 
 LocalKeyringData = Dict[str, Dict[str, str]]
@@ -44,13 +43,25 @@ class NavigatorFallback(KeyringBackend):
     def set_password(self, service: str, username: str, password: str) -> None:
         raise PasswordSetError("This keyring cannot set passwords")
 
+    def _get_auth_domain(self) -> str:
+        from anaconda_navigator.config import CONF as navigator_config
+
+        known_mapping = {"https://anaconda.cloud": "anaconda.cloud/api/iam"}
+
+        cloud_base_url: str = navigator_config.get(
+            "main", "cloud_base_url", "https://anaconda.cloud"
+        ).strip("/")
+        return known_mapping[cloud_base_url]
+
     def get_password(self, service: str, username: str) -> Union[str, None]:
         try:
             from anaconda_navigator.api.nucleus.token import NucleusToken
+
+            auth_domain = self._get_auth_domain()
         except ImportError:
             return None
 
-        if service != KEYRING_NAME and username != KEYRING_CLIENT:
+        if service != KEYRING_NAME and username != auth_domain:
             return None
         else:
             token = NucleusToken.from_file()
@@ -109,11 +120,12 @@ class AnacondaKeyring(KeyringBackend):
 class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
+    domain: str
 
     @classmethod
-    def load(cls) -> "TokenInfo":
+    def load(cls, domain: str) -> "TokenInfo":
         """Load the token information from the system keyring."""
-        keyring_data = keyring.get_password(KEYRING_NAME, KEYRING_CLIENT)
+        keyring_data = keyring.get_password(KEYRING_NAME, domain)
         if keyring_data is None:
             raise TokenNotFoundError
 
@@ -126,14 +138,13 @@ class TokenInfo(BaseModel):
         """Write the token information to the system keyring."""
         payload = self.json()
         encoded = _as_base64_string(payload)
-        keyring.set_password(KEYRING_NAME, KEYRING_CLIENT, encoded)
+        keyring.set_password(KEYRING_NAME, self.domain, encoded)
         logger.debug("🔒 Token has been safely stored in system keychain 🎉")
 
-    @staticmethod
-    def delete() -> None:
+    def delete(self) -> None:
         """Delete the token information from the system keyring."""
         try:
-            keyring.delete_password(KEYRING_NAME, KEYRING_CLIENT)
+            keyring.delete_password(KEYRING_NAME, self.domain)
         except PasswordDeleteError:
             raise TokenNotFoundError
 
@@ -141,7 +152,7 @@ class TokenInfo(BaseModel):
         """Get the access token, ensuring login and refresh if necessary."""
         if self.api_key is None:
             try:
-                new_token_info = TokenInfo.load()
+                new_token_info = TokenInfo.load(self.domain)
             except TokenNotFoundError:
                 message = "No token found, please login with `anaconda login`"
                 console.print(message)

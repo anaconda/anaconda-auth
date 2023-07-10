@@ -6,6 +6,7 @@ import typer
 from anaconda_cloud_auth import Client
 from anaconda_cloud_auth import login
 from anaconda_cloud_auth import logout
+from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
@@ -17,8 +18,9 @@ app = typer.Typer(add_completion=False)
 def auth_login(
     ory: bool = typer.Option(False), simple: bool = typer.Option(False)
 ) -> None:
+    auth_config = AuthConfig()
     try:
-        TokenInfo.load()
+        TokenInfo.load(auth_config.domain)
     except TokenNotFoundError:
         pass  # Proceed to login
     else:
@@ -28,7 +30,7 @@ def auth_login(
         if not force_login:
             raise typer.Exit()
 
-    login(simple=simple)
+    login(auth_config=auth_config, simple=simple)
     console.print("Successfully logged into Anaconda Cloud", style="green")
 
 
