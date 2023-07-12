@@ -1,10 +1,12 @@
 import base64
+import datetime as dt
 import json
 import logging
 from pathlib import Path
 from typing import Dict
 from typing import Union
 
+import jwt
 import keyring
 from jaraco.classes.properties import classproperty
 from keyring.backend import KeyringBackend
@@ -13,6 +15,7 @@ from keyring.errors import PasswordSetError
 from pydantic import BaseModel
 
 from anaconda_cloud_auth.console import console
+from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -148,6 +151,19 @@ class TokenInfo(BaseModel):
         except PasswordDeleteError:
             raise TokenNotFoundError
 
+    @property
+    def expired(self) -> bool:
+        if self.api_key is None:
+            return True
+
+        decoded = jwt.decode(
+            self.api_key, algorithms=["RS256"], options={"verify_signature": False}
+        )
+        expiry = dt.datetime.fromtimestamp(decoded["exp"]).replace(
+            tzinfo=dt.timezone.utc
+        )
+        return expiry < dt.datetime.now(tz=dt.timezone.utc)
+
     def get_access_token(self) -> str:
         """Get the access token, ensuring login and refresh if necessary."""
         if self.api_key is None:
@@ -163,4 +179,11 @@ class TokenInfo(BaseModel):
             self.api_key = new_token_info.api_key
 
         assert self.api_key is not None
+
+        if self.expired:
+            raise TokenExpiredError(
+                "Your login token as expired. Please login again using\n"
+                "  anaconda login --force"
+            )
+
         return self.api_key

@@ -4,6 +4,8 @@ import requests
 from pydantic import BaseModel
 from pydantic import BaseSettings
 
+from anaconda_cloud_auth import __version__ as version
+
 
 class APIConfig(BaseSettings):
     class Config:
@@ -18,7 +20,7 @@ class AuthConfig(BaseSettings):
         env_prefix = "ANACONDA_CLOUD_AUTH_"
         env_file = ".env"
 
-    domain: str = "anaconda.cloud/api/iam"
+    domain: str = "id.anaconda.cloud"
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = ".well-known/openid-configuration"
@@ -31,7 +33,8 @@ class AuthConfig(BaseSettings):
     @property
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
-        res = requests.get(self.well_known_url)
+        headers = {"User-Agent": f"anaconda-cloud-auth/{version}"}
+        res = requests.get(self.well_known_url, headers=headers)
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())
         return self.__dict__.setdefault("_oidc", oidc_config)

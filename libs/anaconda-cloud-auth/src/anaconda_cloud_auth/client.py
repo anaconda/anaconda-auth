@@ -10,6 +10,8 @@ from requests.auth import AuthBase
 
 from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.exceptions import LoginRequiredError
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
 
 
@@ -21,7 +23,10 @@ class BearerAuth(AuthBase):
         self._token_info = TokenInfo(domain=domain)
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
-        r.headers["Authorization"] = f"Bearer {self._token_info.get_access_token()}"
+        try:
+            r.headers["Authorization"] = f"Bearer {self._token_info.get_access_token()}"
+        except TokenNotFoundError:
+            pass
         return r
 
 
@@ -42,4 +47,13 @@ class Client(requests.Session):
         **kwargs: Any,
     ) -> Response:
         joined_url = urljoin(self._base_url, str(url))
-        return super().request(method, joined_url, *args, **kwargs)
+        response = super().request(method, joined_url, *args, **kwargs)
+        if response.status_code == 401 or response.status_code == 403:
+            if response.headers.get("Authorization") is None:
+                raise LoginRequiredError(
+                    f"{response.reason}: You must login before using this API endpoint using\n"
+                    f"  anaconda login"
+                    f"If you are already logged in your token may be invalid. Try\n"
+                    f"  anaconda login --force"
+                )
+        return response

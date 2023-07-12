@@ -8,3 +8,11 @@ class InvalidTokenError(AuthenticationError):
 
 class TokenNotFoundError(Exception):
     pass
+
+
+class LoginRequiredError(Exception):
+    pass
+
+
+class TokenExpiredError(Exception):
+    pass
