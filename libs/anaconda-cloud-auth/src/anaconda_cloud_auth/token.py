@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Dict
 from typing import Union
+from urllib.error import HTTPError
 
 import jwt
 import keyring
@@ -14,7 +15,7 @@ from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
 
-from anaconda_cloud_auth.console import console
+from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 
@@ -49,7 +50,7 @@ class NavigatorFallback(KeyringBackend):
     def _get_auth_domain(self) -> str:
         from anaconda_navigator.config import CONF as navigator_config
 
-        known_mapping = {"https://anaconda.cloud": "anaconda.cloud/api/iam"}
+        known_mapping = {"https://anaconda.cloud": "id.anaconda.cloud"}
 
         cloud_base_url: str = navigator_config.get(
             "main", "cloud_base_url", "https://anaconda.cloud"
@@ -70,11 +71,29 @@ class NavigatorFallback(KeyringBackend):
             token = NucleusToken.from_file()
             if token is not None:
                 from anaconda_cloud_auth.actions import _get_api_key
+                from anaconda_cloud_auth.actions import refresh_access_token
 
-                api_key = _get_api_key(token.access_token)
-                token_info = {"username": token.username, "api_key": api_key}
+                if not token.valid:
+                    auth_config = AuthConfig(domain=auth_domain)
+                    try:
+                        access_token = refresh_access_token(
+                            token.refresh_token, auth_config=auth_config
+                        )
+                    except HTTPError:
+                        return None
+                else:
+                    access_token = token.access_token
+
+                api_key = _get_api_key(access_token)
+                token_info = {
+                    "username": token.username,
+                    "api_key": api_key,
+                    "domain": auth_config.domain,
+                }
                 payload = json.dumps(token_info)
                 encoded = _as_base64_string(payload)
+                keyring.set_password(KEYRING_NAME, auth_domain, encoded)
+
                 return encoded
             else:
                 return None
@@ -171,7 +190,6 @@ class TokenInfo(BaseModel):
                 new_token_info = TokenInfo.load(self.domain)
             except TokenNotFoundError:
                 message = "No token found, please login with `anaconda login`"
-                console.print(message)
                 raise TokenNotFoundError(message)
 
             # Store the new token information for later retrieval

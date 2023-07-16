@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 from pytest_mock import MockerFixture
 
-from anaconda_cloud_auth import Client
+from anaconda_cloud_auth.client import BaseClient
+from anaconda_cloud_auth.client import client_factory
 from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.token import TokenInfo
 
@@ -14,16 +15,23 @@ if TYPE_CHECKING:
 
 
 def test_login_required_error() -> None:
-    client = Client()
+    client = BaseClient()
     with pytest.raises(LoginRequiredError):
         _ = client.get("/api/account")
+
+
+def test_user_agent_client_factory() -> None:
+    Client = client_factory("my-app/version")
+    client = Client()
+    response = client.get("/api/catalogs/examples")
+    assert response.request.headers.get("User-Agent") == "my-app/version"
 
 
 def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("ANACONDA_CLOUD_API_DOMAIN", "anaconda.cloud")
     monkeypatch.setenv("ANACONDA_CLOUD_AUTH_DOMAIN", "dummy")
 
-    client = Client()
+    client = BaseClient()
     response = client.get("/api/catalogs/examples")
     assert "Authorization" not in response.request.headers.keys()
     assert response.status_code == 200
@@ -37,7 +45,7 @@ def test_token_included(
 
     outdated_token_info.save()
 
-    client = Client()
+    client = BaseClient()
     response = client.get("/api/catalogs/examples")
     assert (
         response.request.headers.get("Authorization")

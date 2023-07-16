@@ -14,9 +14,13 @@ def test_expired_token_error(outdated_token_info: TokenInfo) -> None:
 
 
 def test_token_not_found() -> None:
+    auth_config = AuthConfig()
+
     with pytest.raises(TokenNotFoundError):
-        auth_config = AuthConfig()
         _ = TokenInfo.load(auth_config.domain)
+
+    with pytest.raises(TokenNotFoundError):
+        _ = TokenInfo(domain=auth_config.domain).get_access_token()
 
 
 def test_logout_multiple_okay(mocker: MockerFixture) -> None:

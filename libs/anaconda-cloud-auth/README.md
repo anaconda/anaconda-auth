@@ -1,89 +1,16 @@
 # anaconda-cloud-auth
 
-A client auth library for Anaconda.cloud APIs.
+A client library for Anaconda.cloud APIs to authenticate and securely store API keys.
 
-## Configuration
+This package also provides a [requests](https://requests.readthedocs.io/en/latest/)
+client class that handles loading the API key for requests made to Anaconda Cloud services.
 
-You can configure `anaconda-cloud-auth` with a `.env` file.
-An example template is provided in the repo, which contains the following options:
+## Interactive login/logout
 
-```dotenv
-# Logging level
-LOGGING_LEVEL="INFO"
+In order to use the request client class you must first login interactively.
+This can be done using the Python API or CLI (see below).
 
-# Base URL for all API endpoints
-BASE_URL="https://nucleus-latest.anacondaconnect.com"
-
-# Oauth credentials/settings for the legacy IAM service
-IAM_AUTH_DOMAIN="nucleus-latest.anacondaconnect.com/api/iam"
-IAM_AUTH_ENDPOINT="https://nucleus-latest.anacondaconnect.com/authorize"
-IAM_CLIENT_ID="cloud-cli-test-4"
-IAM_CLIENT_SECRET="TPm0c0bdMDy2ngivuHIB95Hvurv999x9smdLxv2EmpKo30kS6ku3wGx183dmgcuc"
-
-# Oauth credentials/settings for the new Ory IAM service
-ORY_AUTH_DOMAIN="dev.id.anaconda.cloud"
-ORY_CLIENT_ID="83d245e3-6312-4f44-9298-1f5b32a13769"
-```
-
-If you do not specify the `.env` file, the production configuration should be the default.
-Please file an issue if you see any errors.
-
-## Simple CLI usage
-
-Several login flows are implemented, and different flows are available in dev/prod until the Ory migration is completed.
-
-### Login
-
-#### Browser-based flow (legacy IAM, dev-only)
-
-You can login from your terminal using the legacy IAM account in dev only. You must provide `IAM_CLIENT_ID` and `IAM_CLIENT_SECRET`:
-
-```shell
-acli auth login
-```
-
-#### Browser-based flow (Ory, dev-only)
-
-The Ory login flow only works in dev.
-It should work in prod as well, but currently there is not an oauth2 client registered in prod.
-
-```shell
-acli auth login --ory
-```
-
-#### Password-based flow (legacy IAM, dev & prod)
-
-If you want to authenticate with prod, you must currently use a password-based flow that will prompt you for email & password until your user is migrated into Ory:
-
-```shell
-acli auth login --simple
-```
-
-### Test your Credentials by printing your info
-
-The response from the `/api/account` endpoint will be printed with the following, which will confirm you are authenticated:
-
-```shell
-acli auth info
-```
-
-### Make a generic request from the command line
-
-You can make something like a curl request via the CLI, which will use your authorization token by default and handle token refresh:
-
-```shell
-acli request --method GET --no-auth --debug --json '{"key": "value"}' --token "override-bearer-token" "/api/account"
-```
-
-All the options above are optional.
-If the URL starts with a `/`, the BASE_URL will be prepended.
-
-If you include the `--debug` flag, the headers, response status code, response headers, and response data will be printed.
-If not, only the JSON response will be printed.
-
-## Simple library usage
-
-To login (one time), use:
+### Login API
 
 ```python
 from anaconda_cloud_auth import login
@@ -91,16 +18,109 @@ from anaconda_cloud_auth import login
 login()
 ```
 
-To make authenticated API requests, use the `Client` class.
-For example, to print your user credentials, do:
+The `login()` function initiates a browser-based login flow. It will automatically
+open your browser and once you have completed the login flow it will store an
+API key in your system keychain using the [keyring](https://github.com/jaraco/keyring)
+package.
+
+Typically, these API keys will have a one year expiration so you will only need
+to login once and requests using the client class will read the token from the
+keyring storage.
+
+If you call `login()` while there is a valid (non-expired) API key in your keyring
+no action is taken. You can replace the valid API key with `login(force=True)`.
+
+
+#### Password-based flow (Deprecated)
+
+WARNING: Password-based login flow will be disable in the near future.
+
+You can login into Anaconda Cloud using username/password flow (non-browser)
+with the `basic=True` keyword argument. The `login()` function will interactively
+request your username and password before completing login and storing the API
+key.
 
 ```python
-from anaconda_cloud_auth import Client
+from anaconda_cloud_auth import login
+
+login(basic=True)
+```
+
+## Logout
+
+To remove the API key from your keyring storage use the `logout()` function.
+
+```python
+from anaconda_cloud_auth import logout
+
+logout()
+```
+
+## API requests
+
+The Client class is a subclass of [requests.Session](https://requests.readthedocs.io/en/latest/user/advanced/#session-objects).
+It will automatically load the API key from the keyring on each request.
+If the API key is expired it will raise a `TokenExpiredError`.
+
+The Client class can be used for non-authenticated requests, if
+the API key cannot be found and the request returns 401 or 403 error codes
+the `LoginRequiredError` will be raised.
+
+To create a Client class in your package use the `client_factory()` function,
+which takes a user-agent string as input.
+
+```python
+from anaconda_cloud_auth import client_factory
+
+Client = client_factory('<my-application>/<version>')
 
 client = Client()
-response = client.get("/api/account")
+response = client.get("/api/<endpoint>")
 print(response.json())
 ```
+
+## CLI usage
+
+To use `anaconda-cloud-auth` as a CLI you will need to install the
+`anaconda-cloud` package. Once installed you can use the `anaconda`
+CLI to login and logout of Anaconda Cloud.
+
+```
+❯ anaconda login --help
+
+ Usage: anaconda login [OPTIONS]
+
+ Login to your Anaconda account.
+
+╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --domain                  TEXT  [default: None]                                                                                │
+│ --basic     --no-basic          Depcrecated [default: no-basic]                                                                │
+│ --force     --no-force          [default: no-force]                                                                            │
+│ --help                          Show this message and exit.                                                                    │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+## Configuration
+
+You can configure `anaconda-cloud-auth` by setting `ANACONDA_CLOUD_` environment variables
+or use a `.env` file. The `.env` file must be in your current working directory.
+An example template is provided in the repo, which contains the following options,
+which are the default values.
+
+```dotenv
+# Logging level
+LOGGING_LEVEL="INFO"
+
+# Base URL for all API endpoints
+ANACONDA_CLOUD_API_DOMAIN="anaconda.cloud"
+
+# Authentication settings
+ANACONDA_CLOUD_AUTH_DOMAIN="id.anaconda.cloud"
+ANACONDA_CLOUD_AUTH_CLIENT_ID="b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
+```
+
+If you do not specify the `.env` file, the production configuration should be the default.
+Please file an issue if you see any errors.
 
 ## Setup for development
 

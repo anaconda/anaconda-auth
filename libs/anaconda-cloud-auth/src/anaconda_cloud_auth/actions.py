@@ -2,6 +2,7 @@ import base64
 import hashlib
 import logging
 import uuid
+import warnings
 import webbrowser
 from typing import Optional
 from typing import Union
@@ -114,6 +115,27 @@ def _send_auth_code_request(
     webbrowser.open(url)
 
 
+def refresh_access_token(
+    refresh_token: str, auth_config: Union[AuthConfig, None] = None
+) -> str:
+    """Refresh and save the tokens."""
+    if auth_config is None:
+        auth_config = AuthConfig()
+    response = requests.post(
+        auth_config.oidc.token_endpoint,
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": auth_config.client_id,
+        },
+    )
+    response.raise_for_status()
+    response_data = response.json()
+
+    access_token = response_data["access_token"]
+    return access_token
+
+
 def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
     if auth_config is None:
@@ -162,6 +184,12 @@ def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
 
 def _login_with_username(auth_config: Optional[AuthConfig] = None) -> str:
     """Prompt for username and password and log in with the password grant flow."""
+    warnings.warn(
+        "Basic login with username/password is deprecated and will be disabled soon.",
+        UserWarning,
+        stacklevel=0,
+    )
+
     if auth_config is None:
         auth_config = AuthConfig()
 
@@ -182,6 +210,16 @@ def _login_with_username(auth_config: Optional[AuthConfig] = None) -> str:
     return access_token
 
 
+def _do_login(auth_config: AuthConfig, basic: bool) -> None:
+    if basic:
+        access_token = _login_with_username(auth_config=auth_config)
+    else:
+        access_token = _do_auth_flow(auth_config=auth_config)
+    api_key = _get_api_key(access_token)
+    token_info = TokenInfo(api_key=api_key, domain=auth_config.domain)
+    token_info.save()
+
+
 def _get_api_key(access_token: str) -> str:
     config = APIConfig()
     response = requests.post(
@@ -195,22 +233,27 @@ def _get_api_key(access_token: str) -> str:
     return response.json()["api_key"]
 
 
-def login(auth_config: Optional[AuthConfig] = None, simple: bool = False) -> TokenInfo:
+def _api_key_is_valid(auth_config: AuthConfig) -> bool:
+    try:
+        valid = not TokenInfo.load(auth_config.domain).expired
+    except TokenNotFoundError:
+        valid = False
+
+    return valid
+
+
+def login(
+    auth_config: Optional[AuthConfig] = None, basic: bool = False, force: bool = False
+) -> None:
     """Log into Anaconda.cloud and store the token information in the keyring."""
     if auth_config is None:
         auth_config = AuthConfig()
 
-    if simple:
-        access_token = _login_with_username(auth_config=auth_config)
-    else:
-        access_token = _do_auth_flow(auth_config=auth_config)
-    api_key = _get_api_key(access_token)
-    token_info = TokenInfo(api_key=api_key, domain=auth_config.domain)
-    token_info.save()
-    return token_info
+    if force or not _api_key_is_valid(auth_config=auth_config):
+        _do_login(auth_config=auth_config, basic=basic)
 
 
-def logout(auth_config: Optional[AuthConfig] = None) -> Union[TokenInfo, None]:
+def logout(auth_config: Optional[AuthConfig] = None) -> None:
     """Log out of Anaconda.cloud."""
     if auth_config is None:
         auth_config = AuthConfig()
@@ -218,6 +261,4 @@ def logout(auth_config: Optional[AuthConfig] = None) -> Union[TokenInfo, None]:
         token_info = TokenInfo.load(domain=auth_config.domain)
         token_info.delete()
     except TokenNotFoundError:
-        return None
-
-    return token_info
+        pass

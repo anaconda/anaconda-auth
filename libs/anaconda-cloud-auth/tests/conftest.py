@@ -15,21 +15,28 @@ load_dotenv()
 
 
 class MockedKeyring(KeyringBackend):
-    """A one-time-use keyring backend"""
+    """A high-priority in-memory keyring backend for testing"""
 
     priority = 10000.0  # type: ignore
+    _data: dict = defaultdict(dict)
 
     def __init__(self) -> None:
         super().__init__()
-        self._data: dict = defaultdict(dict)
 
     def set_password(self, service: str, username: str, password: str) -> None:
         self._data[service][username] = password
 
     def get_password(self, service: str, username: str) -> Union[str, None]:
         password = self._data.get(service, {}).get(username, None)
-        self._data = defaultdict(dict)
         return password
+
+    def delete_password(self, service: str, username: str) -> None:
+        _ = self._data.get(service, {}).pop(username)
+
+
+@pytest.fixture(autouse=True)
+def clear_mocked_keyring() -> None:
+    MockedKeyring._data = defaultdict(dict)
 
 
 @pytest.fixture(autouse=True)

@@ -1,5 +1,6 @@
 from typing import Any
 from typing import Optional
+from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -8,6 +9,7 @@ from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
 
+from anaconda_cloud_auth import __version__ as version
 from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.exceptions import LoginRequiredError
@@ -30,13 +32,20 @@ class BearerAuth(AuthBase):
         return r
 
 
-class Client(requests.Session):
+class BaseClient(requests.Session):
+    _user_agent: str = f"anaconda-cloud-auth/{version}"
+
+    @classmethod
+    def _get_user_agent(cls) -> str:
+        return cls._user_agent
+
     def __init__(self, domain: Optional[str] = None):
         super().__init__()
 
         kwargs = {"domain": domain} if domain else {}
         self.config = APIConfig(**kwargs)
         self._base_url = f"https://{self.config.domain}"
+        self.headers["User-Agent"] = self._get_user_agent()
         self.auth = BearerAuth()
 
     def request(
@@ -53,7 +62,12 @@ class Client(requests.Session):
                 raise LoginRequiredError(
                     f"{response.reason}: You must login before using this API endpoint using\n"
                     f"  anaconda login"
-                    f"If you are already logged in your token may be invalid. Try\n"
-                    f"  anaconda login --force"
                 )
         return response
+
+
+def client_factory(user_agent: str) -> Type[BaseClient]:
+    class Client(BaseClient):
+        _user_agent: str = user_agent
+
+    return Client
