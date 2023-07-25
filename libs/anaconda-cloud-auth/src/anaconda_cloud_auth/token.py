@@ -67,36 +67,35 @@ class NavigatorFallback(KeyringBackend):
 
         if service != KEYRING_NAME and username != auth_domain:
             return None
-        else:
-            token = NucleusToken.from_file()
-            if token is not None:
-                from anaconda_cloud_auth.actions import _get_api_key
-                from anaconda_cloud_auth.actions import refresh_access_token
 
-                if not token.valid:
-                    auth_config = AuthConfig(domain=auth_domain)
-                    try:
-                        access_token = refresh_access_token(
-                            token.refresh_token, auth_config=auth_config
-                        )
-                    except HTTPError:
-                        return None
-                else:
-                    access_token = token.access_token
+        token = NucleusToken.from_file()
+        if token is not None:
+            from anaconda_cloud_auth.actions import _get_api_key
+            from anaconda_cloud_auth.actions import refresh_access_token
 
-                api_key = _get_api_key(access_token)
-                token_info = {
-                    "username": token.username,
-                    "api_key": api_key,
-                    "domain": auth_config.domain,
-                }
-                payload = json.dumps(token_info)
-                encoded = _as_base64_string(payload)
-                keyring.set_password(KEYRING_NAME, auth_domain, encoded)
-
-                return encoded
+            auth_config = AuthConfig(domain=auth_domain)
+            if not token.valid:
+                try:
+                    access_token = refresh_access_token(
+                        token.refresh_token, auth_config=auth_config
+                    )
+                except HTTPError:
+                    return None
             else:
-                return None
+                access_token = token.access_token
+
+            api_key = _get_api_key(access_token)
+            token_info = {
+                "username": token.username,
+                "api_key": api_key,
+                "domain": auth_config.domain,
+            }
+            payload = json.dumps(token_info)
+            encoded = _as_base64_string(payload)
+            keyring.set_password(KEYRING_NAME, auth_domain, encoded)
+
+            return encoded
+        return None
 
 
 class AnacondaKeyring(KeyringBackend):
