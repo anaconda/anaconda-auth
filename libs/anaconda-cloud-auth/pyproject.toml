@@ -108,12 +108,11 @@ deps =
     pytest-mock
     ../anaconda-cloud-cli
 conda_deps =
-    anaconda-client >1.11.99
+    anaconda-client >=1.12.0
 conda_channels =
     anaconda-cloud
     defaults
     conda-forge
-    anaconda-client-test
 commands = pytest -m "not integration"
 
 [testenv:mypy]

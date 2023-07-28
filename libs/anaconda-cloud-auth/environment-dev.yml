@@ -2,10 +2,9 @@
 channels:
 - defaults
 - conda-forge
-- anaconda-client-test
 dependencies:
 - python=3.10
-- anaconda-client >1.11.99
+- anaconda-client >=1.12.0
 - tox=3
 - tox-conda
 - pip
