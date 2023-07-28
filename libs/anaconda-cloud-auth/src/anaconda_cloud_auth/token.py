@@ -2,6 +2,7 @@ import base64
 import datetime as dt
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict
 from typing import Union
@@ -97,6 +98,24 @@ class NavigatorFallback(KeyringBackend):
             return encoded
         return None
 
+    def delete_password(self, service: str, username: str) -> None:
+        auth_domain = self._get_auth_domain()
+        try:
+            from anaconda_navigator.api.nucleus.token import (
+                TOKEN_FILE as navigator_token_file,
+            )
+
+        except ImportError:
+            return None
+
+        if service != KEYRING_NAME and username != auth_domain:
+            return None
+        else:
+            try:
+                os.remove(navigator_token_file)
+            except FileNotFoundError:
+                return None
+
 
 class AnacondaKeyring(KeyringBackend):
     keyring_path = Path("~/.anaconda/keyring").expanduser()
@@ -166,6 +185,8 @@ class TokenInfo(BaseModel):
         """Delete the token information from the system keyring."""
         try:
             keyring.delete_password(KEYRING_NAME, self.domain)
+            if NavigatorFallback.viable:
+                NavigatorFallback().delete_password(KEYRING_NAME, self.domain)
         except PasswordDeleteError:
             raise TokenNotFoundError
 

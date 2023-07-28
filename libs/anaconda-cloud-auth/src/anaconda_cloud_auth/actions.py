@@ -262,3 +262,13 @@ def logout(auth_config: Optional[AuthConfig] = None) -> None:
         token_info.delete()
     except TokenNotFoundError:
         pass
+
+
+def is_logged_in() -> bool:
+    auth_config = AuthConfig()
+    try:
+        token_info = TokenInfo.load(domain=auth_config.domain)
+    except TokenNotFoundError:
+        token_info = None
+
+    return token_info is not None
