@@ -5,13 +5,10 @@ from typing import Union
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest_mock import MockerFixture
 
 from anaconda_cloud_auth.token import TokenInfo
-
-load_dotenv()
 
 
 class MockedKeyring(KeyringBackend):
@@ -87,3 +84,12 @@ def is_not_none() -> Any:
             return other is not None
 
     return _NotNone()
+
+
+@pytest.fixture
+def disable_dot_env(monkeypatch: MonkeyPatch) -> None:
+    from anaconda_cloud_auth.config import APIConfig
+    from anaconda_cloud_auth.config import AuthConfig
+
+    monkeypatch.setattr(APIConfig.Config, "env_file", "")
+    monkeypatch.setattr(AuthConfig.Config, "env_file", "")

@@ -1,4 +1,5 @@
 from typing import List
+from typing import Optional
 
 import requests
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ class APIConfig(BaseSettings):
         env_file = ".env"
 
     domain: str = "anaconda.cloud"
+    key: Optional[str] = None
 
 
 class AuthConfig(BaseSettings):

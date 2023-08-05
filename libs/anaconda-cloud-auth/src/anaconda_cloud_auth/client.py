@@ -18,17 +18,25 @@ from anaconda_cloud_auth.token import TokenInfo
 
 
 class BearerAuth(AuthBase):
-    def __init__(self, domain: Optional[str] = None) -> None:
+    def __init__(
+        self, domain: Optional[str] = None, api_key: Optional[str] = None
+    ) -> None:
+        self.api_key = api_key
         if domain is None:
             domain = AuthConfig().domain
 
         self._token_info = TokenInfo(domain=domain)
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
-        try:
-            r.headers["Authorization"] = f"Bearer {self._token_info.get_access_token()}"
-        except TokenNotFoundError:
-            pass
+        if not self.api_key:
+            try:
+                r.headers[
+                    "Authorization"
+                ] = f"Bearer {self._token_info.get_access_token()}"
+            except TokenNotFoundError:
+                pass
+        else:
+            r.headers["Authorization"] = f"Bearer {self.api_key}"
         return r
 
 
@@ -39,14 +47,19 @@ class BaseClient(requests.Session):
     def _get_user_agent(cls) -> str:
         return cls._user_agent
 
-    def __init__(self, domain: Optional[str] = None):
+    def __init__(self, domain: Optional[str] = None, api_key: Optional[str] = None):
         super().__init__()
 
-        kwargs = {"domain": domain} if domain else {}
+        kwargs = {}
+        if domain is not None:
+            kwargs["domain"] = domain
+        if api_key is not None:
+            kwargs["key"] = api_key
+
         self.config = APIConfig(**kwargs)
         self._base_url = f"https://{self.config.domain}"
         self.headers["User-Agent"] = self._get_user_agent()
-        self.auth = BearerAuth()
+        self.auth = BearerAuth(api_key=self.config.key)
 
     def request(
         self,

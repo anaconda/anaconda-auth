@@ -39,6 +39,7 @@ def test_login_to_token_info(is_not_none: Any) -> None:
     }
 
 
+@pytest.mark.xfail(reason="the route currently does not accept an api key")
 @pytest.mark.integration
 def test_get_auth_info(is_not_none: Any) -> None:
     login()
