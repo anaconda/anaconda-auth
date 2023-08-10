@@ -58,9 +58,7 @@ root = "../.."
 
 [tool.isort]
 force_single_line = true
-known_secondparty = ["anaconda_cloud_cli"]
 profile = "black"
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SECONDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
 disallow_untyped_defs = true
@@ -69,10 +67,6 @@ files = [
   "tests/**/*.py"
 ]
 python_version = "3.8"
-
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = "rich_click.*"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -106,9 +100,6 @@ deps =
     mypy
     pytest
     pytest-mock
-    ../anaconda-cloud-cli
-conda_deps =
-    anaconda-client >=1.12.0
 conda_channels =
     anaconda-cloud
     defaults
@@ -121,8 +112,8 @@ deps =
     pytest
     pytest-mock
     types-requests
-    typer
-    rich
+    ../anaconda-cli-base
+    ../anaconda-cloud-cli  # Needed for typer
 commands = mypy
 """
 
