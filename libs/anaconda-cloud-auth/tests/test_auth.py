@@ -7,7 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth import login
+from anaconda_cloud_auth.actions import _get_api_key
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.token import TokenInfo
@@ -113,3 +115,50 @@ def test_login_has_expired_token(
     mocked_do_login.assert_called_once()
 
     assert TokenInfo.load(auth_config.domain).api_key == "from-login"
+
+
+class MockResponse:
+    def __init__(self, json_data: dict[str, Any], status_code: int):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self) -> dict[str, Any]:
+        return self.json_data
+
+
+class MockedRequest:
+    def __init__(self) -> None:
+        self.called_with_args: tuple[Any] = ()  # type: ignore
+        self.called_with_kwargs: dict[str, Any] = {}
+
+    def __call__(self, *args: Any, **kwargs: Any) -> MockResponse:
+        self.called_with_args = args  # type: ignore
+        self.called_with_kwargs = kwargs
+        return MockResponse(status_code=201, json_data={"api_key": "some-jwt"})
+
+
+@pytest.fixture()
+def mocked_request(mocker: MockerFixture) -> MockedRequest:
+    """A mocked post request returning an API key."""
+
+    # This could be generalized further, but it may not be worth the effort
+    # For now, this mimics a fixed POST request with fixed mocked return data
+
+    mocked_request = MockedRequest()
+    mocker.patch("requests.post", mocked_request)
+    return mocked_request
+
+
+def test_get_api_key(mocked_request: MockedRequest) -> None:
+    """When we get an API key, we assign appropriate generic scopes and tags."""
+    key = _get_api_key("some_access_token")
+    assert key == "some-jwt"
+
+    headers = mocked_request.called_with_kwargs["headers"]
+    assert headers["Authorization"].startswith("Bearer")
+
+    data = mocked_request.called_with_kwargs["json"]
+    assert data == {
+        "scopes": ["cloud:read", "cloud:write"],
+        "tags": [f"anaconda-cloud-auth/v{__version__}"],
+    }

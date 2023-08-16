@@ -12,6 +12,7 @@ import jwt
 import pkce
 import requests
 
+from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.console import console
@@ -224,7 +225,10 @@ def _get_api_key(access_token: str) -> str:
     config = APIConfig()
     response = requests.post(
         f"https://{config.domain}/api/iam/api-keys",
-        json=dict(scopes=["cloud:read", "cloud:write"]),
+        json=dict(
+            scopes=["cloud:read", "cloud:write"],
+            tags=[f"anaconda-cloud-auth/v{__version__}"],
+        ),
         headers={"Authorization": f"Bearer {access_token}"},
     )
     if response.status_code != 201:
