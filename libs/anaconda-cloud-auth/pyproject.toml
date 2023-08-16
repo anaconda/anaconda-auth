@@ -5,6 +5,7 @@ requires = ["hatchling", "hatch-vcs>=0.3", "setuptools-scm>=7.1"]
 [project]
 dependencies = [
   "keyring",
+  "pkce",
   "python-dotenv",
   "pydantic <2.0",
   "pyjwt",

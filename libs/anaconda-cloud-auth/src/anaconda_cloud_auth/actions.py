@@ -9,9 +9,9 @@ from typing import Union
 from urllib.parse import urlencode
 
 import jwt
+import pkce
 import requests
 
-from anaconda_cloud_auth._vendor import pkce
 from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.console import console
