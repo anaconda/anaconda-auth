@@ -71,7 +71,7 @@ class BaseClient(requests.Session):
         joined_url = urljoin(self._base_url, str(url))
         response = super().request(method, joined_url, *args, **kwargs)
         if response.status_code == 401 or response.status_code == 403:
-            if response.headers.get("Authorization") is None:
+            if response.request.headers.get("Authorization") is None:
                 raise LoginRequiredError(
                     f"{response.reason}: You must login before using this API endpoint using\n"
                     f"  anaconda login"
