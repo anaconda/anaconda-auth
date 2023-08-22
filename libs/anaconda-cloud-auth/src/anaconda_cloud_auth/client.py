@@ -1,6 +1,5 @@
 from typing import Any
 from typing import Optional
-from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -43,11 +42,12 @@ class BearerAuth(AuthBase):
 class BaseClient(requests.Session):
     _user_agent: str = f"anaconda-cloud-auth/{version}"
 
-    @classmethod
-    def _get_user_agent(cls) -> str:
-        return cls._user_agent
-
-    def __init__(self, domain: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        domain: Optional[str] = None,
+        api_key: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ):
         super().__init__()
 
         kwargs = {}
@@ -58,7 +58,7 @@ class BaseClient(requests.Session):
 
         self.config = APIConfig(**kwargs)
         self._base_url = f"https://{self.config.domain}"
-        self.headers["User-Agent"] = self._get_user_agent()
+        self.headers["User-Agent"] = user_agent or self._user_agent
         self.auth = BearerAuth(api_key=self.config.key)
 
     def request(
@@ -79,8 +79,5 @@ class BaseClient(requests.Session):
         return response
 
 
-def client_factory(user_agent: str) -> Type[BaseClient]:
-    class Client(BaseClient):
-        _user_agent: str = user_agent
-
-    return Client
+def client_factory(user_agent: Optional[str]) -> BaseClient:
+    return BaseClient(user_agent=user_agent)

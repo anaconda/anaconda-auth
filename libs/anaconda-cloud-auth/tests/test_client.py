@@ -21,8 +21,7 @@ def test_login_required_error() -> None:
 
 
 def test_user_agent_client_factory() -> None:
-    Client = client_factory("my-app/version")
-    client = Client()
+    client = client_factory("my-app/version")
     response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("User-Agent") == "my-app/version"
 
