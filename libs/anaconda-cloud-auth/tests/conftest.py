@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -5,10 +6,17 @@ from typing import Union
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
+from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest_mock import MockerFixture
 
+from anaconda_cloud_auth import config
+from anaconda_cloud_auth import login
+from anaconda_cloud_auth.client import BaseClient
+from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.token import TokenInfo
+
+load_dotenv()
 
 
 class MockedKeyring(KeyringBackend):
@@ -93,3 +101,91 @@ def disable_dot_env(monkeypatch: MonkeyPatch) -> None:
 
     monkeypatch.setattr(APIConfig.Config, "env_file", "")
     monkeypatch.setattr(AuthConfig.Config, "env_file", "")
+
+
+@pytest.fixture()
+def integration_test_client(monkeypatch: MonkeyPatch) -> BaseClient:
+    """Provides a request client configured to talk to the automation environment.
+
+    We first load credentials from environment variables. We then use a special
+    user credential to generate an API key via basic login. Finally, we patch
+    the configuration and clients such that CloudFlare headers are included and
+    the domains match the automation environment.
+
+    """
+    if (email := os.getenv("TEST_AUTOMATION_USER_EMAIL")) is None:
+        raise ValueError(
+            "TEST_AUTOMATION_USER_EMAIL must be specified as an environment variable or in `.env`"
+        )
+    if (password := os.getenv("TEST_AUTOMATION_USER_PASSWORD")) is None:
+        raise ValueError(
+            "TEST_AUTOMATION_USER_PASSWORD must be specified as an environment variable or in `.env`"
+        )
+
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_AUTH_DOMAIN", "nucleus-automation.anacondaconnect.com/api/iam"
+    )
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_API_DOMAIN", "nucleus-automation.anacondaconnect.com"
+    )
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_AUTH_CLIENT_ID", "e0648d7e-72c1-4159-b7e8-5d020ac134c2"
+    )
+
+    # Here, we store Cloudflare headers to allow use of Warp from GitHub Actions runners.
+    # These are stored as secrets in Vault.
+    if client_id := os.getenv("CF_CLIENT_ID"):
+        monkeypatch.setitem(
+            config.OIDC_REQUEST_HEADERS, "CF-Access-Client-Id", client_id
+        )
+    if client_secret := os.getenv("CF_CLIENT_SECRET"):
+        monkeypatch.setitem(
+            config.OIDC_REQUEST_HEADERS, "CF-Access-Client-Secret", client_secret
+        )
+
+    def mock_input(msg: str, **kwargs: Any) -> str:
+        """Mock the input function to mimic user entry."""
+        if msg == "Please enter your email: ":
+            return email
+        elif msg == "Please enter your password: ":
+            return password
+        else:
+            raise ValueError(f"Unknown input statement: {msg}")
+
+    monkeypatch.setattr(console, "input", mock_input)
+
+    login(basic=True)
+
+    client = BaseClient()
+    if client_id:
+        client.headers["CF-Access-Client-Id"] = client_id
+    if client_secret:
+        client.headers["CF-Access-Client-Secret"] = client_secret
+
+    return client
+
+
+def pytest_addoption(parser):  # type: ignore
+    """Defines custom CLI options."""
+    parser.addoption(
+        "--integration",
+        action="store_true",
+        dest="integration",
+        default=False,
+        help="enable integration tests",
+    )
+
+
+def pytest_collection_modifyitems(config, items):  # type: ignore
+    """Auto-mark each test in the integration directory, and enable them based on CLI flag."""
+    integration_test_root_dir = Path(__file__).parent / "integration"
+    run_integration_tests = config.getoption("--integration")
+    for item in items:
+        # Here, we add a marker to any test in the "tests/integration" directory
+        if integration_test_root_dir in Path(item.fspath).parents:
+            item.add_marker(pytest.mark.integration)
+
+        # Add a skip marker if the CLI option is not used. We use an additional marker so that we can
+        # independently select integrations with `pytest -m integration` and enable them with `--integration`.
+        if "integration" in item.keywords and not run_integration_tests:
+            item.add_marker(pytest.mark.skip(reason="need --integration to run"))

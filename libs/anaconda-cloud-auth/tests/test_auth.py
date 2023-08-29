@@ -24,14 +24,15 @@ def set_dev_env_vars(monkeypatch: MonkeyPatch) -> None:
         "ANACONDA_CLOUD_API_DOMAIN", "nucleus-latest.anacondaconnect.com"
     )
     monkeypatch.setenv("ANACONDA_CLOUD_AUTH_DOMAIN", "dev.id.anaconda.cloud")
-    monkeypatch.setenv("ANACONDA_CLOUD_AUTH_CLIENT_ID", "cloud-cli-test-4")
+    monkeypatch.setenv(
+        "ANACONDA_CLOUD_AUTH_CLIENT_ID", "83d245e3-6312-4f44-9298-1f5b32a13769"
+    )
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("integration_test_client")
 def test_login_to_token_info(is_not_none: Any) -> None:
     auth_config = AuthConfig()
-
-    login(auth_config=auth_config, basic=False)
     keyring_token = TokenInfo.load(auth_config.domain)
 
     assert keyring_token == {
@@ -41,12 +42,9 @@ def test_login_to_token_info(is_not_none: Any) -> None:
     }
 
 
-@pytest.mark.xfail(reason="the route currently does not accept an api key")
 @pytest.mark.integration
-def test_get_auth_info(is_not_none: Any) -> None:
-    login()
-    client = BaseClient()
-    response = client.get("/api/account")
+def test_get_auth_info(integration_test_client: BaseClient, is_not_none: Any) -> None:
+    response = integration_test_client.get("/api/account")
     assert response.status_code == 200
     assert response.json() == {
         "user": is_not_none,

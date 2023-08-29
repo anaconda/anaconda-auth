@@ -14,8 +14,14 @@ setup:  ## Setup local dev conda environment
 test:  ## Run all the unit tests
 	$(CONDA_RUN) pytest
 
+test-integration:  ## Run all the unit tests
+	$(CONDA_RUN) pytest --integration
+
 tox:  ## Run tox to test in isolated environments
 	$(CONDA_RUN) tox
+
+tox-integration:  ## Run tox to test in isolated environments
+	$(CONDA_RUN) tox -- --integration
 
 clean:  ## Clean up cache and temporary files
 	find . -name \*.py[cod] -delete

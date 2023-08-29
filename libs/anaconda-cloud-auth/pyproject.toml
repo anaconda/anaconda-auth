@@ -97,6 +97,11 @@ python =
     3.11: py311
 
 [testenv]
+pass_env =
+  TEST_AUTOMATION_USER_EMAIL
+  TEST_AUTOMATION_USER_PASSWORD
+  CF_CLIENT_ID
+  CF_CLIENT_SECRET
 deps =
     mypy
     pytest
@@ -105,7 +110,7 @@ conda_channels =
     anaconda-cloud
     defaults
     conda-forge
-commands = pytest -m "not integration"
+commands = pytest {posargs}
 
 [testenv:mypy]
 deps =
