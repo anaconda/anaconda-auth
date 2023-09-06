@@ -145,6 +145,8 @@ def integration_test_client(monkeypatch: MonkeyPatch) -> BaseClient:
 
     def mock_input(msg: str, **kwargs: Any) -> str:
         """Mock the input function to mimic user entry."""
+        assert email is not None
+        assert password is not None
         if msg == "Please enter your email: ":
             return email
         elif msg == "Please enter your password: ":

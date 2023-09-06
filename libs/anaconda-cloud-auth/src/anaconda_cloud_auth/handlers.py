@@ -71,44 +71,33 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
         """Override base method to suppress log message."""
 
     def _handle_auth(self, query_params: Dict[str, List[str]]) -> None:
-        if "code" in query_params:
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(
-                bytes(
-                    "<html><head><title>Go back to CLI</title></head>"
-                    "<body>"
-                    "<p>Authentication successful. Close this page and go back to the CLI.</p>"
-                    "</body></html>",
-                    "utf-8",
-                )
-            )
+        if "code" in query_params and "state" in query_params:
+            location = "https://anaconda.cloud/local-login-success"
             self.server.result = Result(
                 auth_code=query_params["code"][0],
                 state=query_params["state"][0],
                 scopes=query_params.get("scope", []),
             )
         else:
-            self.send_response(HTTPStatus.BAD_REQUEST)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(
-                bytes(
-                    "<html><head><title>Error</title></head>"
-                    "<body>"
-                    "<p>Authentication failed. Please try again.</p>"
-                    "</body></html>",
-                    "utf-8",
-                )
-            )
+            location = "https://anaconda.cloud/local-login-error"
+
+        self.send_response(HTTPStatus.TEMPORARY_REDIRECT)
+        self.send_header("Location", location)
+        self.end_headers()
+
+    def _not_found(self) -> None:
+        self.send_response(HTTPStatus.NOT_FOUND)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
 
     def do_GET(self) -> None:
         parsed_url = urlparse(f"http://{self.host_name}{self.path}")
         query_params = parse_qs(parsed_url.query)
 
         # Only accept requests to self.oidc_path
-        if parsed_url.path is not None:
+        if parsed_url.path != self.oidc_path:
+            self._not_found()
+        else:
             self._handle_auth(query_params)
 
 
