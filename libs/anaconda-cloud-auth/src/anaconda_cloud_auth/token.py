@@ -119,15 +119,28 @@ class NavigatorFallback(KeyringBackend):
 
 class AnacondaKeyring(KeyringBackend):
     keyring_path = Path("~/.anaconda/keyring").expanduser()
-    priority = 0.2  # type: ignore
+    priority = 9  # type: ignore
+
+    @classproperty
+    def viable(cls) -> bool:
+        try:
+            cls.keyring_path.parent.mkdir(exist_ok=True, parents=True)
+            with cls.keyring_path.open("a") as f:
+                writable = f.writable()
+            return writable
+        except OSError:
+            return False
 
     def _read(self) -> LocalKeyringData:
         if not self.keyring_path.exists():
             return {}
 
-        with self.keyring_path.open("r") as fp:
-            data = json.load(fp)
-        return data
+        try:
+            with self.keyring_path.open("r") as fp:
+                data = json.load(fp)
+            return data
+        except json.JSONDecodeError:
+            return {}
 
     def _save(self, data: LocalKeyringData) -> None:
         self.keyring_path.parent.mkdir(exist_ok=True, parents=True)
@@ -153,6 +166,7 @@ class AnacondaKeyring(KeyringBackend):
         data = self._read()
         try:
             data.get(service, {}).pop(username)
+            self._save(data)
         except KeyError:
             raise PasswordDeleteError
 
