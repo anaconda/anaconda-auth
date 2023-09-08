@@ -6,11 +6,13 @@ from socket import socket
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Set
 from typing import Tuple
 from typing import Union
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+import requests
 from pydantic.main import BaseModel
 
 from anaconda_cloud_auth.exceptions import AuthenticationError
@@ -32,11 +34,25 @@ TRequest = Union[socket, Tuple[bytes, socket]]
 class AuthCodeRedirectServer(HTTPServer):
     """A simple http server to handle the incoming auth code redirect from Ory"""
 
+    _open_servers: Set["AuthCodeRedirectServer"] = set()
+
     def __init__(self, oidc_path: str, server_address: Tuple[str, int]):
         super().__init__(server_address, AuthCodeRedirectRequestHandler)
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
+
+    def __enter__(self) -> "AuthCodeRedirectServer":
+        self._open_servers.add(self)
+        return super().__enter__()
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        try:
+            self._open_servers.remove(self)
+        except KeyError:
+            # In case another thread removed it already, just ignore
+            pass
+        return super().__exit__(exc_type, exc_val, exc_tb)
 
     def finish_request(self, request: TRequest, client_address: str) -> None:
         """Finish one request by instantiating RequestHandlerClass."""
@@ -125,3 +141,16 @@ def capture_auth_code(redirect_uri: str, state: str) -> str:
         raise AuthenticationError("State does not match")
 
     return result.auth_code
+
+
+def shutdown_all_servers() -> None:
+    """Cancel all open AuthCodeRedirectServer instances, which may be blocking their thread waiting
+    for an auth code.
+
+    This function should be called from a separate thread than the servers.
+
+    """
+    for server in list(AuthCodeRedirectServer._open_servers):
+        # Here, we just make a single request to force the `server.handle_request()` method to stop blocking.
+        # There is probably a better way by calling some method, but :shrug:
+        requests.get(f"http://{server.host_name}:{server.server_port}/cancel")

@@ -1,10 +1,15 @@
+import time
+from multiprocessing.pool import ThreadPool
 from threading import Thread
 from typing import Iterator
 
 import pytest
 import requests
 
+from anaconda_cloud_auth.exceptions import AuthenticationError
 from anaconda_cloud_auth.handlers import AuthCodeRedirectServer
+from anaconda_cloud_auth.handlers import capture_auth_code
+from anaconda_cloud_auth.handlers import shutdown_all_servers
 
 
 @pytest.fixture()
@@ -63,3 +68,26 @@ def test_server_response_not_found(server: AuthCodeRedirectServer) -> None:
         "http://localhost:8080/auth/oidc2?code=some-code&state=some-state"
     )
     assert response.status_code == 404
+
+
+def test_shutdown_server_before_completing_authentication() -> None:
+    """If e.g. Navigator user starts the auth flow, but tries to close Navigator before finishing, the
+    shutdown_all_servers() function can be used to prevent deadlock."""
+    with ThreadPool(processes=1) as pool:
+        # Start a server in a background thread to capture the auth code
+        async_result = pool.apply_async(
+            capture_auth_code, ("http://localhost:8000", "random-state")
+        )
+
+        # We need to sleep a bit before we can shut down the server
+        time.sleep(0.1)
+
+        # Shut it down from the main thread
+        shutdown_all_servers()
+
+        # We will have an authentication error because we never captured the code
+        with pytest.raises(AuthenticationError):
+            async_result.get()
+
+    # If we get this far, we have not hit a deadlock
+    assert True
