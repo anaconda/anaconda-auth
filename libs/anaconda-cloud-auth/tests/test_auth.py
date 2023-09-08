@@ -147,16 +147,31 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     return mocked_request
 
 
+@pytest.mark.usefixtures("without_aau_token")
 def test_get_api_key(mocked_request: MockedRequest) -> None:
     """When we get an API key, we assign appropriate generic scopes and tags."""
+
     key = _get_api_key("some_access_token")
     assert key == "some-jwt"
 
     headers = mocked_request.called_with_kwargs["headers"]
     assert headers["Authorization"].startswith("Bearer")
+    assert "X-AAU-CLIENT" not in headers
 
     data = mocked_request.called_with_kwargs["json"]
     assert data == {
         "scopes": ["cloud:read", "cloud:write"],
         "tags": [f"anaconda-cloud-auth/v{__version__}"],
     }
+
+
+@pytest.mark.usefixtures("with_aau_token")
+def test_get_api_key_with_aau_token(mocked_request: MockedRequest) -> None:
+    """When we get an API key, we assign appropriate generic scopes and tags."""
+
+    key = _get_api_key("some_access_token")
+    assert key == "some-jwt"
+
+    headers = mocked_request.called_with_kwargs["headers"]
+    assert headers["Authorization"].startswith("Bearer")
+    assert headers["X-AAU-CLIENT"] == "anon-token"

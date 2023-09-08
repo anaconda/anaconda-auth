@@ -223,13 +223,20 @@ def _do_login(auth_config: AuthConfig, basic: bool) -> None:
 
 def _get_api_key(access_token: str) -> str:
     config = APIConfig()
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    aau_token = config.aau_token
+    if aau_token is not None:
+        headers["X-AAU-CLIENT"] = aau_token
+
     response = requests.post(
         f"https://{config.domain}/api/iam/api-keys",
         json=dict(
             scopes=["cloud:read", "cloud:write"],
             tags=[f"anaconda-cloud-auth/v{__version__}"],
         ),
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers=headers,
     )
     if response.status_code != 201:
         console.print("Error retrieving an API key")

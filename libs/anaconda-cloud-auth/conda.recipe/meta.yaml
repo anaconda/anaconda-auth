@@ -28,6 +28,7 @@ requirements:
     {% for dep in project['dependencies'] %}
     - {{ dep.lower() }}
     {% endfor %}
+    - anaconda-anon-usage
 
 test:
   imports:

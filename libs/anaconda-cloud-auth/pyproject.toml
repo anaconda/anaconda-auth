@@ -71,6 +71,10 @@ python_version = "3.8"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
+module = "anaconda_anon_usage.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
 module = "anaconda_navigator.*"
 
 [[tool.mypy.overrides]]
@@ -106,6 +110,8 @@ deps =
     mypy
     pytest
     pytest-mock
+conda_deps =
+    anaconda-anon-usage
 conda_channels =
     anaconda-cloud
     defaults

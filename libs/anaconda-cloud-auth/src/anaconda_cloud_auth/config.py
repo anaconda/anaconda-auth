@@ -1,5 +1,7 @@
+from functools import cached_property
 from typing import List
 from typing import Optional
+from typing import Union
 
 import requests
 from pydantic import BaseModel
@@ -14,9 +16,27 @@ class APIConfig(BaseSettings):
     class Config:
         env_prefix = "ANACONDA_CLOUD_API_"
         env_file = ".env"
+        keep_untouched = (
+            cached_property,  # this allows pydantic models to have a cached_property
+        )
 
     domain: str = "anaconda.cloud"
     key: Optional[str] = None
+
+    @cached_property
+    def aau_token(self) -> Union[str, None]:
+        # The token is cached in anaconda_anon_usage, so we can also cache here
+        try:
+            from anaconda_anon_usage.tokens import token_string
+        except ImportError:
+            return None
+
+        try:
+            return token_string()
+        except Exception:
+            # We don't want this to block user login in any case,
+            # so let any Exceptions pass silently.
+            return None
 
 
 class AuthConfig(BaseSettings):

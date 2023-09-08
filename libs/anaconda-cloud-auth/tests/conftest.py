@@ -191,3 +191,13 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
         # independently select integrations with `pytest -m integration` and enable them with `--integration`.
         if "integration" in item.keywords and not run_integration_tests:
             item.add_marker(pytest.mark.skip(reason="need --integration to run"))
+
+
+@pytest.fixture
+def with_aau_token(mocker: MockerFixture) -> None:
+    mocker.patch("anaconda_cloud_auth.config.APIConfig.aau_token", "anon-token")
+
+
+@pytest.fixture
+def without_aau_token(mocker: MockerFixture) -> None:
+    mocker.patch("anaconda_cloud_auth.config.APIConfig.aau_token", None)
