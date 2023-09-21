@@ -24,6 +24,7 @@ cli = ["anaconda-cloud-cli"]
 dev = [
   "mypy",
   "pytest",
+  "pytest-cov",
   "pytest-mock",
   "tox",
   "types-requests"
@@ -86,6 +87,18 @@ ignore_missing_imports = true
 module = "jaraco.classes.properties.*"
 
 [tool.pytest.ini_options]
+addopts = [
+  "--cov=anaconda_cloud_auth",
+  "--color=yes",
+  "--cov-append",
+  "--cov-branch",
+  "--cov-report=html",
+  "--cov-report=html:./cov_html",
+  "--cov-report=term-missing",
+  "--cov-report=xml",
+  "--durations=5",
+  "-vv"
+]
 markers = [
   "integration: Integration tests requiring a browser"
 ]
@@ -113,6 +126,7 @@ pass_env =
 deps =
     mypy
     pytest
+    pytest-cov
     pytest-mock
 conda_deps =
     anaconda-anon-usage
@@ -126,6 +140,7 @@ commands = pytest {posargs}
 deps =
     mypy
     pytest
+    pytest-cov
     pytest-mock
     types-requests
     ../anaconda-cli-base
