@@ -94,7 +94,7 @@ CLI to login and logout of Anaconda Cloud.
 
 ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ --domain                  TEXT  [default: None]                                                                                │
-│ --basic     --no-basic          Depcrecated [default: no-basic]                                                                │
+│ --basic     --no-basic          Deprecated [default: no-basic]                                                                │
 │ --force     --no-force          [default: no-force]                                                                            │
 │ --help                          Show this message and exit.                                                                    │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

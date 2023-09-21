@@ -70,6 +70,10 @@ files = [
 python_version = "3.8"
 
 [[tool.mypy.overrides]]
+ignore_errors = true
+module = "*._version"
+
+[[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "anaconda_anon_usage.*"
 
