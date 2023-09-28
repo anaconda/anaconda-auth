@@ -14,6 +14,8 @@ from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.token import TokenInfo
 
+from .conftest import MockedRequest
+
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
 
@@ -115,26 +117,6 @@ def test_login_has_expired_token(
     assert TokenInfo.load(auth_config.domain).api_key == "from-login"
 
 
-class MockResponse:
-    def __init__(self, json_data: dict[str, Any], status_code: int):
-        self.json_data = json_data
-        self.status_code = status_code
-
-    def json(self) -> dict[str, Any]:
-        return self.json_data
-
-
-class MockedRequest:
-    def __init__(self) -> None:
-        self.called_with_args: tuple[Any] = ()  # type: ignore
-        self.called_with_kwargs: dict[str, Any] = {}
-
-    def __call__(self, *args: Any, **kwargs: Any) -> MockResponse:
-        self.called_with_args = args  # type: ignore
-        self.called_with_kwargs = kwargs
-        return MockResponse(status_code=201, json_data={"api_key": "some-jwt"})
-
-
 @pytest.fixture()
 def mocked_request(mocker: MockerFixture) -> MockedRequest:
     """A mocked post request returning an API key."""
@@ -142,7 +124,9 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     # This could be generalized further, but it may not be worth the effort
     # For now, this mimics a fixed POST request with fixed mocked return data
 
-    mocked_request = MockedRequest()
+    mocked_request = MockedRequest(
+        response_status_code=201, response_data={"api_key": "some-jwt"}
+    )
     mocker.patch("requests.post", mocked_request)
     return mocked_request
 

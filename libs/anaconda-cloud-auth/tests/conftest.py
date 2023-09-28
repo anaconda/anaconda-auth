@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
-from typing import Union
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -31,7 +32,7 @@ class MockedKeyring(KeyringBackend):
     def set_password(self, service: str, username: str, password: str) -> None:
         self._data[service][username] = password
 
-    def get_password(self, service: str, username: str) -> Union[str, None]:
+    def get_password(self, service: str, username: str) -> str | None:
         password = self._data.get(service, {}).get(username, None)
         return password
 
@@ -201,3 +202,43 @@ def with_aau_token(mocker: MockerFixture) -> None:
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
     mocker.patch("anaconda_cloud_auth.config.APIConfig.aau_token", None)
+
+
+class MockResponse:
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        json_data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ):
+        self.status_code = status_code
+        self.json_data = json_data
+        self.headers = headers or {}
+
+    def json(self) -> dict[str, Any]:
+        return self.json_data or {}
+
+
+class MockedRequest:
+    def __init__(
+        self,
+        *,
+        response_status_code: int,
+        response_data: dict[str, Any] | None = None,
+        response_headers: dict[str, str] | None = None,
+    ) -> None:
+        self.response_status_code = response_status_code
+        self.response_data = response_data
+        self.response_headers = response_headers
+        self.called_with_args: tuple[Any] = ()  # type: ignore
+        self.called_with_kwargs: dict[str, Any] = {}
+
+    def __call__(self, *args: Any, **kwargs: Any) -> MockResponse:
+        self.called_with_args = args  # type: ignore
+        self.called_with_kwargs = kwargs
+        return MockResponse(
+            status_code=self.response_status_code,
+            json_data=self.response_data,
+            headers=self.response_headers,
+        )

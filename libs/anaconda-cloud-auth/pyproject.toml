@@ -10,7 +10,8 @@ dependencies = [
   "pydantic <2.0",
   "pyjwt",
   "requests",
-  "cryptography>=3.4.0"  # see pyjwt
+  "cryptography>=3.4.0",  # see pyjwt
+  "semver<3"
 ]
 description = "A client auth library for Anaconda.cloud APIs"
 dynamic = ["version"]
@@ -77,6 +78,10 @@ module = "*._version"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "anaconda_anon_usage.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "semver.*"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
