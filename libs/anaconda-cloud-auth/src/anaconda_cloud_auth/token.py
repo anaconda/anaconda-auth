@@ -4,14 +4,17 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any
+from typing import Callable
 from typing import Dict
+from typing import Type
 from typing import Union
 from urllib.error import HTTPError
 
 import jwt
 import keyring
-from jaraco.classes.properties import classproperty
 from keyring.backend import KeyringBackend
+from keyring.backend import properties
 from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
@@ -19,6 +22,16 @@ from pydantic import BaseModel
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
+
+# Note: we can remove this if we pin keyring>=23.9.0
+try:
+    classproperty = properties.classproperty
+except AttributeError:
+    _KeyringClassMethod = Callable[[Type[KeyringBackend]], Any]
+
+    def classproperty(method: _KeyringClassMethod) -> _KeyringClassMethod:
+        return properties.ClassProperty(classmethod(method))
+
 
 logger = logging.getLogger(__name__)
 

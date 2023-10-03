@@ -112,7 +112,7 @@ norecursedirs = ["env", "envs", ".tox"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310,py311,mypy
+envlist = py38,py39,py310-{old-keyring,new-keyring},py311,mypy
 isolated_build = True
 
 [gh-actions]
@@ -133,6 +133,9 @@ deps =
     pytest
     pytest-cov
     pytest-mock
+    # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
+    # on an import from that library and instead rely on `keyring.backend.properties`.
+    old-keyring: keyring <=23.4.0
 conda_deps =
     anaconda-anon-usage
 conda_channels =
