@@ -20,6 +20,9 @@ name = "anaconda-cloud-auth"
 readme = "README.md"
 requires-python = ">=3.8"
 
+[project.entry-points."panel.auth"]
+anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
+
 [project.optional-dependencies]
 cli = ["anaconda-cloud-cli"]
 dev = [
@@ -90,6 +93,10 @@ module = "anaconda_navigator.*"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "jaraco.classes.properties.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "panel.*"
 
 [tool.pytest.ini_options]
 addopts = [

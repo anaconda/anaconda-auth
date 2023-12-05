@@ -1,4 +1,6 @@
 import warnings
+from functools import cached_property
+from hashlib import md5
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -73,6 +75,9 @@ class BaseClient(requests.Session):
             self.headers["Api-Version"] = self.api_version
         self.auth = BearerAuth(api_key=self.config.key)
 
+    def urljoin(self, url: str) -> str:
+        return urljoin(self._base_uri, url)
+
     def request(
         self,
         method: Union[str, bytes],
@@ -80,7 +85,7 @@ class BaseClient(requests.Session):
         *args: Any,
         **kwargs: Any,
     ) -> Response:
-        joined_url = urljoin(self._base_uri, str(url))
+        joined_url = self.urljoin(str(url))
         response = super().request(method, joined_url, *args, **kwargs)
         if response.status_code == 401 or response.status_code == 403:
             if response.request.headers.get("Authorization") is None:
@@ -92,6 +97,43 @@ class BaseClient(requests.Session):
         self._validate_api_version(response.headers.get("Min-Api-Version"))
 
         return response
+
+    @cached_property
+    def account(self) -> dict:
+        res = self.get("/api/account")
+        res.raise_for_status()
+        account = res.json()
+        return account
+
+    @property
+    def name(self) -> str:
+        user = self.account.get("user", {})
+
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+        if not first_name and not last_name:
+            return self.email
+        else:
+            return f"{first_name} {last_name}".strip()
+
+    @property
+    def email(self) -> str:
+        value = self.account.get("user", {}).get("email")
+        if value is None:
+            raise ValueError(
+                "Something is wrong with your account. An email address could not be found."
+            )
+        else:
+            return value
+
+    @cached_property
+    def avatar(self) -> Union[bytes, None]:
+        hashed = md5(self.email.encode("utf-8")).hexdigest()
+        res = requests.get(f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404")
+        if res.ok:
+            return res.content
+        else:
+            return None
 
     def _validate_api_version(self, min_api_version_string: Optional[str]) -> None:
         """Validate that the client API version against the min API version from the service."""

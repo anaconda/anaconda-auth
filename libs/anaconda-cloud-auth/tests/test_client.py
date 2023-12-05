@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import pytest
 from pytest_mock import MockerFixture
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 
 def test_login_required_error() -> None:
     client = BaseClient()
+    client.auth = None
+
     with pytest.raises(LoginRequiredError):
         _ = client.get("/api/account")
 
@@ -159,3 +162,84 @@ def test_api_key_init_arg_over_variable(
 
     response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("Authorization") == "Bearer set-in-init"
+
+
+def test_name_reverts_to_email(mocker: MockerFixture) -> None:
+    account = {
+        "user": {
+            "id": "uuid",
+            "email": "me@example.com",
+            "first_name": None,
+            "last_name": None,
+        }
+    }
+
+    mocker.patch(
+        "anaconda_cloud_auth.client.BaseClient.account",
+        return_value=account,
+        new_callable=mocker.PropertyMock,
+    )
+    client = BaseClient()
+
+    assert client.email == "me@example.com"
+    assert client.name == client.email
+
+
+def test_first_and_last_name(mocker: MockerFixture) -> None:
+    account = {
+        "user": {
+            "id": "uuid",
+            "email": "me@example.com",
+            "first_name": "Anaconda",
+            "last_name": "User",
+        }
+    }
+
+    mocker.patch(
+        "anaconda_cloud_auth.client.BaseClient.account",
+        return_value=account,
+        new_callable=mocker.PropertyMock,
+    )
+    client = BaseClient()
+
+    assert client.email == "me@example.com"
+    assert client.name == "Anaconda User"
+
+
+def test_gravatar_missing(mocker: MockerFixture) -> None:
+    account = {
+        "user": {
+            "id": "uuid",
+            "email": f"{uuid4()}@example.com",
+            "first_name": "Anaconda",
+            "last_name": "User",
+        }
+    }
+
+    mocker.patch(
+        "anaconda_cloud_auth.client.BaseClient.account",
+        return_value=account,
+        new_callable=mocker.PropertyMock,
+    )
+    client = BaseClient()
+
+    assert client.avatar is None
+
+
+def test_gravatar_found(mocker: MockerFixture) -> None:
+    account = {
+        "user": {
+            "id": "uuid",
+            "email": "test1@example.com",
+            "first_name": "Anaconda",
+            "last_name": "User",
+        }
+    }
+
+    mocker.patch(
+        "anaconda_cloud_auth.client.BaseClient.account",
+        return_value=account,
+        new_callable=mocker.PropertyMock,
+    )
+    client = BaseClient()
+    assert client.avatar is not None

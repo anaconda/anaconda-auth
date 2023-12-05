@@ -2,8 +2,11 @@
 
 A client library for Anaconda.cloud APIs to authenticate and securely store API keys.
 
-This package also provides a [requests](https://requests.readthedocs.io/en/latest/)
+This package provides a [requests](https://requests.readthedocs.io/en/latest/)
 client class that handles loading the API key for requests made to Anaconda Cloud services.
+
+This package provides a [Panel OAuth plugin](https://panel.holoviz.org/how_to/authentication/configuration.html)
+called `anaconda_cloud`.
 
 ## Interactive login/logout
 
@@ -20,15 +23,14 @@ login()
 
 The `login()` function initiates a browser-based login flow. It will automatically
 open your browser and once you have completed the login flow it will store an
-API key in your system keychain using the [keyring](https://github.com/jaraco/keyring)
-package.
+API key on your system.
 
 Typically, these API keys will have a one year expiration so you will only need
 to login once and requests using the client class will read the token from the
 keyring storage.
 
-If you call `login()` while there is a valid (non-expired) API key in your keyring
-no action is taken. You can replace the valid API key with `login(force=True)`.
+If you call `login()` while there is a valid (non-expired) API key no action is
+taken. You can replace the valid API key with `login(force=True)`.
 
 
 #### Password-based flow (Deprecated)
@@ -102,10 +104,10 @@ CLI to login and logout of Anaconda Cloud.
 
 ## Configuration
 
-You can configure `anaconda-cloud-auth` by setting `ANACONDA_CLOUD_` environment variables
-or use a `.env` file. The `.env` file must be in your current working directory.
-An example template is provided in the repo, which contains the following options,
-which are the default values.
+You can configure `anaconda-cloud-auth` by setting one or more `ANACONDA_CLOUD_`
+environment variables or use a `.env` file. The `.env` file must be in your
+current working directory.  An example template is provided in the repo, which
+contains the following options, which are the default values.
 
 ```dotenv
 # Logging level
@@ -117,6 +119,41 @@ ANACONDA_CLOUD_API_DOMAIN="anaconda.cloud"
 # Authentication settings
 ANACONDA_CLOUD_AUTH_DOMAIN="id.anaconda.cloud"
 ANACONDA_CLOUD_AUTH_CLIENT_ID="b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
+
+# API Key
+ANACONDA_CLOUD_API_KEY="<api-key>"
+```
+
+## Panel OAuth Provider
+
+In order to use the anaconda_cloud auth plugin you will need an OAuth client
+ID (key) and secret. The client must be configured as follows
+
+```text
+Set scopes: offline_access, openid, email, profile
+Set redirect url to http://localhost:5006
+Set grant type: Authorization Code
+Set response types: ID Token, Token, Code
+Set access token type: JWT
+Set Authentication Method: HTTP Body
+```
+
+To run the app with the anaconda_cloud auth provider you will need to set several
+environment variables or command-line arguments. See the
+[Panel OAuth documentation](https://panel.holoviz.org/how_to/authentication/configuration.html)
+for more details
+
+```text
+PANEL_OAUTH_PROVIDER=anaconda_cloud or --oauth-provider anaconda_cloud
+PANEL_OAUTH_KEY=<key>               or --oauth-key=<key>
+PANEL_OAUTH_SECRET=<secret>         or --oauth-secret=<key>
+PANEL_COOKIE_SECRET=<cookie-name>   or --cookie-secret=<value>
+PANEL_OAUTH_REFRESH_TOKENS=1        or --oauth-refresh-tokens
+PANEL_OAUTH_OPTIONAL=1              or --oauth-optional
+```
+
+```text
+panel serve <arguments> ...
 ```
 
 If you do not specify the `.env` file, the production configuration should be the default.
@@ -126,16 +163,19 @@ Please file an issue if you see any errors.
 
 Ensure you have `conda` installed.
 Then run:
+
 ```shell
 make setup
 ```
 
 ## Run the unit tests
+
 ```shell
 make test
 ```
 
 ## Run the unit tests across isolated environments with tox
+
 ```shell
 make tox
 ```
