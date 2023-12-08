@@ -17,7 +17,12 @@ from keyring.backend import KeyringBackend
 from keyring.backend import properties
 from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
-from pydantic import BaseModel
+
+try:
+    # Version 2 provides a v1 API
+    from pydantic.v1 import BaseModel
+except ImportError:
+    from pydantic import BaseModel
 
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.exceptions import TokenExpiredError

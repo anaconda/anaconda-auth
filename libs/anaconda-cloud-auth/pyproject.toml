@@ -7,7 +7,7 @@ dependencies = [
   "keyring",
   "pkce",
   "python-dotenv",
-  "pydantic <2.0",
+  "pydantic",
   "pyjwt",
   "requests",
   "cryptography>=3.4.0",  # see pyjwt
@@ -98,6 +98,10 @@ module = "jaraco.classes.properties.*"
 ignore_missing_imports = true
 module = "panel.*"
 
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "pydantic.v1.*"
+
 [tool.pytest.ini_options]
 addopts = [
   "--cov=anaconda_cloud_auth",
@@ -119,7 +123,7 @@ norecursedirs = ["env", "envs", ".tox"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring},py311,mypy
+envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2},py311,mypy
 isolated_build = True
 
 [gh-actions]
@@ -143,6 +147,8 @@ deps =
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
     # on an import from that library and instead rely on `keyring.backend.properties`.
     old-keyring: keyring <=23.4.0
+    pydantic1: pydantic <2.0
+    pydantic2: pydantic >=2.0
 conda_deps =
     anaconda-anon-usage
 conda_channels =

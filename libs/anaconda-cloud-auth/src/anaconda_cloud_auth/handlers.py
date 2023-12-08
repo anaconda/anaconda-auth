@@ -13,7 +13,12 @@ from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
 import requests
-from pydantic.main import BaseModel
+
+try:
+    # Version 2 provides a v1 API
+    from pydantic.v1 import BaseModel
+except ImportError:
+    from pydantic import BaseModel
 
 from anaconda_cloud_auth.exceptions import AuthenticationError
 

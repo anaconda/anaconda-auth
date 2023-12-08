@@ -4,8 +4,14 @@ from typing import Optional
 from typing import Union
 
 import requests
-from pydantic import BaseModel
-from pydantic import BaseSettings
+
+try:
+    # Version 2 provides a v1 API
+    from pydantic.v1 import BaseModel
+    from pydantic.v1 import BaseSettings
+except ImportError:
+    from pydantic import BaseModel
+    from pydantic import BaseSettings
 
 from anaconda_cloud_auth import __version__ as version
 
