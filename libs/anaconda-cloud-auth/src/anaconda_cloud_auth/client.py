@@ -1,9 +1,12 @@
+import json
 import warnings
 from functools import cached_property
 from hashlib import md5
 from typing import Any
+from typing import Dict
 from typing import Optional
 from typing import Union
+from typing import cast
 from urllib.parse import urljoin
 
 import requests
@@ -54,25 +57,47 @@ class BaseClient(requests.Session):
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
+        extra_headers: Optional[Union[str, dict]] = None,
     ):
         super().__init__()
 
         if base_uri and domain:
             raise ValueError("Can only specify one of `domain` or `base_uri` argument")
 
-        kwargs = {}
+        kwargs: Dict[str, Any] = {}
         if domain is not None:
             kwargs["domain"] = domain
         if api_key is not None:
             kwargs["key"] = api_key
+        if extra_headers is not None:
+            kwargs["extra_headers"] = extra_headers
 
+        # kwargs in the client init take precedence over default
+        # values or env vars
         self.config = APIConfig(**kwargs)
+
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
         self.api_version = api_version or self._api_version
         if self.api_version:
             self.headers["Api-Version"] = self.api_version
+
+        if self.config.extra_headers is not None:
+            if isinstance(self.config.extra_headers, str):
+                try:
+                    self.config.extra_headers = cast(
+                        dict, json.loads(self.config.extra_headers)
+                    )
+                except json.decoder.JSONDecodeError:
+                    raise ValueError(
+                        f"{repr(self.config.extra_headers)} is not valid JSON."
+                    )
+
+            keys_to_add = self.config.extra_headers.keys() - self.headers.keys()
+            for k in keys_to_add:
+                self.headers[k] = self.config.extra_headers[k]
+
         self.auth = BearerAuth(api_key=self.config.key)
 
     def urljoin(self, url: str) -> str:

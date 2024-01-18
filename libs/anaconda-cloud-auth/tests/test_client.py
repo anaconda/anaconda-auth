@@ -243,3 +243,47 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
     )
     client = BaseClient()
     assert client.avatar is not None
+
+
+def test_extra_headers_dict() -> None:
+    extra_headers = {"X-Extra": "stuff"}
+    client = BaseClient(api_version="ver", extra_headers=extra_headers)
+
+    res = client.get("api/something")
+    assert res.request.headers["X-Extra"] == "stuff"
+    assert res.request.headers["Api-Version"] == "ver"
+
+
+def test_extra_headers_string() -> None:
+    extra_headers = '{"X-Extra": "stuff"}'
+    client = BaseClient(api_version="ver", extra_headers=extra_headers)
+
+    res = client.get("api/something")
+    assert res.request.headers["X-Extra"] == "stuff"
+    assert res.request.headers["Api-Version"] == "ver"
+
+
+def test_extra_headers_non_overwrite() -> None:
+    extra_headers = {"X-Extra": "stuff", "Api-Version": "never overwrite"}
+    client = BaseClient(api_version="ver", extra_headers=extra_headers)
+
+    res = client.get("api/something")
+    assert res.request.headers["X-Extra"] == "stuff"
+    assert res.request.headers["Api-Version"] == "ver"
+
+
+def test_extra_headers_bad_json() -> None:
+    extra_headers = "nope"
+
+    with pytest.raises(ValueError):
+        _ = BaseClient(api_version="ver", extra_headers=extra_headers)
+
+
+def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
+    extra_headers = '{"X-Extra": "from-env"}'
+    monkeypatch.setenv("ANACONDA_CLOUD_API_EXTRA_HEADERS", extra_headers)
+
+    client = BaseClient(api_key="set-in-init")
+
+    res = client.get("api/something")
+    assert res.request.headers["X-Extra"] == "from-env"

@@ -8,6 +8,12 @@ client class that handles loading the API key for requests made to Anaconda Clou
 This package provides a [Panel OAuth plugin](https://panel.holoviz.org/how_to/authentication/configuration.html)
 called `anaconda_cloud`.
 
+## Installation
+
+```text
+conda install anaconda-cloud-auth
+```
+
 ## Interactive login/logout
 
 In order to use the request client class you must first login interactively.
@@ -31,7 +37,6 @@ keyring storage.
 
 If you call `login()` while there is a valid (non-expired) API key no action is
 taken. You can replace the valid API key with `login(force=True)`.
-
 
 #### Password-based flow (Deprecated)
 
@@ -60,7 +65,7 @@ logout()
 
 ## API requests
 
-The Client class is a subclass of [requests.Session](https://requests.readthedocs.io/en/latest/user/advanced/#session-objects).
+The BaseClient class is a subclass of [requests.Session](https://requests.readthedocs.io/en/latest/user/advanced/#session-objects).
 It will automatically load the API key from the keyring on each request.
 If the API key is expired it will raise a `TokenExpiredError`.
 
@@ -68,17 +73,34 @@ The Client class can be used for non-authenticated requests, if
 the API key cannot be found and the request returns 401 or 403 error codes
 the `LoginRequiredError` will be raised.
 
-To create a Client class in your package use the `client_factory()` function,
-which takes a user-agent string as input.
-
 ```python
-from anaconda_cloud_auth import client_factory
+from anaconda_cloud_auth.client import BaseClient
 
-Client = client_factory('<my-application>/<version>')
+client = BaseClient()
 
-client = Client()
 response = client.get("/api/<endpoint>")
 print(response.json())
+```
+
+BaseClient accepts the following optional arguments.
+
+* `domain`: Domain to use for requests, defaults to `anaconda.cloud`
+* `api_key`: API key to use for requests, if unspecified uses token set by `anaconda login`
+* `user_agent`: Defaults to `anaconda-cloud-auth/<package-version>`
+* `api_version`: Requested API version, defaults to latest available from the domain
+* `extra_headers`: Dictionary or JSON string of extra headers to send in requests
+
+
+To create a Client class specific to your package, subclass BaseClient and set
+an appropriate user-agent and API version for your needs. This is automatically done
+if you use the [cookiecutter](https://github.com/anaconda/anaconda-cloud-tools/tree/main/cookiecutter)
+in this repository to create a new package.
+
+```python
+from anaconda_cloud_auth.client import BaseClient
+class Client(BaseClient):
+    _user_agent = "anaconda-cloud-<package>/<version>"
+    _api_version = "<api-version>"
 ```
 
 ## CLI usage
@@ -87,7 +109,7 @@ To use `anaconda-cloud-auth` as a CLI you will need to install the
 `anaconda-cloud` package. Once installed you can use the `anaconda`
 CLI to login and logout of Anaconda Cloud.
 
-```
+```text
 ❯ anaconda login --help
 
  Usage: anaconda login [OPTIONS]
@@ -119,9 +141,16 @@ ANACONDA_CLOUD_API_DOMAIN="anaconda.cloud"
 # Authentication settings
 ANACONDA_CLOUD_AUTH_DOMAIN="id.anaconda.cloud"
 ANACONDA_CLOUD_AUTH_CLIENT_ID="b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
+```
 
-# API Key
+In addition to the variables above you can set the following
+
+```dotenv
+# API key to use for all requests, this will ignore the keyring token set by `anaconda login`
 ANACONDA_CLOUD_API_KEY="<api-key>"
+
+# Extra headers to use in all requests; must be parsable JSON format
+ANACONDA_CLOUD_API_EXTRA_HEADERS='<json-parsable-dictionary>'
 ```
 
 ## Panel OAuth Provider

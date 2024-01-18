@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
@@ -10,8 +11,8 @@ try:
     from pydantic.v1 import BaseModel
     from pydantic.v1 import BaseSettings
 except ImportError:
-    from pydantic import BaseModel
-    from pydantic import BaseSettings
+    from pydantic import BaseModel  # type: ignore
+    from pydantic import BaseSettings  # type: ignore
 
 from anaconda_cloud_auth import __version__ as version
 
@@ -28,6 +29,7 @@ class APIConfig(BaseSettings):
 
     domain: str = "anaconda.cloud"
     key: Optional[str] = None
+    extra_headers: Optional[Union[Dict[str, str], str]] = None
 
     @cached_property
     def aau_token(self) -> Union[str, None]:

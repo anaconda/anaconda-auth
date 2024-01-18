@@ -18,7 +18,7 @@ try:
     # Version 2 provides a v1 API
     from pydantic.v1 import BaseModel
 except ImportError:
-    from pydantic import BaseModel
+    from pydantic import BaseModel  # type: ignore
 
 from anaconda_cloud_auth.exceptions import AuthenticationError
 
