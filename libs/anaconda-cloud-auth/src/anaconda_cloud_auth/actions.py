@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import logging
+import ssl
 import uuid
 import warnings
 import webbrowser
@@ -57,13 +58,21 @@ def _validate_access_token(
         raise jwt.InvalidSignatureError()
 
 
-def _validate_token_info(access_token: str, id_token: Optional[str]) -> None:
+def _validate_token_info(
+    access_token: str, id_token: Optional[str], auth_config: Optional[AuthConfig] = None
+) -> None:
     if id_token is None:
         # TODO: legacy IAM doesn't work w/ these validations
         return
 
-    auth_config = AuthConfig()
-    jwks_client = JWKClient(auth_config.oidc.jwks_uri)
+    auth_config = auth_config or AuthConfig()
+
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    if not auth_config.ssl_verify:
+        ctx.verify_mode = ssl.CERT_NONE
+
+    jwks_client = JWKClient(auth_config.oidc.jwks_uri, ssl_context=ctx)
     signing_key = jwks_client.get_signing_key_from_jwt(id_token)
 
     try:
@@ -129,6 +138,7 @@ def refresh_access_token(
             "refresh_token": refresh_token,
             "client_id": auth_config.client_id,
         },
+        verify=auth_config.ssl_verify,
     )
     response.raise_for_status()
     response_data = response.json()
@@ -167,6 +177,7 @@ def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
             redirect_uri=redirect_uri,
             code_verifier=code_verifier,
         ),
+        verify=auth_config.ssl_verify,
     )
     result = response.json()
 
@@ -178,7 +189,7 @@ def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
     access_token = result.get("access_token")
     id_token = result.get("id_token")
 
-    _validate_token_info(access_token, id_token)
+    _validate_token_info(access_token, id_token, auth_config=auth_config)
 
     return access_token
 
@@ -203,6 +214,7 @@ def _login_with_username(auth_config: Optional[AuthConfig] = None) -> str:
             "username": username,
             "password": password,
         },
+        verify=auth_config.ssl_verify,
     )
     response_data = response.json()
     response.raise_for_status()
@@ -216,12 +228,12 @@ def _do_login(auth_config: AuthConfig, basic: bool) -> None:
         access_token = _login_with_username(auth_config=auth_config)
     else:
         access_token = _do_auth_flow(auth_config=auth_config)
-    api_key = _get_api_key(access_token)
+    api_key = _get_api_key(access_token, auth_config.ssl_verify)
     token_info = TokenInfo(api_key=api_key, domain=auth_config.domain)
     token_info.save()
 
 
-def _get_api_key(access_token: str) -> str:
+def _get_api_key(access_token: str, ssl_verify: bool = True) -> str:
     config = APIConfig()
 
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -237,6 +249,7 @@ def _get_api_key(access_token: str) -> str:
             tags=[f"anaconda-cloud-auth/v{__version__}"],
         ),
         headers=headers,
+        verify=ssl_verify,
     )
     if response.status_code != 201:
         console.print("Error retrieving an API key")
@@ -254,11 +267,14 @@ def _api_key_is_valid(auth_config: AuthConfig) -> bool:
 
 
 def login(
-    auth_config: Optional[AuthConfig] = None, basic: bool = False, force: bool = False
+    auth_config: Optional[AuthConfig] = None,
+    basic: bool = False,
+    force: bool = False,
+    ssl_verify: bool = True,
 ) -> None:
     """Log into Anaconda.cloud and store the token information in the keyring."""
     if auth_config is None:
-        auth_config = AuthConfig()
+        auth_config = AuthConfig(ssl_verify=ssl_verify)
 
     if force or not _api_key_is_valid(auth_config=auth_config):
         _do_login(auth_config=auth_config, basic=basic)

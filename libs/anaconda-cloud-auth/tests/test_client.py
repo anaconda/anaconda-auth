@@ -61,7 +61,7 @@ def test_client_subclass_api_version() -> None:
     ],
 )
 def test_client_base_uri(attr_name: str, value: str, expected_base_uri: str) -> None:
-    client = BaseClient(**{attr_name: value})
+    client = BaseClient(**{attr_name: value})  # type: ignore
     assert client._base_uri == expected_base_uri
 
 

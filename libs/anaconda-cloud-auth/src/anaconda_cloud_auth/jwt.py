@@ -1,3 +1,4 @@
+import ssl
 from typing import Any
 from typing import Dict
 from typing import Union
@@ -13,8 +14,16 @@ class JWKClient(PyJWKClient):
         # This method fails in the original class due to using urlopen.
         # The jwks URI likely blocks the user-agent used by urlopen
         jwk_set: Union[Dict[str, Any], None] = None
+
+        ssl_verify = True
+        if (
+            self.ssl_context is not None
+            and self.ssl_context.verify_mode == ssl.CERT_NONE
+        ):
+            ssl_verify = False
+
         try:
-            jwk_set = requests.get(self.uri).json()
+            jwk_set = requests.get(self.uri, verify=ssl_verify).json()
         except requests.exceptions.RequestException as e:
             raise PyJWKClientError(f'Fail to fetch data from the url, err: "{e}"')
         else:

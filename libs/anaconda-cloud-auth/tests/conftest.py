@@ -105,7 +105,7 @@ def disable_dot_env(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture()
-def integration_test_client(monkeypatch: MonkeyPatch) -> BaseClient:
+def integration_test_client_setup(monkeypatch: MonkeyPatch) -> Any:
     """Provides a request client configured to talk to the automation environment.
 
     We first load credentials from environment variables. We then use a special
@@ -157,13 +157,24 @@ def integration_test_client(monkeypatch: MonkeyPatch) -> BaseClient:
 
     monkeypatch.setattr(console, "input", mock_input)
 
+    yield
+
+
+@pytest.fixture()
+def integration_test_client(integration_test_client_setup: None) -> BaseClient:
+    _ = integration_test_client_setup
     login(basic=True)
 
-    client = BaseClient()
-    if client_id:
-        client.headers["CF-Access-Client-Id"] = client_id
-    if client_secret:
-        client.headers["CF-Access-Client-Secret"] = client_secret
+    extra_headers = {}
+
+    client_id = os.getenv("CF_CLIENT_ID")
+    client_secret = os.getenv("CF_CLIENT_SECRET")
+
+    if client_id and client_secret:
+        extra_headers["CF-Access-Client-Id"] = client_id
+        extra_headers["CF-Access-Client-Secret"] = client_secret
+
+    client = BaseClient(extra_headers=extra_headers)
 
     return client
 

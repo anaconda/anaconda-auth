@@ -29,6 +29,7 @@ class APIConfig(BaseSettings):
 
     domain: str = "anaconda.cloud"
     key: Optional[str] = None
+    ssl_verify: bool = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
 
     @cached_property
@@ -56,6 +57,7 @@ class AuthConfig(BaseSettings):
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = ".well-known/openid-configuration"
+    ssl_verify: bool = True
 
     @property
     def well_known_url(self: "AuthConfig") -> str:
@@ -65,7 +67,9 @@ class AuthConfig(BaseSettings):
     @property
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
-        res = requests.get(self.well_known_url, headers=OIDC_REQUEST_HEADERS)
+        res = requests.get(
+            self.well_known_url, headers=OIDC_REQUEST_HEADERS, verify=self.ssl_verify
+        )
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())
         return self.__dict__.setdefault("_oidc", oidc_config)

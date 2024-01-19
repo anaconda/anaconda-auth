@@ -57,6 +57,7 @@ class BaseClient(requests.Session):
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
+        ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
     ):
         super().__init__()
@@ -69,6 +70,8 @@ class BaseClient(requests.Session):
             kwargs["domain"] = domain
         if api_key is not None:
             kwargs["key"] = api_key
+        if ssl_verify is not None:
+            kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
             kwargs["extra_headers"] = extra_headers
 
@@ -111,6 +114,11 @@ class BaseClient(requests.Session):
         **kwargs: Any,
     ) -> Response:
         joined_url = self.urljoin(str(url))
+
+        # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
+        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
+        kwargs.setdefault("verify", self.config.ssl_verify)
+
         response = super().request(method, joined_url, *args, **kwargs)
         if response.status_code == 401 or response.status_code == 403:
             if response.request.headers.get("Authorization") is None:
@@ -154,7 +162,10 @@ class BaseClient(requests.Session):
     @cached_property
     def avatar(self) -> Union[bytes, None]:
         hashed = md5(self.email.encode("utf-8")).hexdigest()
-        res = requests.get(f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404")
+        res = requests.get(
+            f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
+            verify=self.config.ssl_verify,
+        )
         if res.ok:
             return res.content
         else:

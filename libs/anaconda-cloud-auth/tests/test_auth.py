@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
+from requests.exceptions import SSLError
 
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth import login
@@ -18,6 +20,8 @@ from .conftest import MockedRequest
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
+
+HERE = os.path.dirname(__file__)
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +46,23 @@ def test_login_to_token_info(is_not_none: Any) -> None:
         "username": None,
         "api_key": is_not_none,
     }
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("integration_test_client_setup")
+def test_login_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+
+    with pytest.raises(SSLError):
+        login(ssl_verify=True, force=True, basic=True)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("integration_test_client_setup")
+def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+
+    login(ssl_verify=False, force=True, basic=True)
 
 
 @pytest.mark.integration
