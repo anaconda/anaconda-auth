@@ -11,7 +11,7 @@ from requests.exceptions import SSLError
 
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth import login
-from anaconda_cloud_auth.actions import _get_api_key
+from anaconda_cloud_auth.actions import get_api_key
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.token import TokenInfo
@@ -156,7 +156,7 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
 def test_get_api_key(mocked_request: MockedRequest) -> None:
     """When we get an API key, we assign appropriate generic scopes and tags."""
 
-    key = _get_api_key("some_access_token")
+    key = get_api_key("some_access_token")
     assert key == "some-jwt"
 
     headers = mocked_request.called_with_kwargs["headers"]
@@ -174,7 +174,7 @@ def test_get_api_key(mocked_request: MockedRequest) -> None:
 def test_get_api_key_with_aau_token(mocked_request: MockedRequest) -> None:
     """When we get an API key, we assign appropriate generic scopes and tags."""
 
-    key = _get_api_key("some_access_token")
+    key = get_api_key("some_access_token")
     assert key == "some-jwt"
 
     headers = mocked_request.called_with_kwargs["headers"]

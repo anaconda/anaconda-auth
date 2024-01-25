@@ -89,7 +89,7 @@ class NavigatorFallback(KeyringBackend):
 
         token = NucleusToken.from_file()
         if token is not None:
-            from anaconda_cloud_auth.actions import _get_api_key
+            from anaconda_cloud_auth.actions import get_api_key
             from anaconda_cloud_auth.actions import refresh_access_token
 
             auth_config = AuthConfig(domain=auth_domain)
@@ -103,7 +103,7 @@ class NavigatorFallback(KeyringBackend):
             else:
                 access_token = token.access_token
 
-            api_key = _get_api_key(access_token)
+            api_key = get_api_key(access_token)
             token_info = {
                 "username": token.username,
                 "api_key": api_key,

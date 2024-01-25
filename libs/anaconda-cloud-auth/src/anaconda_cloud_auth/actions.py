@@ -6,7 +6,6 @@ import uuid
 import warnings
 import webbrowser
 from typing import Optional
-from typing import Union
 from urllib.parse import urlencode
 
 import jwt
@@ -99,14 +98,18 @@ def _validate_token_info(
         raise InvalidTokenError("Access token has an invalid hash.")
 
 
-def _send_auth_code_request(
-    client_id: str,
-    authorization_endpoint: str,
-    redirect_uri: str,
-    state: str,
-    code_challenge: str,
-) -> None:
-    """Open the authentication flow in the browser."""
+def make_auth_code_request_url(
+    code_challenge: str, state: str, auth_config: Optional[AuthConfig] = None
+) -> str:
+    """Build the authorization code request URL."""
+
+    if auth_config is None:
+        auth_config = AuthConfig()
+
+    authorization_endpoint = auth_config.oidc.authorization_endpoint
+    client_id = auth_config.client_id
+    redirect_uri = auth_config.redirect_uri
+
     params = dict(
         client_id=client_id,
         response_type="code",
@@ -116,21 +119,22 @@ def _send_auth_code_request(
         code_challenge=code_challenge,
         code_challenge_method="S256",
     )
-
     encoded_params = urlencode(params)
     url = f"{authorization_endpoint}?{encoded_params}"
 
-    logger.debug(f"Opening auth URL: {url}")
+    return url
 
+
+def _send_auth_code_request(
+    code_challenge: str, state: str, auth_config: AuthConfig
+) -> None:
+    """Open the authentication flow in the browser."""
+    url = make_auth_code_request_url(code_challenge, state, auth_config)
     webbrowser.open(url)
 
 
-def refresh_access_token(
-    refresh_token: str, auth_config: Union[AuthConfig, None] = None
-) -> str:
+def refresh_access_token(refresh_token: str, auth_config: AuthConfig) -> str:
     """Refresh and save the tokens."""
-    if auth_config is None:
-        auth_config = AuthConfig()
     response = requests.post(
         auth_config.oidc.token_endpoint,
         data={
@@ -147,27 +151,14 @@ def refresh_access_token(
     return access_token
 
 
-def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
-    """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    if auth_config is None:
-        auth_config = AuthConfig()
-
+def request_access_token(
+    auth_code: str, code_verifier: str, auth_config: AuthConfig
+) -> str:
+    """Request an access token using the provided authorization code and code verifier."""
     token_endpoint = auth_config.oidc.token_endpoint
-    authorization_endpoint = auth_config.oidc.authorization_endpoint
     client_id = auth_config.client_id
     redirect_uri = auth_config.redirect_uri
-    state = str(uuid.uuid4())
-    code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
 
-    _send_auth_code_request(
-        client_id, authorization_endpoint, redirect_uri, state, code_challenge
-    )
-
-    # Listen for the response
-    auth_code = capture_auth_code(redirect_uri, state)
-    logger.debug("Authentication successful! Getting JWT token.")
-
-    # Do auth code exchange
     response = requests.post(
         token_endpoint,
         data=dict(
@@ -187,11 +178,26 @@ def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
         )
 
     access_token = result.get("access_token")
-    id_token = result.get("id_token")
-
-    _validate_token_info(access_token, id_token, auth_config=auth_config)
-
     return access_token
+
+
+def _do_auth_flow(auth_config: Optional[AuthConfig] = None) -> str:
+    """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
+    if auth_config is None:
+        auth_config = AuthConfig()
+
+    redirect_uri = auth_config.redirect_uri
+    state = str(uuid.uuid4())
+    code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
+
+    _send_auth_code_request(code_challenge, state, auth_config)
+
+    # Listen for the response
+    auth_code = capture_auth_code(redirect_uri, state)
+    logger.debug("Authentication successful! Getting JWT token.")
+
+    # Do auth code exchange
+    return request_access_token(auth_code, code_verifier, auth_config)
 
 
 def _login_with_username(auth_config: Optional[AuthConfig] = None) -> str:
@@ -228,12 +234,12 @@ def _do_login(auth_config: AuthConfig, basic: bool) -> None:
         access_token = _login_with_username(auth_config=auth_config)
     else:
         access_token = _do_auth_flow(auth_config=auth_config)
-    api_key = _get_api_key(access_token, auth_config.ssl_verify)
+    api_key = get_api_key(access_token, auth_config.ssl_verify)
     token_info = TokenInfo(api_key=api_key, domain=auth_config.domain)
     token_info.save()
 
 
-def _get_api_key(access_token: str, ssl_verify: bool = True) -> str:
+def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
     config = APIConfig()
 
     headers = {"Authorization": f"Bearer {access_token}"}
