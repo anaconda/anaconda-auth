@@ -26,6 +26,14 @@ def test_login_required_error() -> None:
         _ = client.get("/api/account")
 
 
+@pytest.mark.integration
+def test_outdated_api_key(outdated_api_key: str) -> None:
+    client = BaseClient(api_key=outdated_api_key)
+
+    with pytest.raises(LoginRequiredError):
+        _ = client.get("api/account")
+
+
 def test_client_factory_user_agent() -> None:
     client = client_factory("my-app/version")
     response = client.get("/api/catalogs/examples")

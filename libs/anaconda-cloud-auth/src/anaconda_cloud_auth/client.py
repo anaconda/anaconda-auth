@@ -123,8 +123,18 @@ class BaseClient(requests.Session):
         if response.status_code == 401 or response.status_code == 403:
             if response.request.headers.get("Authorization") is None:
                 raise LoginRequiredError(
-                    f"{response.reason}: You must login before using this API endpoint using\n"
-                    f"  anaconda login"
+                    f"{response.status_code} {response.reason}:\n"
+                    f"You must login before using this API endpoint using\n"
+                    f"  anaconda login\n"
+                    f"or provide an api_key to your client."
+                )
+            elif response.json().get("error", {}).get("code", "") == "auth_required":
+                raise LoginRequiredError(
+                    f"{response.status_code} {response.reason}:\n"
+                    f"The provided API key or login token is invalid.\n"
+                    f"You may login again using\n"
+                    f"  anaconda login\n"
+                    f"or update the api_key provided to your client."
                 )
 
         self._validate_api_version(response.headers.get("Min-Api-Version"))

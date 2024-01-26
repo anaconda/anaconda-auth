@@ -51,7 +51,7 @@ def set_keyring_name(mocker: MockerFixture) -> None:
 
 
 @pytest.fixture
-def outdated_token_info() -> TokenInfo:
+def outdated_api_key() -> str:
     # This is an old token from the dev system that will always be out-of-date
     api_key = (
         "eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQiLCJ0eXAiOiJKV1QifQ"
@@ -64,7 +64,12 @@ def outdated_token_info() -> TokenInfo:
         "tbycV5uemKjyR1Qeuva2zCKYB3FEXdTEiWHhTzhSQ-3-xjUrIZvpfGJd3G"
         "CzXlkUhpeDoj2KbSN-Lq0Q"
     )
-    return TokenInfo(api_key=api_key, domain="mocked-domain")
+    return api_key
+
+
+@pytest.fixture
+def outdated_token_info(outdated_api_key: str) -> TokenInfo:
+    return TokenInfo(api_key=outdated_api_key, domain="mocked-domain")
 
 
 @pytest.fixture()
