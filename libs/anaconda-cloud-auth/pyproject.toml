@@ -164,8 +164,8 @@ deps =
     pytest-cov
     pytest-mock
     types-requests
-    ../anaconda-cli-base
-    ../anaconda-cloud-cli  # Needed for typer
+    anaconda-cli-base
+    anaconda-cloud-cli  # Needed for typer
 commands = mypy
 """
 
