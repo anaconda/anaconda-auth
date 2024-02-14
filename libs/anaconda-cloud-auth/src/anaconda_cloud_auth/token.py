@@ -34,8 +34,8 @@ try:
 except AttributeError:
     _KeyringClassMethod = Callable[[Type[KeyringBackend]], Any]
 
-    def classproperty(method: _KeyringClassMethod) -> _KeyringClassMethod:
-        return properties.ClassProperty(classmethod(method))
+    def classproperty(method: _KeyringClassMethod) -> _KeyringClassMethod:  # type: ignore
+        return properties.ClassProperty(classmethod(method))  # type: ignore
 
 
 logger = logging.getLogger(__name__)
