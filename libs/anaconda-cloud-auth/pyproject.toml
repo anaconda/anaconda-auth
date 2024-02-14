@@ -62,10 +62,6 @@ source = "vcs"
 git_describe_command = "git describe --dirty --tags --long --match 'anaconda-cloud-auth-*'"
 root = "../.."
 
-[tool.isort]
-force_single_line = true
-profile = "black"
-
 [tool.mypy]
 disallow_untyped_defs = true
 files = [
