@@ -13,7 +13,6 @@ import requests
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
-from semver import VersionInfo
 
 from anaconda_cloud_auth import __version__ as version
 from anaconda_cloud_auth.config import APIConfig
@@ -21,6 +20,13 @@ from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
+
+# VersionInfo was renamed and is deprecated in semver>=3
+try:
+    from semver.version import Version
+except ImportError:
+    # In semver<3, it's called VersionInfo
+    from semver import VersionInfo as Version
 
 
 class BearerAuth(AuthBase):
@@ -201,7 +207,7 @@ class BaseClient(requests.Session):
             )
 
 
-def _parse_semver_string(version: str) -> Optional[VersionInfo]:
+def _parse_semver_string(version: str) -> Optional[Version]:
     """Parse a version string into a semver Version object, stripping off any leading zeros from the components.
 
     If the version string is invalid, returns None.
@@ -209,7 +215,7 @@ def _parse_semver_string(version: str) -> Optional[VersionInfo]:
     """
     norm_version = ".".join(s.lstrip("0") for s in version.split("."))
     try:
-        return VersionInfo.parse(norm_version)
+        return Version.parse(norm_version)
     except ValueError:
         return None
 
