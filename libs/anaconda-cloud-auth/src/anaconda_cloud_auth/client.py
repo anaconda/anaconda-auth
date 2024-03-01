@@ -42,9 +42,9 @@ class BearerAuth(AuthBase):
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
         if not self.api_key:
             try:
-                r.headers[
-                    "Authorization"
-                ] = f"Bearer {self._token_info.get_access_token()}"
+                r.headers["Authorization"] = (
+                    f"Bearer {self._token_info.get_access_token()}"
+                )
             except TokenNotFoundError:
                 pass
         else:

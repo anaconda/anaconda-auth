@@ -35,6 +35,7 @@ PANEL_OAUTH_OPTIONAL=1              or --oauth-optional
 
 panel serve <arguments> panel-auth.py --show
 """
+
 from textwrap import dedent
 
 import panel as pn

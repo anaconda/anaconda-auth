@@ -5,12 +5,10 @@ from typing import Protocol
 
 class TConsole(Protocol):
     @staticmethod
-    def print(*args: Any, **kwargs: Any) -> None:
-        ...
+    def print(*args: Any, **kwargs: Any) -> None: ...
 
     @staticmethod
-    def input(*args: Any, **kwargs: Any) -> Any:
-        ...
+    def input(*args: Any, **kwargs: Any) -> Any: ...
 
 
 class SimpleConsole:
