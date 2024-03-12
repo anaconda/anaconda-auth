@@ -119,7 +119,7 @@ norecursedirs = ["env", "envs", ".tox"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2,semver2,semver3},py311,mypy
+envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2,semver2,semver3},py311,py312,mypy
 isolated_build = True
 
 [gh-actions]
@@ -128,6 +128,7 @@ python =
     3.9: py39, mypy
     3.10: py310, mypy
     3.11: py311
+    3.12: py312
 
 [testenv]
 pass_env =
