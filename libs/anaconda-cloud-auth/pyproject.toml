@@ -20,6 +20,9 @@ name = "anaconda-cloud-auth"
 readme = "README.md"
 requires-python = ">=3.8"
 
+[project.entry-points.conda]
+anaconda-cloud-auth = "anaconda_cloud_auth.plugins"
+
 [project.entry-points."panel.auth"]
 anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
 
@@ -65,8 +68,7 @@ root = "../.."
 [tool.mypy]
 disallow_untyped_defs = true
 files = [
-  "src/**/*.py",
-  "tests/**/*.py"
+  "src/**/*.py"
 ]
 python_version = "3.8"
 
@@ -93,6 +95,18 @@ module = "jaraco.classes.properties.*"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "panel.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "conda.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "conda_token.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "ruamel.*"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true

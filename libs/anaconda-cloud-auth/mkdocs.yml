@@ -1,0 +1,15 @@
+site_name: anaconda-cloud-auth
+theme:
+  name: material
+#nav:
+#  - Introduction: index.md
+plugins:
+- techdocs-core
+markdown_extensions:
+- admonition
+- pymdownx.highlight:
+    auto_title: true
+    anchor_linenums: true
+- pymdownx.superfences
+- toc:
+    toc_depth: 4

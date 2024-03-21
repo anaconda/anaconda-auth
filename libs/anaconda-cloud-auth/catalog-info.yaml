@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "anaconda-cloud-auth"
+  description: "A library providing easy authenticated requests against anaconda.cloud APIs"
+  annotations:
+    github.com/project-slug: anaconda/anaconda-cloud-tools
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: library
+  lifecycle: production
+  owner: tulz
+  system: anaconda-cloud-tools

@@ -29,6 +29,7 @@ requirements:
     - {{ dep.lower() }}
     {% endfor %}
     - anaconda-anon-usage
+    - conda-token
 
 test:
   imports:
