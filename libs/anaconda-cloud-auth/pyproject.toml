@@ -21,7 +21,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 
 [project.entry-points.conda]
-anaconda-cloud-auth = "anaconda_cloud_auth.plugins"
+anaconda-cloud-auth = "anaconda_cloud_auth._conda.plugins"
 
 [project.entry-points."panel.auth"]
 anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
