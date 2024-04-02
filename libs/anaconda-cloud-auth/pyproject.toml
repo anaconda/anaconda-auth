@@ -133,7 +133,7 @@ norecursedirs = ["env", "envs", ".tox"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2,semver2,semver3},py311,py312,mypy
+envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2,semver2,semver3,conda},py311,py312,mypy,report
 isolated_build = True
 
 [gh-actions]
@@ -145,6 +145,7 @@ python =
     3.12: py312
 
 [testenv]
+    COVERAGE_FILE = .coverage.{envname}
 pass_env =
   TEST_AUTOMATION_USER_EMAIL
   TEST_AUTOMATION_USER_PASSWORD
@@ -165,11 +166,13 @@ deps =
     semver3: semver>=3,<4
 conda_deps =
     anaconda-anon-usage
+    # Optionally install conda to test plugins
+    conda: conda
 conda_channels =
     anaconda-cloud
     defaults
     conda-forge
-commands = pytest {posargs}
+commands = pytest --cov {posargs}
 
 [testenv:mypy]
 deps =
@@ -181,6 +184,14 @@ deps =
     anaconda-cli-base
     anaconda-cloud-cli  # Needed for typer
 commands = mypy
+
+[testenv:report]
+deps = coverage
+skip_install = true
+commands =
+    coverage combine
+    coverage report
+    coverage xml -o coverage.xml
 """
 
 [tool.vendoring]

@@ -4,11 +4,18 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+from functools import cached_property
+from typing import Any
 from typing import Optional
 from urllib.parse import urlparse
 
+from conda import CondaError
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
+from requests import Response
+
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
+from anaconda_cloud_auth.token import TokenInfo
 
 try:
     from conda_token import repo_config
@@ -16,26 +23,67 @@ except ImportError:
     repo_config = None  # type: ignore
 
 
+class AnacondaCloudAuthError(CondaError):
+    """
+    A generic error to raise that is a subclass of CondaError so we don't trigger the unhandled exception traceback.
+    """
+
+
 class AnacondaCloudAuthHandler(ChannelAuthBase):
-    @property
-    def token(self) -> Optional[str]:
+    @staticmethod
+    def _load_token_from_keyring(domain: str) -> Optional[str]:
+        try:
+            token_info = TokenInfo.load(domain)
+        except TokenNotFoundError:
+            pass  # Fallback to conda-token if the token is not found in the keyring
+        else:
+            # We found a keyring entry, but the token may be None
+            return token_info.repo_token
+        return None
+
+    @staticmethod
+    def _load_token_via_conda_token(domain: str) -> Optional[str]:
+        # Try to load the token via conda-token if that is installed
+        if repo_config is not None:
+            tokens = repo_config.token_list()
+            for url, token in tokens.items():
+                token_netloc = urlparse(url).netloc
+                if token_netloc.lower() == domain and token is not None:
+                    return token
+        return None
+
+    @cached_property
+    def token(self) -> str:
         """Load the legacy repo token via conda-token.
 
         Returns None if token cannot be found.
 
         """
-        if repo_config is None:
-            return None
-        tokens = repo_config.token_list()
-        for url, token in tokens.items():
-            token_netloc = urlparse(url).netloc
-            channel_netloc = urlparse(self.channel_name).netloc
-            if token_netloc.lower() == channel_netloc.lower():
-                return token
-        return None
+        channel_url = urlparse(self.channel_name)
+        domain = channel_url.netloc.lower()
+
+        # First, we try to load the token from the keyring. If it is not found, we fall through
+        if token := self._load_token_from_keyring(domain):
+            return token
+        elif token := self._load_token_via_conda_token(domain):
+            return token
+        else:
+            raise AnacondaCloudAuthError(
+                f"Token not found for {self.channel_name}. Please install token with "
+                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+            )
+
+    def handle_invalid_token(self, response: Response, **_: Any) -> Response:
+        """Raise a nice error message if the authentication token is invalid (not missing)."""
+        if response.status_code == 403:
+            raise AnacondaCloudAuthError(
+                f"Token is invalid for {self.channel_name}. Please re-install token with "
+                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+            )
+        return response
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        if token := self.token:
-            request.headers["Authorization"] = f"token {token}"
+        request.headers["Authorization"] = f"token {self.token}"
+        request.register_hook("response", self.handle_invalid_token)
         return request

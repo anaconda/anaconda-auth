@@ -44,6 +44,7 @@ def test_login_to_token_info(is_not_none: Any) -> None:
     assert keyring_token == {
         "domain": auth_config.domain,
         "username": None,
+        "repo_token": None,
         "api_key": is_not_none,
     }
 

@@ -192,6 +192,7 @@ class AnacondaKeyring(KeyringBackend):
 class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
+    repo_token: Union[str, None] = None
     domain: str
 
     @classmethod
