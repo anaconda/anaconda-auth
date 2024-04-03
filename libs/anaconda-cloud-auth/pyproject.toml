@@ -33,6 +33,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-mock",
+  "responses",
   "tox",
   "types-requests"
 ]
@@ -40,6 +41,15 @@ publish = [
   "build",
   "twine",
   "wheel"
+]
+
+[tool.coverage]
+paths.source = [
+  "src",
+  ".tox*/*/lib/python*/site-packages"
+]
+report.omit = [
+  "src/anaconda_cloud_auth/_version.py"
 ]
 
 [tool.distutils.bdist_wheel]
@@ -114,14 +124,13 @@ module = "pydantic.v1.*"
 
 [tool.pytest.ini_options]
 addopts = [
-  "--cov=anaconda_cloud_auth",
+  "--cov",
   "--color=yes",
   "--cov-append",
   "--cov-branch",
-  "--cov-report=html",
   "--cov-report=html:./cov_html",
   "--cov-report=term-missing",
-  "--cov-report=xml",
+  "--cov-report=xml:./coverage.xml",
   "--durations=5",
   "-vv"
 ]
@@ -129,11 +138,12 @@ markers = [
   "integration: Integration tests requiring a browser"
 ]
 norecursedirs = ["env", "envs", ".tox"]
+pythonpath = "src/"
 
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring},py310-{pydantic1,pydantic2,semver2,semver3,conda},py311,py312,mypy,report
+envlist = py38,py39,py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda},py311,py312,mypy,report
 isolated_build = True
 
 [gh-actions]
@@ -145,7 +155,6 @@ python =
     3.12: py312
 
 [testenv]
-    COVERAGE_FILE = .coverage.{envname}
 pass_env =
   TEST_AUTOMATION_USER_EMAIL
   TEST_AUTOMATION_USER_PASSWORD
@@ -156,6 +165,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
+    responses
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
     # on an import from that library and instead rely on `keyring.backend.properties`.
     old-keyring: keyring <=23.4.0
@@ -168,11 +178,12 @@ conda_deps =
     anaconda-anon-usage
     # Optionally install conda to test plugins
     conda: conda
+    conda: conda-token
 conda_channels =
     anaconda-cloud
     defaults
     conda-forge
-commands = pytest --cov {posargs}
+commands = pytest {posargs}
 
 [testenv:mypy]
 deps =
@@ -186,10 +197,9 @@ deps =
 commands = mypy
 
 [testenv:report]
-deps = coverage
+deps = coverage[toml]
 skip_install = true
 commands =
-    coverage combine
     coverage report
     coverage xml -o coverage.xml
 """
