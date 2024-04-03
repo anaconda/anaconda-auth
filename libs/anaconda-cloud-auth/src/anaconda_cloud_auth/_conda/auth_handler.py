@@ -10,6 +10,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from conda import CondaError
+from conda.models.channel import Channel
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
@@ -27,6 +28,23 @@ class AnacondaCloudAuthError(CondaError):
     """
     A generic error to raise that is a subclass of CondaError so we don't trigger the unhandled exception traceback.
     """
+
+
+def _get_domain_for_channel(channel_name: str) -> str:
+    if channel_name == "defaults":
+        # For defaults, we require that the domain for all defaults channels is the same
+        default_urls = Channel("defaults").urls()
+        domains = [urlparse(url).netloc.lower() for url in default_urls]
+        if len(set(domains)) != 1:
+            raise AnacondaCloudAuthError(
+                "defaults cannot be used with multiple domains"
+            )
+        domain, *_ = domains
+    else:
+        # Handle a general URL-based channel name
+        channel_url = urlparse(channel_name)
+        domain = channel_url.netloc.lower()
+    return domain
 
 
 class AnacondaCloudAuthHandler(ChannelAuthBase):
@@ -59,8 +77,7 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
         Returns None if token cannot be found.
 
         """
-        channel_url = urlparse(self.channel_name)
-        domain = channel_url.netloc.lower()
+        domain = _get_domain_for_channel(self.channel_name)
 
         # First, we try to load the token from the keyring. If it is not found, we fall through
         if token := self._load_token_from_keyring(domain):
