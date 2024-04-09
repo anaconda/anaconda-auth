@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import Type
 from typing import Union
 from urllib.error import HTTPError
@@ -43,7 +44,10 @@ logger = logging.getLogger(__name__)
 KEYRING_NAME = "Anaconda Cloud"
 
 
+# Type aliases
 LocalKeyringData = Dict[str, Dict[str, str]]
+OrgName = str
+TokenString = str
 
 
 def _as_base64_string(payload: str) -> str:
@@ -189,10 +193,15 @@ class AnacondaKeyring(KeyringBackend):
             raise PasswordDeleteError
 
 
+class RepoToken(BaseModel):
+    token: TokenString
+    org_name: Union[OrgName, None] = None
+
+
 class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
-    repo_token: Union[str, None] = None
+    repo_tokens: List[RepoToken] = []
     domain: str
 
     @classmethod
@@ -258,3 +267,21 @@ class TokenInfo(BaseModel):
             )
 
         return self.api_key
+
+    def get_repo_token(self, org_name: OrgName) -> TokenString:
+        """Return the installed repo token for a specific organization.
+
+        Args:
+            org_name: The organization name for which to search for a token.
+
+        Returns:
+            The repo access token associated with the requested organization.
+
+        Raises:
+            TokenNotFoundError: if no token is found in the keyring for that organization.
+
+        """
+        for token in self.repo_tokens:
+            if token.org_name == org_name:
+                return token.token
+        raise TokenNotFoundError(f"Could not find repo token for org {org_name}")

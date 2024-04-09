@@ -4,19 +4,20 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
-from functools import cached_property
+from functools import lru_cache
 from typing import Any
 from typing import Optional
 from urllib.parse import urlparse
 
 from conda import CondaError
-from conda.models.channel import Channel
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
 
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
+
+CLOUD_URI_PREFIX = "/repo/"
 
 try:
     from conda_token import repo_config
@@ -30,59 +31,80 @@ class AnacondaCloudAuthError(CondaError):
     """
 
 
-def _get_domain_for_channel(channel_name: str) -> str:
-    if channel_name == "defaults":
-        # For defaults, we require that the domain for all defaults channels is the same
-        default_urls = Channel("defaults").urls()
-        domains = [urlparse(url).netloc.lower() for url in default_urls]
-        if len(set(domains)) != 1:
-            raise AnacondaCloudAuthError(
-                "defaults cannot be used with multiple domains"
-            )
-        domain, *_ = domains
-    else:
-        # Handle a general URL-based channel name
-        channel_url = urlparse(channel_name)
-        domain = channel_url.netloc.lower()
-    return domain
-
-
 class AnacondaCloudAuthHandler(ChannelAuthBase):
     @staticmethod
-    def _load_token_from_keyring(domain: str) -> Optional[str]:
+    def _load_token_from_keyring(url: str) -> Optional[str]:
+        """Attempt to load an appropriate token from the keyring.
+
+        We parse the requested URL, extract what may be an organization ID, and first
+        attempt to load the token for that specific organization. If that fails, we
+        then simply return the first token in the keyring (since this is in all likelihood
+        one of the default channels ('main', 'r', etc.).
+
+        If no token can be found in the keyring, we return None, which means that
+        the token will attempt to be read from via conda-token instead.
+
+        """
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.lower()
         try:
             token_info = TokenInfo.load(domain)
         except TokenNotFoundError:
-            pass  # Fallback to conda-token if the token is not found in the keyring
-        else:
-            # We found a keyring entry, but the token may be None
-            return token_info.repo_token
+            # Fallback to conda-token if the token is not found in the keyring
+            return None
+
+        path = parsed_url.path
+        if path.startswith(CLOUD_URI_PREFIX):
+            path = path[len(CLOUD_URI_PREFIX) :]
+        maybe_org, _, _ = path.partition("/")
+
+        # First we attempt to return an organization-specific token
+        try:
+            return token_info.get_repo_token(maybe_org)
+        except TokenNotFoundError:
+            pass
+
+        # Return the first one, assuming this is not an org-specific channel
+        try:
+            return token_info.repo_tokens[0].token
+        except KeyError:
+            pass
+
         return None
 
     @staticmethod
-    def _load_token_via_conda_token(domain: str) -> Optional[str]:
+    def _load_token_via_conda_token(url: str) -> Optional[str]:
+        domain = urlparse(url).netloc.lower()
         # Try to load the token via conda-token if that is installed
         if repo_config is not None:
             tokens = repo_config.token_list()
-            for url, token in tokens.items():
-                token_netloc = urlparse(url).netloc
+            for token_url, token in tokens.items():
+                token_netloc = urlparse(token_url).netloc
                 if token_netloc.lower() == domain and token is not None:
                     return token
         return None
 
-    @cached_property
-    def token(self) -> str:
-        """Load the legacy repo token via conda-token.
+    @lru_cache
+    def _load_token(self, url: str) -> str:
+        """Load the appropriate token based on URL matching.
 
-        Returns None if token cannot be found.
+        First, attempts to load from the keyring. If that fails, we attempt
+        to load the legacy repo token via conda-token.
+
+        Cached for performance.
+
+        Args:
+            url: The URL for the request.
+
+        Raises:
+             AnacondaCloudAuthError: If no token is found using either method.
 
         """
-        domain = _get_domain_for_channel(self.channel_name)
 
         # First, we try to load the token from the keyring. If it is not found, we fall through
-        if token := self._load_token_from_keyring(domain):
+        if token := self._load_token_from_keyring(url):
             return token
-        elif token := self._load_token_via_conda_token(domain):
+        elif token := self._load_token_via_conda_token(url):
             return token
         else:
             raise AnacondaCloudAuthError(
@@ -101,6 +123,6 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        request.headers["Authorization"] = f"token {self.token}"
+        request.headers["Authorization"] = f"token {self._load_token(request.url)}"
         request.register_hook("response", self.handle_invalid_token)
         return request

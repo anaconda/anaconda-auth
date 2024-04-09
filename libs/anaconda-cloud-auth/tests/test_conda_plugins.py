@@ -8,24 +8,26 @@ conda = pytest.importorskip("conda")
 
 from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
-from conda.models.channel import Channel  # noqa: E402
 
 from anaconda_cloud_auth._conda.auth_handler import AnacondaCloudAuthError  # noqa: E402
 from anaconda_cloud_auth._conda.auth_handler import (  # noqa: E402
     AnacondaCloudAuthHandler,
 )
-from anaconda_cloud_auth._conda.auth_handler import (  # noqa: E402
-    _get_domain_for_channel,
-)
+
+
+@pytest.fixture()
+def mocked_empty_conda_token(mocker):
+    mocker.patch(
+        "conda_token.repo_config.token_list",
+        return_value={},
+    )
 
 
 @pytest.fixture()
 def mocked_conda_token(mocker):
     mocker.patch(
         "conda_token.repo_config.token_list",
-        return_value={
-            "https://repo.anaconda.cloud/repo/my-org/my-channel": "my-test-token"
-        },
+        return_value={"https://repo.anaconda.cloud/repo/": "my-test-token"},
     )
 
 
@@ -35,7 +37,13 @@ def mocked_token_info(mocker):
         "anaconda_cloud_auth.token.TokenInfo.load",
         return_value=TokenInfo(
             domain="repo.anaconda.cloud",
-            repo_token="my-test-token-in-token-info",
+            repo_tokens=[
+                {
+                    "org_name": "my-first-org",
+                    "token": "my-first-test-token-in-token-info",
+                },
+                {"org_name": "my-org", "token": "my-test-token-in-token-info"},
+            ],
         ),
     )
 
@@ -49,17 +57,34 @@ def handler():
 
 @pytest.mark.usefixtures("mocked_conda_token")
 def test_get_token_via_conda_token(handler):
-    assert handler.token == "my-test-token"
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    )
+    assert token == "my-test-token"
 
 
 @pytest.mark.usefixtures("mocked_token_info")
 def test_get_token_via_keyring(handler):
-    assert handler.token == "my-test-token-in-token-info"
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    )
+    assert token == "my-test-token-in-token-info"
 
 
+@pytest.mark.usefixtures("mocked_token_info")
+def test_get_token_for_main_finds_first_token(handler):
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/main/noarch/repodata.json"
+    )
+    assert token == "my-first-test-token-in-token-info"
+
+
+@pytest.mark.usefixtures("mocked_empty_conda_token")
 def test_get_token_missing(handler):
     with pytest.raises(AnacondaCloudAuthError):
-        _ = handler.token
+        _ = handler._load_token(
+            "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+        )
 
 
 @pytest.fixture()
@@ -105,49 +130,3 @@ def test_response_callback_403(session, url, monkeypatch):
     # A 403 response is captured by the hook and a custom exception is raised
     with pytest.raises(AnacondaCloudAuthError):
         session.get(url)
-
-
-def test_get_domain_for_channel_url():
-    """If the channel is specified by URL, we just extract the domain name."""
-    domain = _get_domain_for_channel("https://repo.anaconda.cloud/repo/main")
-    assert domain == "repo.anaconda.cloud"
-
-
-def test_get_domain_for_channel_defaults(monkeypatch):
-    """
-    If the channel is specified as "defaults", a list of URLS will be set in the default_channels section of .condarc
-    """
-
-    def _mock_urls(*args, **kwargs):
-        return [
-            "https://repo.anaconda.cloud/repo/main",
-            "https://repo.anaconda.cloud/repo/r",
-            "https://repo.anaconda.cloud/repo/msys2",
-        ]
-
-    monkeypatch.setattr(Channel, "urls", _mock_urls)
-    domain = _get_domain_for_channel("defaults")
-    assert domain == "repo.anaconda.cloud"
-
-
-@pytest.mark.parametrize(
-    "urls",
-    [
-        [],
-        [
-            "https://repo.anaconda.cloud/repo/main",
-            "https://anaconda.org/anaconda-cloud",
-        ],
-    ],
-)
-def test_get_domain_for_channel_defaults_raises_exception(monkeypatch, urls):
-    """
-    If the channel is specified as "defaults", we raise an exception if the URLs are empty or different domains.
-    """
-
-    def _mock_urls(*args, **kwargs):
-        return urls
-
-    monkeypatch.setattr(Channel, "urls", _mock_urls)
-    with pytest.raises(AnacondaCloudAuthError):
-        _get_domain_for_channel("defaults")
