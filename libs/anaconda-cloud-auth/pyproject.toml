@@ -11,7 +11,8 @@ dependencies = [
   "pyjwt",
   "requests",
   "cryptography>=3.4.0",  # see pyjwt
-  "semver<4"
+  "semver<4",
+  "anaconda-cli-base>=0.3.0"
 ]
 description = "A client auth library for Anaconda.cloud APIs"
 dynamic = ["version"]
@@ -20,6 +21,9 @@ name = "anaconda-cloud-auth"
 readme = "README.md"
 requires-python = ">=3.8"
 
+[project.entry-points."anaconda_cli.subcommand"]
+cloud = "anaconda_cloud_auth.cli:app"
+
 [project.entry-points.conda]
 anaconda-cloud-auth = "anaconda_cloud_auth._conda.entrypoint"
 
@@ -27,7 +31,6 @@ anaconda-cloud-auth = "anaconda_cloud_auth._conda.entrypoint"
 anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
 
 [project.optional-dependencies]
-cli = ["anaconda-cloud-cli"]
 dev = [
   "mypy",
   "pytest",
@@ -140,6 +143,9 @@ markers = [
 norecursedirs = ["env", "envs", ".tox"]
 pythonpath = "src/"
 
+[tool.ruff]
+target-version = "py38"
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -195,7 +201,8 @@ deps =
     pytest-mock
     types-requests
     anaconda-cli-base
-    anaconda-cloud-cli  # Needed for typer
+    typer
+    rich
 commands = mypy
 
 [testenv:report]

@@ -6,15 +6,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest_mock import MockerFixture
 
+from anaconda_cli_base.console import console
 from anaconda_cloud_auth import config
 from anaconda_cloud_auth import login
 from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.token import TokenInfo
 
 load_dotenv()

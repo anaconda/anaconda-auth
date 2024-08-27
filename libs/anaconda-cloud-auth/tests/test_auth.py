@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests.exceptions import SSLError
 
@@ -17,9 +17,6 @@ from anaconda_cloud_auth.config import AuthConfig
 from anaconda_cloud_auth.token import TokenInfo
 
 from .conftest import MockedRequest
-
-if TYPE_CHECKING:
-    from _pytest.monkeypatch import MonkeyPatch
 
 HERE = os.path.dirname(__file__)
 

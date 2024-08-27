@@ -12,5 +12,5 @@ dependencies:
 - tox-conda
 - pip
 - pip:
+    - "-e ../anaconda-cli-base[dev]"
     - "-e .[dev]"
-    - "-e ../anaconda-cloud-cli"

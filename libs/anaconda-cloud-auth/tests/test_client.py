@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
 from anaconda_cloud_auth.client import BaseClient
@@ -13,9 +13,6 @@ from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.token import TokenInfo
 
 from .conftest import MockedRequest
-
-if TYPE_CHECKING:
-    from _pytest.monkeypatch import MonkeyPatch
 
 
 def test_login_required_error() -> None:

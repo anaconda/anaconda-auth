@@ -12,10 +12,10 @@ import jwt
 import pkce
 import requests
 
+from anaconda_cli_base.console import console
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth.config import APIConfig
 from anaconda_cloud_auth.config import AuthConfig
-from anaconda_cloud_auth.console import console
 from anaconda_cloud_auth.exceptions import AuthenticationError
 from anaconda_cloud_auth.exceptions import InvalidTokenError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
