@@ -4,6 +4,8 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from typing import Union
+from typing import Generator
 
 import pytest
 from pytest import MonkeyPatch
@@ -11,9 +13,6 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest_mock import MockerFixture
 
-from anaconda_cli_base.console import console
-from anaconda_cloud_auth import config
-from anaconda_cloud_auth import login
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.token import TokenInfo
 
@@ -101,87 +100,36 @@ def is_not_none() -> Any:
 
 
 @pytest.fixture
-def disable_dot_env(monkeypatch: MonkeyPatch) -> None:
-    from anaconda_cloud_auth.config import APIConfig
-    from anaconda_cloud_auth.config import AuthConfig
+def disable_dot_env(mocker: MockerFixture) -> None:
+    from anaconda_cloud_auth.config import AnacondaCloudConfig
 
-    monkeypatch.setattr(APIConfig.Config, "env_file", "")
-    monkeypatch.setattr(AuthConfig.Config, "env_file", "")
+    mocker.patch.dict(AnacondaCloudConfig.model_config, {"env_file": ""})
+
+
+@pytest.fixture(autouse=True)
+def disable_config_toml(tmp_path: Path, monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("ANACONDA_CONFIG_TOML", str(tmp_path / "empty-config.toml"))
+
+
+@pytest.fixture
+def api_key() -> Union[str, None]:
+    return os.getenv("TEST_API_KEY")
 
 
 @pytest.fixture()
-def integration_test_client_setup(monkeypatch: MonkeyPatch) -> Any:
-    """Provides a request client configured to talk to the automation environment.
+def integration_test_client(api_key: Union[str, None]) -> BaseClient:
+    c = BaseClient(api_key=api_key)
+    return c
 
-    We first load credentials from environment variables. We then use a special
-    user credential to generate an API key via basic login. Finally, we patch
-    the configuration and clients such that CloudFlare headers are included and
-    the domains match the automation environment.
 
-    """
-    if (email := os.getenv("TEST_AUTOMATION_USER_EMAIL")) is None:
-        raise ValueError(
-            "TEST_AUTOMATION_USER_EMAIL must be specified as an environment variable or in `.env`"
-        )
-    if (password := os.getenv("TEST_AUTOMATION_USER_PASSWORD")) is None:
-        raise ValueError(
-            "TEST_AUTOMATION_USER_PASSWORD must be specified as an environment variable or in `.env`"
-        )
+@pytest.fixture()
+def save_api_key_to_token(api_key: Union[str, None]) -> Generator[None, None, None]:
+    from anaconda_cloud_auth.config import AnacondaCloudConfig
 
-    monkeypatch.setenv(
-        "ANACONDA_CLOUD_AUTH_DOMAIN", "nucleus-automation.anacondaconnect.com/api/iam"
-    )
-    monkeypatch.setenv(
-        "ANACONDA_CLOUD_API_DOMAIN", "nucleus-automation.anacondaconnect.com"
-    )
-    monkeypatch.setenv(
-        "ANACONDA_CLOUD_AUTH_CLIENT_ID", "e0648d7e-72c1-4159-b7e8-5d020ac134c2"
-    )
-
-    # Here, we store Cloudflare headers to allow use of Warp from GitHub Actions runners.
-    # These are stored as secrets in Vault.
-    if client_id := os.getenv("CF_CLIENT_ID"):
-        monkeypatch.setitem(
-            config.OIDC_REQUEST_HEADERS, "CF-Access-Client-Id", client_id
-        )
-    if client_secret := os.getenv("CF_CLIENT_SECRET"):
-        monkeypatch.setitem(
-            config.OIDC_REQUEST_HEADERS, "CF-Access-Client-Secret", client_secret
-        )
-
-    def mock_input(msg: str, **kwargs: Any) -> str:
-        """Mock the input function to mimic user entry."""
-        assert email is not None
-        assert password is not None
-        if msg == "Please enter your email: ":
-            return email
-        elif msg == "Please enter your password: ":
-            return password
-        else:
-            raise ValueError(f"Unknown input statement: {msg}")
-
-    monkeypatch.setattr(console, "input", mock_input)
-
+    conf = AnacondaCloudConfig()
+    token = TokenInfo(api_key=api_key, domain=conf.domain)
+    token.save()
     yield
-
-
-@pytest.fixture()
-def integration_test_client(integration_test_client_setup: None) -> BaseClient:
-    _ = integration_test_client_setup
-    login(basic=True)
-
-    extra_headers = {}
-
-    client_id = os.getenv("CF_CLIENT_ID")
-    client_secret = os.getenv("CF_CLIENT_SECRET")
-
-    if client_id and client_secret:
-        extra_headers["CF-Access-Client-Id"] = client_id
-        extra_headers["CF-Access-Client-Secret"] = client_secret
-
-    client = BaseClient(extra_headers=extra_headers)
-
-    return client
 
 
 def pytest_addoption(parser):  # type: ignore
@@ -212,12 +160,14 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_cloud_auth.config.APIConfig.aau_token", "anon-token")
+    mocker.patch(
+        "anaconda_cloud_auth.config.AnacondaCloudConfig.aau_token", "anon-token"
+    )
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_cloud_auth.config.APIConfig.aau_token", None)
+    mocker.patch("anaconda_cloud_auth.config.AnacondaCloudConfig.aau_token", None)
 
 
 class MockResponse:

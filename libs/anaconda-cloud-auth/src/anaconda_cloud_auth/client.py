@@ -15,8 +15,7 @@ from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_cloud_auth import __version__ as version
-from anaconda_cloud_auth.config import APIConfig
-from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
@@ -35,7 +34,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AuthConfig().domain
+            domain = AnacondaCloudConfig().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -75,15 +74,13 @@ class BaseClient(requests.Session):
         if domain is not None:
             kwargs["domain"] = domain
         if api_key is not None:
-            kwargs["key"] = api_key
+            kwargs["api_key"] = api_key
         if ssl_verify is not None:
             kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
             kwargs["extra_headers"] = extra_headers
 
-        # kwargs in the client init take precedence over default
-        # values or env vars
-        self.config = APIConfig(**kwargs)
+        self.config = AnacondaCloudConfig(**kwargs)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -107,7 +104,7 @@ class BaseClient(requests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(api_key=self.config.key)
+        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)

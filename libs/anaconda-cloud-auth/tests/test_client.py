@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 import warnings
 from uuid import uuid4
 
 import pytest
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests import Request
+from requests.exceptions import SSLError
 
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.client import client_factory
@@ -13,6 +16,8 @@ from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.token import TokenInfo
 
 from .conftest import MockedRequest
+
+HERE = os.path.dirname(__file__)
 
 
 def test_login_required_error() -> None:
@@ -110,36 +115,33 @@ def test_client_min_api_version_header(
         assert len(w) == 0
 
 
-def test_anonymous_endpoint(monkeypatch: MonkeyPatch, disable_dot_env: None) -> None:
-    _ = disable_dot_env
-    monkeypatch.setenv("ANACONDA_CLOUD_API_DOMAIN", "anaconda.cloud")
-    monkeypatch.setenv("ANACONDA_CLOUD_AUTH_DOMAIN", "dummy")
+@pytest.mark.usefixtures("disable_dot_env")
+def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
     client = BaseClient()
-    response = client.get("/api/catalogs/examples")
-    assert "Authorization" not in response.request.headers.keys()
-    assert response.status_code == 200
+    request = Request("GET", "api/catalogs/examples")
+    auth_request = client.auth(request)
+    assert "Authorization" not in auth_request.headers
 
 
+@pytest.mark.usefixtures("disable_dot_env")
 def test_token_included(
     mocker: MockerFixture,
     monkeypatch: MonkeyPatch,
     outdated_token_info: TokenInfo,
-    disable_dot_env: None,
 ) -> None:
-    _ = disable_dot_env
-    monkeypatch.setenv("ANACONDA_CLOUD_AUTH_DOMAIN", "mocked-domain")
+    monkeypatch.setenv("ANACONDA_CLOUD_DOMAIN", "mocked-domain")
     mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
     outdated_token_info.save()
 
     client = BaseClient()
-    response = client.get("/api/catalogs/examples")
+    request = Request("GET", "api/catalogs/examples")
+    auth_request = client.auth(request)
     assert (
-        response.request.headers.get("Authorization")
-        == f"Bearer {outdated_token_info.api_key}"
+        auth_request.headers["Authorization"] == f"Bearer {outdated_token_info.api_key}"
     )
 
 
@@ -150,7 +152,7 @@ def test_api_key_env_variable_over_keyring(
     monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "set-in-env")
 
     client = BaseClient()
-    assert client.config.key == "set-in-env"
+    assert client.config.api_key == "set-in-env"
 
     response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("Authorization") == "Bearer set-in-env"
@@ -163,7 +165,7 @@ def test_api_key_init_arg_over_variable(
     monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "set-in-env")
 
     client = BaseClient(api_key="set-in-init")
-    assert client.config.key == "set-in-init"
+    assert client.config.api_key == "set-in-init"
 
     response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("Authorization") == "Bearer set-in-init"
@@ -286,9 +288,29 @@ def test_extra_headers_bad_json() -> None:
 
 def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
     extra_headers = '{"X-Extra": "from-env"}'
-    monkeypatch.setenv("ANACONDA_CLOUD_API_EXTRA_HEADERS", extra_headers)
+    monkeypatch.setenv("ANACONDA_CLOUD_EXTRA_HEADERS", extra_headers)
 
     client = BaseClient(api_key="set-in-init")
 
     res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "from-env"
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("save_api_key_to_token")
+def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+
+    client = BaseClient(ssl_verify=True)
+    with pytest.raises(SSLError):
+        client.get("api/account")
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("save_api_key_to_token")
+def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+
+    client = BaseClient(ssl_verify=False)
+    res = client.get("api/account")
+    assert res.ok

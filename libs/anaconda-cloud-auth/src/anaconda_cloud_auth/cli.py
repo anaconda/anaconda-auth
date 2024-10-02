@@ -7,8 +7,7 @@ from anaconda_cloud_auth.actions import is_logged_in
 from anaconda_cloud_auth.actions import login
 from anaconda_cloud_auth.actions import logout
 from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.config import AuthConfig
-from anaconda_cloud_auth.config import APIConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.token import TokenInfo
 from anaconda_cloud_auth.token import TokenNotFoundError
 
@@ -31,7 +30,7 @@ def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
 def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
     """Login"""
     try:
-        auth_domain = AuthConfig().domain
+        auth_domain = AnacondaCloudConfig().domain
         expired = TokenInfo.load(domain=auth_domain).expired
         if expired:
             console.print("Your API key has expired, logging into Anaconda.cloud")
@@ -53,9 +52,9 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
 @app.command(name="whoami")
 def auth_info() -> None:
     """Display information about the currently signed-in user"""
-    api_config = APIConfig()
+    config = AnacondaCloudConfig()
 
-    if not (api_config.key or is_logged_in()):
+    if not (config.api_key or is_logged_in()):
         login()
 
     client = BaseClient()
@@ -67,14 +66,13 @@ def auth_info() -> None:
 @app.command(name="api-key")
 def auth_key() -> None:
     """Display API Key for signed-in user"""
-    api_config = APIConfig()
-    if api_config.key:
-        console.print(api_config.key)
+    config = AnacondaCloudConfig()
+    if config.api_key:
+        console.print(config.api_key)
         return
 
-    auth_config = AuthConfig()
     try:
-        token_info = TokenInfo.load(domain=auth_config.domain)
+        token_info = TokenInfo.load(domain=config.domain)
         if not token_info.expired:
             console.print(token_info.api_key)
             return
@@ -82,7 +80,7 @@ def auth_key() -> None:
         pass
 
     login()
-    token_info = TokenInfo.load(domain=auth_config.domain)
+    token_info = TokenInfo.load(domain=config.domain)
     console.print(token_info.api_key)
 
 

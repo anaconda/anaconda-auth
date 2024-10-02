@@ -5,15 +5,13 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
-from requests.exceptions import SSLError
 
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth import login
-from anaconda_cloud_auth.actions import get_api_key
+from anaconda_cloud_auth.actions import get_api_key, is_logged_in
 from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.token import TokenInfo
 
 from .conftest import MockedRequest
@@ -21,46 +19,38 @@ from .conftest import MockedRequest
 HERE = os.path.dirname(__file__)
 
 
-@pytest.fixture(autouse=True)
-def set_dev_env_vars(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv(
-        "ANACONDA_CLOUD_API_DOMAIN", "nucleus-latest.anacondaconnect.com"
-    )
-    monkeypatch.setenv("ANACONDA_CLOUD_AUTH_DOMAIN", "dev.id.anaconda.cloud")
-    monkeypatch.setenv(
-        "ANACONDA_CLOUD_AUTH_CLIENT_ID", "83d245e3-6312-4f44-9298-1f5b32a13769"
-    )
+def test_login_to_api_key(mocker: MockerFixture) -> None:
+    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value="api-key")
+    mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
 
+    login()
 
-@pytest.mark.integration
-@pytest.mark.usefixtures("integration_test_client")
-def test_login_to_token_info(is_not_none: Any) -> None:
-    auth_config = AuthConfig()
-    keyring_token = TokenInfo.load(auth_config.domain)
+    config = AnacondaCloudConfig()
+    keyring_token = TokenInfo.load(config.domain)
 
-    assert keyring_token == {
-        "domain": auth_config.domain,
+    assert keyring_token.model_dump() == {
+        "domain": config.domain,
         "username": None,
         "repo_tokens": [],
-        "api_key": is_not_none,
+        "api_key": "api-key",
+        "version": 1,
     }
 
 
-@pytest.mark.integration
-@pytest.mark.usefixtures("integration_test_client_setup")
-def test_login_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+def test_login_ssl_verify(mocker: MockerFixture, api_key: str) -> None:
+    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value=api_key)
+    do_auth_flow = mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
 
-    with pytest.raises(SSLError):
-        login(ssl_verify=True, force=True, basic=True)
+    login(ssl_verify=True)
+    assert do_auth_flow.call_args_list[-1].kwargs["config"].ssl_verify
 
 
-@pytest.mark.integration
-@pytest.mark.usefixtures("integration_test_client_setup")
-def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+def test_login_no_ssl_verify(mocker: MockerFixture, api_key: str) -> None:
+    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value=api_key)
+    do_auth_flow = mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
 
-    login(ssl_verify=False, force=True, basic=True)
+    login(ssl_verify=False)
+    assert not do_auth_flow.call_args_list[-1].kwargs["config"].ssl_verify
 
 
 @pytest.mark.integration
@@ -76,8 +66,8 @@ def test_get_auth_info(integration_test_client: BaseClient, is_not_none: Any) ->
 
 @pytest.fixture
 def mocked_do_login(mocker: MockerFixture) -> MagicMock:
-    def _mocked_login(auth_config: AuthConfig, basic: bool) -> None:
-        TokenInfo(domain=auth_config.domain, api_key="from-login").save()
+    def _mocked_login(config: AnacondaCloudConfig, basic: bool) -> None:
+        TokenInfo(domain=config.domain, api_key="from-login").save()
 
     mocker.patch("anaconda_cloud_auth.actions._do_login", _mocked_login)
     from anaconda_cloud_auth import actions
@@ -87,53 +77,53 @@ def mocked_do_login(mocker: MockerFixture) -> MagicMock:
 
 
 def test_login_no_existing_token(mocked_do_login: MagicMock) -> None:
-    auth_config = AuthConfig()
-    login(auth_config=auth_config)
+    config = AnacondaCloudConfig()
+    login(config=config)
 
-    assert TokenInfo.load(auth_config.domain).api_key == "from-login"
+    assert TokenInfo.load(config.domain).api_key == "from-login"
     mocked_do_login.assert_called_once()
 
 
 def test_login_has_valid_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    auth_config = AuthConfig()
+    config = AnacondaCloudConfig()
 
     mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
-    TokenInfo(domain=auth_config.domain, api_key="pre-existing").save()
+    TokenInfo(domain=config.domain, api_key="pre-existing").save()
 
-    login(auth_config=auth_config)
+    login(config=config)
     mocked_do_login.assert_not_called()
 
-    assert TokenInfo.load(auth_config.domain).api_key == "pre-existing"
+    assert TokenInfo.load(config.domain).api_key == "pre-existing"
 
 
 def test_force_login_with_valid_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    auth_config = AuthConfig()
+    config = AnacondaCloudConfig()
 
     mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
-    TokenInfo(domain=auth_config.domain, api_key="pre-existing").save()
+    TokenInfo(domain=config.domain, api_key="pre-existing").save()
 
-    login(auth_config=auth_config, force=True)
+    login(config=config, force=True)
     mocked_do_login.assert_called_once()
 
-    assert TokenInfo.load(auth_config.domain).api_key == "from-login"
+    assert TokenInfo.load(config.domain).api_key == "from-login"
 
 
 def test_login_has_expired_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    auth_config = AuthConfig()
+    config = AnacondaCloudConfig()
 
     mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", True)
-    TokenInfo(domain=auth_config.domain, api_key="pre-existing-expired").save()
+    TokenInfo(domain=config.domain, api_key="pre-existing-expired").save()
 
-    login(auth_config=auth_config)
+    login(config=config)
     mocked_do_login.assert_called_once()
 
-    assert TokenInfo.load(auth_config.domain).api_key == "from-login"
+    assert TokenInfo.load(config.domain).api_key == "from-login"
 
 
 @pytest.fixture()
@@ -178,3 +168,8 @@ def test_get_api_key_with_aau_token(mocked_request: MockedRequest) -> None:
     headers = mocked_request.called_with_kwargs["headers"]
     assert headers["Authorization"].startswith("Bearer")
     assert headers["X-AAU-CLIENT"] == "anon-token"
+
+
+@pytest.mark.usefixtures("save_api_key_to_token")
+def test_is_logged_in() -> None:
+    assert is_logged_in()

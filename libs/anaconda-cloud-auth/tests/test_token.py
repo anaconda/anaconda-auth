@@ -3,10 +3,11 @@ from pathlib import Path
 
 import pytest
 from keyring.errors import PasswordDeleteError
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
 from anaconda_cloud_auth.actions import logout
-from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.token import TokenExpiredError
 from anaconda_cloud_auth.token import TokenInfo
 from anaconda_cloud_auth.token import TokenNotFoundError
@@ -18,13 +19,13 @@ def test_expired_token_error(outdated_token_info: TokenInfo) -> None:
 
 
 def test_token_not_found() -> None:
-    auth_config = AuthConfig()
+    config = AnacondaCloudConfig()
 
     with pytest.raises(TokenNotFoundError):
-        _ = TokenInfo.load(auth_config.domain)
+        _ = TokenInfo.load(config.domain)
 
     with pytest.raises(TokenNotFoundError):
-        _ = TokenInfo(domain=auth_config.domain).get_access_token()
+        _ = TokenInfo(domain=config.domain).get_access_token()
 
 
 def test_logout_multiple_okay(mocker: MockerFixture) -> None:
@@ -33,23 +34,33 @@ def test_logout_multiple_okay(mocker: MockerFixture) -> None:
 
     delete_spy = mocker.spy(keyring, "delete_password")
 
-    auth_config = AuthConfig(domain="test")
-    token_info = TokenInfo(api_key="key", domain=auth_config.domain)
+    config = AnacondaCloudConfig(domain="test")
+    token_info = TokenInfo(api_key="key", domain=config.domain)
     token_info.save()
 
     for _ in range(2):
-        logout(auth_config)
+        logout(config)
 
     delete_spy.assert_called_once()
 
 
-def test_anaconda_keyring_priority() -> None:
+def test_preferred_token_storage(monkeypatch: MonkeyPatch) -> None:
     import keyring.backend
 
     backends = {k.name: k for k in keyring.backend.get_all_keyring()}
 
     assert "token AnacondaKeyring" in backends
-    assert backends["token AnacondaKeyring"].priority == 9
+    assert backends["token AnacondaKeyring"].priority == 11.0
+    assert (
+        backends["token AnacondaKeyring"].priority
+        > backends["chainer ChainerBackend"].priority
+    )
+
+    monkeypatch.setenv("ANACONDA_CLOUD_PREFERRED_TOKEN_STORAGE", "system")
+    backends = {k.name: k for k in keyring.backend.get_all_keyring()}
+
+    assert "token AnacondaKeyring" in backends
+    assert backends["token AnacondaKeyring"].priority == 0.2
     assert (
         backends["token AnacondaKeyring"].priority
         < backends["chainer ChainerBackend"].priority
@@ -129,3 +140,40 @@ def test_anaconda_keyring_not_writable() -> None:
     AnacondaKeyring.keyring_path = root / "keyring"
 
     assert not AnacondaKeyring.viable
+
+
+def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
+    import keyring
+    import anaconda_cloud_auth.token
+
+    mocker.patch.dict(anaconda_cloud_auth.token.MIGRATIONS, {"modern": "legacy"})
+
+    # First make a token in the keyring with the legacy domain
+    legacy_token = TokenInfo(
+        api_key="one key to rule them all", domain="legacy", version=None
+    )
+    assert legacy_token.version is None
+    legacy_token.save()
+
+    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "legacy")
+    assert payload
+
+    decoded = TokenInfo._decode(payload)
+    assert "version" not in decoded
+
+    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "modern")
+    assert payload is None
+
+    # Now when loaded the keyring username will switch from legacy to modern
+    token = TokenInfo.load(domain="modern")
+    assert token.api_key == "one key to rule them all"
+    assert token.version == 1
+
+    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "legacy")
+    assert payload is None
+
+    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "modern")
+    assert payload
+
+    decoded = TokenInfo._decode(payload)
+    assert decoded["version"] == 1

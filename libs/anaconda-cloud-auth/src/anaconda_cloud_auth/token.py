@@ -8,6 +8,7 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Type
 from typing import Union
 from urllib.error import HTTPError
@@ -18,14 +19,9 @@ from keyring.backend import KeyringBackend
 from keyring.backend import properties
 from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
+from pydantic import BaseModel
 
-try:
-    # Version 2 provides a v1 API
-    from pydantic.v1 import BaseModel
-except ImportError:
-    from pydantic import BaseModel  # type: ignore
-
-from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 
@@ -96,11 +92,11 @@ class NavigatorFallback(KeyringBackend):
             from anaconda_cloud_auth.actions import get_api_key
             from anaconda_cloud_auth.actions import refresh_access_token
 
-            auth_config = AuthConfig(domain=auth_domain)
+            config = AnacondaCloudConfig(domain=auth_domain)
             if not token.valid:
                 try:
                     access_token = refresh_access_token(
-                        token.refresh_token, auth_config=auth_config
+                        token.refresh_token, config=config
                     )
                 except HTTPError:
                     return None
@@ -111,7 +107,7 @@ class NavigatorFallback(KeyringBackend):
             token_info = {
                 "username": token.username,
                 "api_key": api_key,
-                "domain": auth_config.domain,
+                "domain": config.domain,
             }
             payload = json.dumps(token_info)
             encoded = _as_base64_string(payload)
@@ -141,7 +137,18 @@ class NavigatorFallback(KeyringBackend):
 
 class AnacondaKeyring(KeyringBackend):
     keyring_path = Path("~/.anaconda/keyring").expanduser()
-    priority = 9  # type: ignore
+
+    @classproperty
+    def priority(cls) -> float:
+        config = AnacondaCloudConfig()
+        if config.preferred_token_storage == "system":
+            return 0.2
+        elif config.preferred_token_storage == "anaconda-keyring":
+            return 11.0
+        else:
+            raise ValueError(
+                f"token_storage: {config.preferred_token_storage} is not supported."
+            )
 
     @classproperty
     def viable(cls) -> bool:
@@ -198,27 +205,53 @@ class RepoToken(BaseModel):
     org_name: Union[OrgName, None] = None
 
 
+MIGRATIONS: Dict[str, str] = {
+    "anaconda.cloud": "id.anaconda.cloud",
+}
+
+
 class TokenInfo(BaseModel):
+    domain: str
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
-    domain: str
+    version: Optional[int] = 1
+
+    @classmethod
+    def _decode(cls, keyring_data: str) -> dict:
+        decoded_bytes = base64.b64decode(keyring_data)
+        decoded_dict = json.loads(decoded_bytes)
+        return decoded_dict
 
     @classmethod
     def load(cls, domain: str) -> "TokenInfo":
         """Load the token information from the system keyring."""
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
         if keyring_data is None:
-            raise TokenNotFoundError
+            # Try again to see if there is a legacy token on disk
+            legacy_domain = MIGRATIONS.get(domain, domain)
+            keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+            if keyring_data is None:
+                raise TokenNotFoundError
+            else:
+                # Migrate the domain and save token under new domain
+                decoded_dict = cls._decode(keyring_data)
+                decoded_dict["domain"] = domain
+                decoded_dict["version"] = 1
+                token_info = TokenInfo(**decoded_dict)
+                token_info.save()
+                keyring.delete_password(KEYRING_NAME, legacy_domain)
+                logger.debug(
+                    f"🔓 Token has been migrated from legacy domain '{legacy_domain}' to '{domain}' 🎉"
+                )
 
-        decoded_bytes = base64.b64decode(keyring_data)
-        decoded_dict = json.loads(decoded_bytes)
-        logger.debug("🔓 Token has been successfully retrieved from system keychain 🎉")
+        logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+        decoded_dict = cls._decode(keyring_data)
         return TokenInfo(**decoded_dict)
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
-        payload = self.json()
+        payload = self.model_dump_json(exclude_none=True)
         encoded = _as_base64_string(payload)
         keyring.set_password(KEYRING_NAME, self.domain, encoded)
         logger.debug("🔒 Token has been safely stored in system keychain 🎉")

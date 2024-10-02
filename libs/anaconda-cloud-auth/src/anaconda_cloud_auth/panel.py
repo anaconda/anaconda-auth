@@ -3,7 +3,7 @@ from functools import cached_property
 from panel.auth import OAuthLoginHandler
 from panel.config import config
 
-from anaconda_cloud_auth.config import AuthConfig
+from anaconda_cloud_auth.config import AnacondaCloudConfig
 
 
 class AnacondaCloudLoginHandler(OAuthLoginHandler):
@@ -28,21 +28,21 @@ class AnacondaCloudLoginHandler(OAuthLoginHandler):
     _OAUTH_REDIRECT_URL: str = "http://localhost:5006"
 
     @cached_property
-    def _auth_config(self) -> AuthConfig:
-        c = AuthConfig()
+    def _config(self) -> AnacondaCloudConfig:
+        c = AnacondaCloudConfig()
         return c
 
     @property
     def _OAUTH_AUTHORIZE_URL(self) -> str:
-        domain = config.oauth_extra_params.get("auth-domain", self._auth_config.domain)  # type: ignore
+        domain = config.oauth_extra_params.get("auth-domain", self._config.domain)  # type: ignore
         return f"https://{domain}/oauth2/auth"
 
     @property
     def _OAUTH_USER_URL(self) -> str:
-        domain = config.oauth_extra_params.get("auth-domain", self._auth_config.domain)  # type: ignore
+        domain = config.oauth_extra_params.get("auth-domain", self._config.domain)  # type: ignore
         return f"https://{domain}/oauth2/userinfo"
 
     @property
     def _OAUTH_ACCESS_TOKEN_URL(self) -> str:
-        domain = config.oauth_extra_params.get("auth-domain", self._auth_config.domain)  # type: ignore
+        domain = config.oauth_extra_params.get("auth-domain", self._config.domain)  # type: ignore
         return f"https://{domain}/oauth2/token"

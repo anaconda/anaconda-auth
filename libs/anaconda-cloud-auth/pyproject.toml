@@ -10,9 +10,9 @@ dependencies = [
   "pydantic",
   "pyjwt",
   "requests",
-  "cryptography>=3.4.0",  # see pyjwt
+  "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base>=0.3.0"
+  "anaconda-cli-base >=0.4.0"
 ]
 description = "A client auth library for Anaconda.cloud APIs"
 dynamic = ["version"]
@@ -162,10 +162,9 @@ python =
 
 [testenv]
 pass_env =
-  TEST_AUTOMATION_USER_EMAIL
-  TEST_AUTOMATION_USER_PASSWORD
-  CF_CLIENT_ID
-  CF_CLIENT_SECRET
+  TEST_API_KEY
+  ANACONDA_CLOUD_DOMAIN
+  ANACONDA_CLOUD_CLIENT_ID
 deps =
     mypy
     pytest
