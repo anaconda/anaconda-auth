@@ -12,7 +12,6 @@ from requests.exceptions import SSLError
 
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.client import client_factory
-from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.token import TokenInfo
 
 from .conftest import MockedRequest
@@ -20,20 +19,49 @@ from .conftest import MockedRequest
 HERE = os.path.dirname(__file__)
 
 
-def test_login_required_error() -> None:
-    client = BaseClient()
-    client.auth = None
+@pytest.mark.integration
+@pytest.mark.usefixtures("disable_dot_env")
+def test_login_required_error(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
-    with pytest.raises(LoginRequiredError):
-        _ = client.get("/api/account")
+    client = BaseClient()
+
+    request = Request("GET", "api/account")
+    prepped = client.prepare_request(request)
+    assert "Authorization" not in prepped.headers
+
+    res = client.send(prepped)
+    assert not res.ok
+    assert "must login" in res.reason
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("disable_dot_env")
 def test_outdated_api_key(outdated_api_key: str) -> None:
     client = BaseClient(api_key=outdated_api_key)
 
-    with pytest.raises(LoginRequiredError):
-        _ = client.get("api/account")
+    request = Request("GET", "api/account")
+    prepped = client.prepare_request(request)
+    assert prepped.headers.get("Authorization") == f"Bearer {outdated_api_key}"
+
+    res = client.send(prepped)
+    assert not res.ok
+    assert "is invalid" in res.reason
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("disable_dot_env")
+def test_expired_token_ignored(
+    outdated_token_info: TokenInfo, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+
+    outdated_token_info.save()
+
+    client = BaseClient(domain="mocked-domain")
+    request = Request("GET", "api/account")
+    prepped = client.prepare_request(request)
+    assert "Authorization" not in prepped.headers
 
 
 def test_client_factory_user_agent() -> None:
@@ -91,13 +119,14 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     return mocked_request
 
 
+@pytest.mark.usefixtures("mocked_request")
 @pytest.mark.parametrize(
     "api_version, warning_expected", [("2023.01.01", True), ("2023.03.01", False)]
 )
 def test_client_min_api_version_header(
-    mocked_request: MockedRequest, api_version: str, warning_expected: bool
+    api_version: str, warning_expected: bool
 ) -> None:
-    client = client_factory(user_agent="client/0.1.0", api_version=api_version)
+    client = BaseClient(user_agent="client/0.1.0", api_version=api_version)
     with warnings.catch_warnings(record=True) as w:
         response = client.get("/api/something")
 
@@ -120,9 +149,12 @@ def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
     client = BaseClient()
-    request = Request("GET", "api/catalogs/examples")
-    auth_request = client.auth(request)
-    assert "Authorization" not in auth_request.headers
+    request = Request("GET", "api/auth/healthz")
+    prepped = client.prepare_request(request)
+    assert "Authorization" not in prepped.headers
+
+    res = client.send(prepped)
+    assert res
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -139,10 +171,8 @@ def test_token_included(
 
     client = BaseClient()
     request = Request("GET", "api/catalogs/examples")
-    auth_request = client.auth(request)
-    assert (
-        auth_request.headers["Authorization"] == f"Bearer {outdated_token_info.api_key}"
-    )
+    prepped = client.prepare_request(request)
+    assert prepped.headers["Authorization"] == f"Bearer {outdated_token_info.api_key}"
 
 
 def test_api_key_env_variable_over_keyring(

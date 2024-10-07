@@ -1,15 +1,95 @@
-import typer
-from rich.prompt import Confirm
+import sys
 
+import typer
+from textwrap import dedent
+from requests.exceptions import HTTPError, JSONDecodeError
+from rich.prompt import Confirm
+from rich.syntax import Syntax
+
+from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
+from anaconda_cli_base.exceptions import register_error_handler
 from anaconda_cloud_auth import __version__
-from anaconda_cloud_auth.actions import is_logged_in
 from anaconda_cloud_auth.actions import login
 from anaconda_cloud_auth.actions import logout
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.token import TokenInfo
 from anaconda_cloud_auth.token import TokenNotFoundError
+from anaconda_cloud_auth.exceptions import TokenExpiredError
+
+
+def _continue_with_login() -> int:
+    if sys.stdout.isatty():
+        do_login = Confirm.ask("Continue with interactive login?", choices=["y", "n"])
+        if do_login:
+            login()
+            return -1
+        else:
+            console.print(
+                dedent("""
+                To configure your credentials you can run
+                  [green]anaconda login --at cloud[/green]
+
+                or set your API key using the [green]ANACONDA_CLOUD_API_KEY[/green] env var
+
+                or set
+                """)
+            )
+            console.print(
+                Syntax(
+                    dedent("""\
+                  [plugin.cloud]
+                  api_key = "<api-key>"
+                """),
+                    "toml",
+                    background_color=None,
+                )
+            )
+            console.print(f"in {anaconda_config_path()}")
+    return 1
+
+
+def _login_required_message(error_classifier: str) -> None:
+    console.print(
+        f"[bold][red]{error_classifier}[/red][/bold]: Login is required to complete this action."
+    )
+
+
+@register_error_handler(TokenNotFoundError)
+def login_required(e: Exception) -> int:
+    _login_required_message(e.__class__.__name__)
+    return _continue_with_login()
+
+
+@register_error_handler(TokenExpiredError)
+def token_expired(e: Exception) -> int:
+    console.print(
+        f"[bold][red]{e.__class__.__name__}[/red][/bold]: Your login token has expired"
+    )
+
+    return _continue_with_login()
+
+
+@register_error_handler(HTTPError)
+def http_error(e: HTTPError) -> int:
+    try:
+        error_code = e.response.json().get("error", {}).get("code", "")
+    except JSONDecodeError:
+        error_code = ""
+
+    if error_code == "auth_required":
+        if "Authorization" in e.request.headers:
+            console.print(
+                "[bold][red]InvalidAuthentication:[/red][/bold] Your provided API Key or login token is invalid"
+            )
+        else:
+            _login_required_message("AuthenticationMissingError")
+        return _continue_with_login()
+    else:
+        console.print(f"[bold][red]{e.__class__.__name__}:[/red][/bold] {e}")
+        return 1
+
 
 app = typer.Typer(
     name="cloud", add_completion=False, help="Anaconda.cloud auth commands"
@@ -52,13 +132,9 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
 @app.command(name="whoami")
 def auth_info() -> None:
     """Display information about the currently signed-in user"""
-    config = AnacondaCloudConfig()
-
-    if not (config.api_key or is_logged_in()):
-        login()
-
     client = BaseClient()
     response = client.get("/api/account")
+    response.raise_for_status()
     console.print("Your Anaconda Cloud info:")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
@@ -68,20 +144,15 @@ def auth_key() -> None:
     """Display API Key for signed-in user"""
     config = AnacondaCloudConfig()
     if config.api_key:
-        console.print(config.api_key)
+        print(config.api_key)
         return
 
-    try:
-        token_info = TokenInfo.load(domain=config.domain)
-        if not token_info.expired:
-            console.print(token_info.api_key)
-            return
-    except TokenNotFoundError:
-        pass
-
-    login()
     token_info = TokenInfo.load(domain=config.domain)
-    console.print(token_info.api_key)
+    if not token_info.expired:
+        print(token_info.api_key)
+        return
+    else:
+        raise TokenExpiredError()
 
 
 @app.command(name="logout")

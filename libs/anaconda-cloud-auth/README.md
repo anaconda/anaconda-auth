@@ -129,12 +129,11 @@ logout()
 ### API requests
 
 The BaseClient class is a subclass of [requests.Session](https://requests.readthedocs.io/en/latest/user/advanced/#session-objects).
-It will automatically load the API key from the keyring on each request.
-If the API key is expired it will raise a `TokenExpiredError`.
+It will attempt load the API key from the keyring on each request unless overridden
+by the `api_key` argument.
 
-The Client class can be used for non-authenticated requests, if
-the API key cannot be found and the request returns 401 or 403 error codes
-the `LoginRequiredError` will be raised.
+The BaseClient class can be used for non-authenticated requests even when
+the user has not logged in or provided an API in the request.
 
 ```python
 from anaconda_cloud_auth.client import BaseClient
@@ -142,6 +141,7 @@ from anaconda_cloud_auth.client import BaseClient
 client = BaseClient()
 
 response = client.get("/api/<endpoint>")
+response.raise_for_status()
 print(response.json())
 ```
 
@@ -164,6 +164,81 @@ from anaconda_cloud_auth.client import BaseClient
 class Client(BaseClient):
     _user_agent = "anaconda-cloud-<package>/<version>"
     _api_version = "<api-version>"
+```
+
+## CLI Error handlers
+
+This plugin defines an [error handler](https://github.com/anaconda/anaconda-cloud-tools/tree/main/libs/anaconda-cli-base#error-handling) for the `HTTPError` exception when using `.raise_for_status()` on a response
+using BaseClient or subclasses of BaseClient. Errors are not caught automatically when using the BaseClient
+or subclasses outside of `anaconda` CLI subcommands.
+
+### Login required
+
+For the following cases if running the CLI command interactively the user is asked if they wish to continue with
+interactive login. Once completed the command will be re-tried.
+
+* `TokenNotFoundError`: The subcommand requested to load the token from the keyring but none were present
+* `TokenExpiredError`: The token was successfully loaded but has expired
+* `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
+* `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token but Anaconda Cloud determines that the API was invalid
+
+Here's an example demonstrating that the user has not previously run `anaconda login` but attempted a CLI command that at some point requires authentication. By typing `y` the login action is triggered and their browser will open.
+
+```text
+❯ anaconda cloud api-key
+TokenNotFoundError: Login is required to complete this action.
+Continue with interactive login? [y/n]: y
+<api-key>
+```
+
+If the user typed `n` or the command was not run on an interactive terminal an error message is shown instructing
+the user how to login or configure the API key.
+
+```text
+❯ anaconda cloud whoami
+AuthenticationMissingError: Login is required to complete this action.
+Continue with interactive login? [y/n]: n
+
+To configure your credentials you can run
+  anaconda login --at cloud
+
+or set your API key using the ANACONDA_CLOUD_API_KEY env var
+
+or set
+
+[plugin.cloud]
+api_key = "<api-key>"
+
+in ~/.anaconda/config.toml
+
+To see a more detailed error message run the command again as
+  anaconda --verbose cloud whoami
+```
+
+### HTTPError
+
+In addition to the two special cases above all HTTPError exceptions thrown during CLI subcommands will be handled
+to provide the error code and reason.
+
+For example a subcommand using BaseClient or a subclass of it may make a bad request.
+
+```python
+@plugin.subcommand('do-something')
+def do_something(inputs: Annotated[Any, typer.Argument()]):
+    client = Client()
+    res = client.post('api/something', data=inputs)
+    res.raise_for_status()
+```
+
+For this example subcommand the user may provide incorrect inputs that are passed to the endpoint. By using
+`.raise_for_status()` the error is passed along to the CLI user and a short response is printed.
+
+```text
+> anaconda plugin do-something 'input-data'
+HTTPError: 422 Client Error: Unprocessable Entity for url: https://anaconda.cloud/api/something
+
+To see a more detailed error message run the command again as
+  anaconda --verbose plugin do-something
 ```
 
 ## Panel OAuth Provider

@@ -2,17 +2,28 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from typing import Any
 from typing import Union
 from typing import Generator
+from typing import cast
+from typing import Optional
+from typing import Mapping
+from typing import Sequence
+from typing import IO
+from typing import Protocol
 
 import pytest
+import typer
 from pytest import MonkeyPatch
 from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest_mock import MockerFixture
+from typer.testing import CliRunner
+from click.testing import Result
 
+from anaconda_cli_base.cli import app
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.token import TokenInfo
 
@@ -208,3 +219,26 @@ class MockedRequest:
             json_data=self.response_data,
             headers=self.response_headers,
         )
+
+
+class CLIInvoker(Protocol):
+    def __call__(
+        self,
+        # app: typer.Typer,
+        args: Optional[Union[str, Sequence[str]]] = None,
+        input: Optional[Union[bytes, str, IO[Any]]] = None,
+        env: Optional[Mapping[str, str]] = None,
+        catch_exceptions: bool = True,
+        color: bool = False,
+        **extra: Any,
+    ) -> Result: ...
+
+
+@pytest.fixture()
+@pytest.mark.usefixtures("tmp_cwd")
+def invoke_cli() -> CLIInvoker:
+    """Returns a function, which can be used to call the CLI from within a temporary directory."""
+
+    runner = CliRunner()
+
+    return partial(runner.invoke, cast(typer.Typer, app))

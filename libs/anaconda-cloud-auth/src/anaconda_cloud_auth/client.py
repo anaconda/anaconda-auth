@@ -16,8 +16,8 @@ from requests.auth import AuthBase
 
 from anaconda_cloud_auth import __version__ as version
 from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.exceptions import LoginRequiredError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
+from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.token import TokenInfo
 
 # VersionInfo was renamed and is deprecated in semver>=3
@@ -26,6 +26,27 @@ try:
 except ImportError:
     # In semver<3, it's called VersionInfo
     from semver import VersionInfo as Version
+
+
+def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
+    has_auth_header = response.request.headers.get("Authorization", False)
+
+    if response.status_code in [401, 403]:
+        try:
+            error_code = response.json().get("error", {}).get("code", "")
+        except requests.JSONDecodeError:
+            error_code = ""
+
+        if error_code == "auth_required":
+            if has_auth_header:
+                response.reason = "Your API key or login token is invalid."
+            else:
+                response.reason = (
+                    "You must login before using this API endpoint"
+                    " or provide an api_key to your client."
+                )
+
+    return response
 
 
 class BearerAuth(AuthBase):
@@ -44,7 +65,7 @@ class BearerAuth(AuthBase):
                 r.headers["Authorization"] = (
                     f"Bearer {self._token_info.get_access_token()}"
                 )
-            except TokenNotFoundError:
+            except (TokenNotFoundError, TokenExpiredError):
                 pass
         else:
             r.headers["Authorization"] = f"Bearer {self.api_key}"
@@ -105,9 +126,14 @@ class BaseClient(requests.Session):
                 self.headers[k] = self.config.extra_headers[k]
 
         self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.hooks["response"].append(login_required)
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
+
+    def prepare_request(self, request: requests.Request) -> PreparedRequest:
+        request.url = self.urljoin(str(request.url))
+        return super().prepare_request(request)
 
     def request(
         self,
@@ -123,24 +149,9 @@ class BaseClient(requests.Session):
         kwargs.setdefault("verify", self.config.ssl_verify)
 
         response = super().request(method, joined_url, *args, **kwargs)
-        if response.status_code == 401 or response.status_code == 403:
-            if response.request.headers.get("Authorization") is None:
-                raise LoginRequiredError(
-                    f"{response.status_code} {response.reason}:\n"
-                    f"You must login before using this API endpoint using\n"
-                    f"  anaconda login\n"
-                    f"or provide an api_key to your client."
-                )
-            elif response.json().get("error", {}).get("code", "") == "auth_required":
-                raise LoginRequiredError(
-                    f"{response.status_code} {response.reason}:\n"
-                    f"The provided API key or login token is invalid.\n"
-                    f"You may login again using\n"
-                    f"  anaconda login\n"
-                    f"or update the api_key provided to your client."
-                )
 
-        self._validate_api_version(response.headers.get("Min-Api-Version"))
+        min_api_version_string = response.headers.get("Min-Api-Version")
+        self._validate_api_version(min_api_version_string)
 
         return response
 
