@@ -1,6 +1,5 @@
 from functools import cached_property
 from typing import Dict
-from typing import List
 from typing import Literal
 from typing import Optional
 from typing import Union
@@ -22,7 +21,7 @@ class AnacondaCloudConfig(AnacondaBaseSettings, plugin_name="cloud"):
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
-    openid_config_path: str = "api/iam/.well-known/openid-configuration"
+    openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
 
     @property
     def well_known_url(self: "AnacondaCloudConfig") -> str:
@@ -58,6 +57,3 @@ class AnacondaCloudConfig(AnacondaBaseSettings, plugin_name="cloud"):
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
-    jwks_uri: str
-
-    id_token_signing_alg_values_supported: List[str] = []

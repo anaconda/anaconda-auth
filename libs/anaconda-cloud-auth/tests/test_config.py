@@ -11,22 +11,15 @@ def mock_openid_configuration():
     config = AnacondaCloudConfig()
     """Mock return value of openid configuration to prevent requiring actual network calls."""
     expected = {
-        "authorization_endpoint": f"https://{config.domain}/authorize",
-        "token_endpoint": f"https://{config.domain}/api/iam/token",
-        "jwks_uri": "NOT_NEEDED_FOR_TESTS",
+        "authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/authorize",
+        "token_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/token",
     }
     with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
         rsps.get(
-            url=f"https://{config.domain}/api/iam/.well-known/openid-configuration",
+            url=f"https://{config.domain}/api/auth/oauth2/.well-known/openid-configuration",
             json=expected,
         )
         yield rsps
-
-
-def test_legacy() -> None:
-    config = AnacondaCloudConfig()
-    assert config.oidc.authorization_endpoint == f"https://{config.domain}/authorize"
-    assert config.oidc.token_endpoint == f"https://{config.domain}/api/iam/token"
 
 
 def test_well_known_headers(mocker: MockerFixture) -> None:

@@ -1,14 +1,10 @@
-import base64
-import hashlib
 import logging
-import ssl
 import uuid
 import warnings
 import webbrowser
 from typing import Optional
 from urllib.parse import urlencode
 
-import jwt
 import pkce
 import requests
 
@@ -16,87 +12,11 @@ from anaconda_cli_base.console import console
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.exceptions import AuthenticationError
-from anaconda_cloud_auth.exceptions import InvalidTokenError
 from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.handlers import capture_auth_code
-from anaconda_cloud_auth.jwt import JWKClient
 from anaconda_cloud_auth.token import TokenInfo
 
 logger = logging.getLogger(__name__)
-
-
-def _validate_access_token(
-    access_token: str, algorithm_used: str, expected_hash: str
-) -> None:
-    """Validate the JWT token.
-
-    We need to compute the hash of the access token and compare it with the hash that is present in the JWT.
-    This is to ensure that the token is not tampered with.
-
-    """
-
-    # Get the standard name for the hash alg instead of the OIDC name
-    hashlib_alg_name = jwt.get_algorithm_by_name(algorithm_used).hash_alg.name  # type: ignore
-
-    hash = hashlib.new(hashlib_alg_name)
-    hash.update(access_token.encode("utf-8"))
-    digest = hash.digest()
-
-    # The left half of the total hash contains the expected hash we are
-    # looking for.
-    # See https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.3.6
-    digest_truncated = digest[: (len(digest) // 2)]
-
-    # digest_truncated is bytes, so we decode and remove the == padding in base64
-    computed_hash = (
-        base64.urlsafe_b64encode(digest_truncated).decode("utf-8").rstrip("=")
-    )
-
-    if computed_hash != expected_hash:
-        raise jwt.InvalidSignatureError()
-
-
-def _validate_token_info(
-    access_token: str,
-    id_token: Optional[str],
-    config: Optional[AnacondaCloudConfig] = None,
-) -> None:
-    if id_token is None:
-        # TODO: legacy IAM doesn't work w/ these validations
-        return
-
-    config = config or AnacondaCloudConfig()
-
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    if not config.ssl_verify:
-        ctx.verify_mode = ssl.CERT_NONE
-
-    jwks_client = JWKClient(config.oidc.jwks_uri, ssl_context=ctx)
-    signing_key = jwks_client.get_signing_key_from_jwt(id_token)
-
-    try:
-        # parse JWT token and verify signature
-        id_info = jwt.decode(
-            id_token,
-            key=signing_key.key,
-            algorithms=config.oidc.id_token_signing_alg_values_supported,
-            audience=config.client_id,
-        )
-    except jwt.exceptions.PyJWTError as e:
-        raise InvalidTokenError(f"Error decoding token: {e}")
-
-    # at this point, the jwt token should be verified and good to go
-    # but we still need to verify the access token
-    algorithm_used = jwt.get_unverified_header(id_token)["alg"]
-
-    if access_token is None:
-        raise TokenNotFoundError("No access token found to validate")
-
-    try:
-        _validate_access_token(access_token, algorithm_used, id_info["at_hash"])
-    except jwt.InvalidSignatureError:
-        raise InvalidTokenError("Access token has an invalid hash.")
 
 
 def make_auth_code_request_url(
