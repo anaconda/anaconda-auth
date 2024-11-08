@@ -1,4 +1,3 @@
-import platform
 from pathlib import Path
 
 import pytest
@@ -127,17 +126,22 @@ def test_anaconda_keyring_empty(tmp_path: Path) -> None:
         anaconda_keyring.delete_password("s", "u")
 
 
-@pytest.mark.skipif(
-    platform.system() == "Windows", reason="This has been hard to test in CI/CD"
-)
-def test_anaconda_keyring_not_writable() -> None:
+def test_anaconda_keyring_not_writable(tmp_path: Path) -> None:
     from anaconda_cloud_auth.token import AnacondaKeyring
 
-    if platform.system() == "Windows":
-        root = Path("c:\\windows")
-    else:
-        root = Path("/root")
-    AnacondaKeyring.keyring_path = root / "keyring"
+    AnacondaKeyring.keyring_path = tmp_path / "keyring"
+    AnacondaKeyring.keyring_path.touch()
+    AnacondaKeyring.keyring_path.chmod(0x444)
+
+    assert not AnacondaKeyring.viable
+
+
+def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
+    from anaconda_cloud_auth.token import AnacondaKeyring
+
+    keyring_dir = tmp_path / "anaconda"
+    keyring_dir.touch()
+    AnacondaKeyring.keyring_path = keyring_dir / "keyring"
 
     assert not AnacondaKeyring.viable
 
