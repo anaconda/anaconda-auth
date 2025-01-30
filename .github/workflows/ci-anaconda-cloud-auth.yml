@@ -136,7 +136,7 @@ jobs:
         source $CONDA/bin/activate
         conda create -n build --file ../../etc/build.linux-64.lock
     - name: Download the build artifacts
-      uses: actions/download-artifact@9c19ed7fe5d278cd354c7dfd5d3b88589c7e2395 # v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
       with:
         name: anaconda-cloud-auth-conda-${{ github.sha }}
         path: ~/auth-conda-bld
@@ -166,7 +166,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Download the build artifacts
-      uses: actions/download-artifact@9c19ed7fe5d278cd354c7dfd5d3b88589c7e2395 # v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
       with:
         name: anaconda-cloud-auth-wheel-${{ github.sha }}
         path: ~/dist
@@ -200,7 +200,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
     - name: Download the build artifacts
-      uses: actions/download-artifact@9c19ed7fe5d278cd354c7dfd5d3b88589c7e2395 # v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
       with:
         name: anaconda-cloud-auth-wheel-${{ github.sha }}
         path: ~/dist
