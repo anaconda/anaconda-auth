@@ -37,6 +37,8 @@ jobs:
         source $CONDA/bin/activate && conda activate build
         # If it's not a tagged release, publish to dev label
         [[ "$GITHUB_REF" =~ ^refs/tags/v ]] || export LABEL="--label dev"
+        ls ~/anaconda-auth-conda-bld
+        ls ~/anaconda-auth-conda-bld/*
         anaconda --verbose \
           --token $TOKEN \
           upload \
