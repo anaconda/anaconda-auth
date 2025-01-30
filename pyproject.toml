@@ -74,10 +74,6 @@ include = [
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.version.raw-options]
-git_describe_command = "git describe --dirty --tags --long --match 'anaconda-cloud-auth-*'"
-root = "../.."
-
 [tool.mypy]
 disallow_untyped_defs = true
 files = [
