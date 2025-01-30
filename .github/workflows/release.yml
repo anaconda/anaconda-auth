@@ -37,15 +37,13 @@ jobs:
         source $CONDA/bin/activate && conda activate build
         # If it's not a tagged release, publish to dev label
         [[ "$GITHUB_REF" =~ ^refs/tags/v ]] || export LABEL="--label dev"
-        ls ~/anaconda-auth-conda-bld
-        ls ~/anaconda-auth-conda-bld/*
         anaconda --verbose \
           --token $TOKEN \
           upload \
           --user anaconda-cloud \
           $LABEL \
           --force \
-          ~/anaconda-auth-conda-bld/noarch/anaconda-auth-*
+          ~/anaconda-auth-conda-bld/noarch/anaconda-*
 
   publish-wheel-to-anaconda-dot-org:
     name: Publish wheel to Anaconda.org
@@ -77,9 +75,9 @@ jobs:
           --token $TOKEN \
           upload \
           --user anaconda-cloud \
-          ~/dist/*.whl \
           $LABEL \
-          --force
+          --force \
+          ~/dist/*.whl
 
   publish-to-pypi:
     name: Build & publish to PyPI
