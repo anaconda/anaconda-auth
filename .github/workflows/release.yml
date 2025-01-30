@@ -28,8 +28,8 @@ jobs:
     - name: Download the build artifacts
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: anaconda-auth-conda-${{ github.sha }}
-        path: ~/anaconda-auth-conda-bld
+        name: conda-${{ github.sha }}
+        path: ./conda-bld
     - name: publish
       env:
         TOKEN: ${{ secrets.ANACONDA_ORG_UPLOAD_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
           --user anaconda-cloud \
           $LABEL \
           --force \
-          ~/anaconda-auth-conda-bld/noarch/anaconda-*
+          ./conda-bld/noarch/anaconda-*
 
   publish-wheel-to-anaconda-dot-org:
     name: Publish wheel to Anaconda.org
@@ -57,8 +57,8 @@ jobs:
     - name: Download the build artifacts
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: anaconda-auth-wheel-${{ github.sha }}
-        path: ~/dist
+        name: wheel-${{ github.sha }}
+        path: ./dist
     - name: Create build environment
       run: |
         source $CONDA/bin/activate
@@ -77,7 +77,7 @@ jobs:
           --user anaconda-cloud \
           $LABEL \
           --force \
-          ~/dist/*.whl
+          ./dist/*.whl
 
   publish-to-pypi:
     name: Build & publish to PyPI
@@ -93,8 +93,8 @@ jobs:
     - name: Download the build artifacts
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: anaconda-auth-wheel-${{ github.sha }}
-        path: ~/dist
+        name: wheel-${{ github.sha }}
+        path: ./dist
     - name: Install build dependencies
       run: pip install twine
     - name: Upload to PyPI with twine
