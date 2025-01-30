@@ -1,0 +1,44 @@
+name: Update CI build lockfile
+on:
+  schedule:
+    # Once per week on Sunday
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on:
+      labels: self-hosted-main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4
+        with:
+          token: ${{ secrets.ANACONDA_BOT_PRE_COMMIT }}
+      - name: Install conda-lock
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda install --yes conda-forge::conda-lock
+      - name: Update lockfile
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda-lock \
+            --file ./etc/build.environment.yml \
+            --platform linux-64 \
+            --kind explicit \
+            --filename-template './etc/build.{platform}.lock'
+      - name: Show changes
+        run: |
+          git diff
+          git status
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
+        with:
+          title: 'chore(deps): Update CI build lockfile'
+          branch-suffix: random
+          draft: false
+          add-paths: etc/build.linux-64.lock
