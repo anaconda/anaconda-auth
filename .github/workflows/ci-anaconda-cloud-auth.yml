@@ -1,20 +1,20 @@
 name: "[CI] anaconda-cloud-auth"
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-    - .github/workflows/ci-anaconda-cloud-auth.yml
-    - libs/anaconda-cloud-auth/**
-  push:
-    branches:
-      - main
-    paths:
-    - .github/workflows/ci-anaconda-cloud-auth.yml
-    - libs/anaconda-cloud-auth/**
-    tags:
-    - anaconda-cloud-auth-v[0-9]+.[0-9]+.[0-9]+*
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #   - .github/workflows/ci-anaconda-cloud-auth.yml
+  #   - libs/anaconda-cloud-auth/**
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #   - .github/workflows/ci-anaconda-cloud-auth.yml
+  #   - libs/anaconda-cloud-auth/**
+  #   tags:
+  #   - anaconda-cloud-auth-v[0-9]+.[0-9]+.[0-9]+*
   merge_group:
 
 defaults:
