@@ -1,8 +1,9 @@
 import sys
+from textwrap import dedent
 
 import typer
-from textwrap import dedent
-from requests.exceptions import HTTPError, JSONDecodeError
+from requests.exceptions import HTTPError
+from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 
@@ -14,9 +15,9 @@ from anaconda_cloud_auth.actions import login
 from anaconda_cloud_auth.actions import logout
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AnacondaCloudConfig
+from anaconda_cloud_auth.exceptions import TokenExpiredError
 from anaconda_cloud_auth.token import TokenInfo
 from anaconda_cloud_auth.token import TokenNotFoundError
-from anaconda_cloud_auth.exceptions import TokenExpiredError
 
 
 def _continue_with_login() -> int:

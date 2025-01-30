@@ -148,6 +148,7 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
 
 def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     import keyring
+
     import anaconda_cloud_auth.token
 
     mocker.patch.dict(anaconda_cloud_auth.token.MIGRATIONS, {"modern": "legacy"})

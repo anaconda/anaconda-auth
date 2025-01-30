@@ -4,10 +4,10 @@ import pytest
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
-from .conftest import CLIInvoker
-
 from anaconda_cloud_auth.cli import app
 from anaconda_cloud_auth.client import BaseClient
+
+from .conftest import CLIInvoker
 
 
 @pytest.fixture

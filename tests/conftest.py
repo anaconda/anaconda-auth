@@ -4,24 +4,24 @@ import os
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Any
-from typing import Union
-from typing import Generator
-from typing import cast
-from typing import Optional
-from typing import Mapping
-from typing import Sequence
 from typing import IO
+from typing import Any
+from typing import Generator
+from typing import Mapping
+from typing import Optional
 from typing import Protocol
+from typing import Sequence
+from typing import Union
+from typing import cast
 
 import pytest
 import typer
-from pytest import MonkeyPatch
+from click.testing import Result
 from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
-from click.testing import Result
 
 from anaconda_cli_base.cli import app
 from anaconda_cloud_auth.client import BaseClient

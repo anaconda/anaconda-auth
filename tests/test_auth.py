@@ -9,7 +9,8 @@ from pytest_mock import MockerFixture
 
 from anaconda_cloud_auth import __version__
 from anaconda_cloud_auth import login
-from anaconda_cloud_auth.actions import get_api_key, is_logged_in
+from anaconda_cloud_auth.actions import get_api_key
+from anaconda_cloud_auth.actions import is_logged_in
 from anaconda_cloud_auth.client import BaseClient
 from anaconda_cloud_auth.config import AnacondaCloudConfig
 from anaconda_cloud_auth.token import TokenInfo

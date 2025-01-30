@@ -16,8 +16,8 @@ from requests.auth import AuthBase
 
 from anaconda_cloud_auth import __version__ as version
 from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.exceptions import TokenExpiredError
+from anaconda_cloud_auth.exceptions import TokenNotFoundError
 from anaconda_cloud_auth.token import TokenInfo
 
 # VersionInfo was renamed and is deprecated in semver>=3
