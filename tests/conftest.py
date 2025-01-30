@@ -8,10 +8,8 @@ from typing import IO
 from typing import Any
 from typing import Generator
 from typing import Mapping
-from typing import Optional
 from typing import Protocol
 from typing import Sequence
-from typing import Union
 from typing import cast
 
 import pytest
@@ -123,18 +121,18 @@ def disable_config_toml(tmp_path: Path, monkeypatch: MonkeyPatch):
 
 
 @pytest.fixture
-def api_key() -> Union[str, None]:
+def api_key() -> str | None:
     return os.getenv("TEST_API_KEY")
 
 
 @pytest.fixture()
-def integration_test_client(api_key: Union[str, None]) -> BaseClient:
+def integration_test_client(api_key: str | None) -> BaseClient:
     c = BaseClient(api_key=api_key)
     return c
 
 
 @pytest.fixture()
-def save_api_key_to_token(api_key: Union[str, None]) -> Generator[None, None, None]:
+def save_api_key_to_token(api_key: str | None) -> Generator[None, None, None]:
     from anaconda_cloud_auth.config import AnacondaCloudConfig
 
     conf = AnacondaCloudConfig()
@@ -225,9 +223,9 @@ class CLIInvoker(Protocol):
     def __call__(
         self,
         # app: typer.Typer,
-        args: Optional[Union[str, Sequence[str]]] = None,
-        input: Optional[Union[bytes, str, IO[Any]]] = None,
-        env: Optional[Mapping[str, str]] = None,
+        args: str | Sequence[str] | None = None,
+        input: bytes | str | IO[Any] | None = None,
+        env: Mapping[str, str] | None = None,
         catch_exceptions: bool = True,
         color: bool = False,
         **extra: Any,

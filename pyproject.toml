@@ -161,7 +161,7 @@ ban-relative-imports = "all"
 force-single-line = true
 known-first-party = ["anaconda_*"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # TID252 Prefer absolute imports over relative imports (allow tests to import from conftest)
 "**/tests/*.py" = ["TID252"]
 
