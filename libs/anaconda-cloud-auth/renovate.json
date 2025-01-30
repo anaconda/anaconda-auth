@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>anaconda/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "automerge": true,
+      "description": "Automatically merge minor updates for some dependency types. Note that this still needs approvals, so human review is still required.",
+      "matchManagers": [
+        "github-actions",
+        "pre-commit"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "rebaseWhen": "behind-base-branch"
+    }
+  ]
+}
