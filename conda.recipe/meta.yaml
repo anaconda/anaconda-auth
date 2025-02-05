@@ -35,7 +35,7 @@ outputs:
       imports:
         - anaconda_cloud_auth
       commands:
-        - python -c "from anaconda_cloud_auth import __version__; assert __version__ == \"{{ version }}\""
+        - python -c "from anaconda_cloud_auth import __version__; assert __version__ == '{{ version }}'"
 
   - name: anaconda-auth
     build:
@@ -50,7 +50,7 @@ outputs:
         - anaconda_cloud_auth
 
 about:
-#  home: {{ project['urls']['repository'] }}
+  home: {{ project['urls']['repository'] }}
   summary: {{ project['description'] }}
   license: {{ project['license']['text'] }}
   license_file: LICENSE
