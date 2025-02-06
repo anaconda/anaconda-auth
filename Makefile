@@ -11,7 +11,7 @@ help:  ## Display help on all Makefile targets
 setup:  ## Setup local dev conda environment
 	$(CONDA_EXE) env $(shell [ -d $(conda_env_dir) ] && echo update || echo create) -p $(conda_env_dir) --file environment-dev.yml
 
-type-check:  ## Run all the unit tests
+type-check:  ## Run static type checks
 	$(CONDA_RUN) mypy
 
 test:  ## Run all the unit tests
