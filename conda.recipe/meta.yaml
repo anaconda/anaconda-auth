@@ -5,7 +5,7 @@
 {% set version = VERSION %}
 
 package:
-  name: {{ name|lower }}
+  name: anaconda-auth-bundle
   version: {{ version }}
 
 source:
