@@ -46,3 +46,17 @@ def test_import_aliases(rel_attr_path):
     val_2 = getattr(mod, attr_name)
 
     assert val_1 is val_2
+
+
+@pytest.mark.parametrize(
+    "rel_attr_path",
+    PUBLIC_IMPORTS,
+)
+def test_deprecation_warning(rel_attr_path):
+    sub_mod_path, _, attr_name = rel_attr_path.rpartition(".")
+
+    mod_path = "anaconda_cloud_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
+
+    mod = importlib.import_module(mod_path)
+    with pytest.deprecated_call():
+        importlib.reload(mod)
