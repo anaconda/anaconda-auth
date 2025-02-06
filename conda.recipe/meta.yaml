@@ -30,14 +30,13 @@ outputs:
         {% for dep in project['dependencies'] %}
         - {{ dep.lower() }}
         {% endfor %}
-
     test:
       imports:
-        - anaconda_cloud_auth
+        - anaconda_auth
       commands:
-        - python -c "from anaconda_cloud_auth import __version__; assert __version__ == '{{ version }}'"
+        - python -c "from anaconda_auth import __version__; assert __version__ == '{{ version }}'"
 
-  - name: anaconda-auth
+  - name: anaconda-cloud-auth
     build:
       noarch: python
     requirements:
@@ -47,7 +46,11 @@ outputs:
       requires:
         - python {{ project['requires-python'] }}
       imports:
+        - anaconda_auth
         - anaconda_cloud_auth
+      commands:
+        - python -c "from anaconda_auth import __version__; assert __version__ == '{{ version }}'"
+        - python -c "from anaconda_cloud_auth import __version__; assert __version__ == '{{ version }}'"
 
 about:
   home: {{ project['urls']['repository'] }}

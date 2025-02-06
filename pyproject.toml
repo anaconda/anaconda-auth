@@ -14,10 +14,10 @@ dependencies = [
   "semver<4",
   "anaconda-cli-base >=0.4.0"
 ]
-description = "A client auth library for Anaconda.cloud APIs"
+description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
-name = "anaconda-cloud-auth"
+name = "anaconda-auth"
 readme = "README.md"
 requires-python = ">=3.8"
 urls = {repository = "https://github.com/anaconda/anaconda-auth"}
@@ -72,6 +72,9 @@ include = [
   "/Makefile",
   "/environment-dev.yml"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anaconda_auth", "src/anaconda_cloud_auth"]
 
 [tool.hatch.version]
 source = "vcs"
