@@ -30,6 +30,8 @@ outputs:
         {% for dep in project['dependencies'] %}
         - {{ dep.lower() }}
         {% endfor %}
+      run_constrained:
+        - {{ pin_subpackage("anaconda-cloud-auth", exact=True) }}
     test:
       imports:
         - anaconda_auth
