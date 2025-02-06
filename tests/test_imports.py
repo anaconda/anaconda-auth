@@ -9,11 +9,24 @@ def reset_imports():
     importlib.invalidate_caches()
 
 
-def test_import_equivalence():
-    mod = importlib.import_module("anaconda_auth")
-    val_1 = getattr(mod, "__version__")
+@pytest.mark.parametrize(
+    "rel_attr_path",
+    [
+        "__version__",
+        "login",
+        "logout",
+        "client_factory",
+    ],
+)
+def test_import_equivalence(rel_attr_path):
+    sub_mod_path, _, attr_name = rel_attr_path.rpartition(".")
 
-    mod = importlib.import_module("anaconda_cloud_auth")
-    val_2 = getattr(mod, "__version__")
+    mod_path = "anaconda_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
+    mod = importlib.import_module(mod_path)
+    val_1 = getattr(mod, attr_name)
+
+    mod_path = "anaconda_cloud_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
+    mod = importlib.import_module(mod_path)
+    val_2 = getattr(mod, attr_name)
 
     assert val_1 is val_2
