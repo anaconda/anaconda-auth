@@ -16,9 +16,17 @@ def reset_imports():
         "login",
         "logout",
         "client_factory",
+        "actions.login",
+        "client.BaseClient",
+        "client.client_factory",
+        "config.AnacondaCloudConfig",
+        "handlers.capture_auth_code",
+        "handlers.shutdown_all_servers",
+        "token.TokenInfo",
     ],
 )
-def test_import_equivalence(rel_attr_path):
+def test_import_aliases(rel_attr_path):
+    """Given a relative nested import, ensure it's the same for both anaconda_auth and anaconda_cloud_auth."""
     sub_mod_path, _, attr_name = rel_attr_path.rpartition(".")
 
     mod_path = "anaconda_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
