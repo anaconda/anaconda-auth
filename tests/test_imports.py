@@ -34,7 +34,7 @@ def test_import_aliases(rel_attr_path):
     """Given a relative nested import, ensure it's the same for both anaconda_auth and anaconda_cloud_auth."""
     sub_mod_path, _, attr_name = rel_attr_path.rpartition(".")
 
-    mod_path = "anaconda_auth_old" + (f".{sub_mod_path}" if sub_mod_path else "")
+    mod_path = "anaconda_cloud_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
     mod = importlib.import_module(mod_path)
     val_1 = getattr(mod, attr_name)
 
