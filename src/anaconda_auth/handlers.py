@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 
-from anaconda_cloud_auth.exceptions import AuthenticationError
+from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
 

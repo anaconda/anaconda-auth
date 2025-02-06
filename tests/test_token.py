@@ -5,11 +5,11 @@ from keyring.errors import PasswordDeleteError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
-from anaconda_cloud_auth.actions import logout
-from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.token import TokenExpiredError
-from anaconda_cloud_auth.token import TokenInfo
-from anaconda_cloud_auth.token import TokenNotFoundError
+from anaconda_auth.actions import logout
+from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.token import TokenExpiredError
+from anaconda_auth.token import TokenInfo
+from anaconda_auth.token import TokenNotFoundError
 
 
 def test_expired_token_error(outdated_token_info: TokenInfo) -> None:
@@ -67,7 +67,7 @@ def test_preferred_token_storage(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_anaconda_keyring_save_delete(tmp_path: Path) -> None:
-    from anaconda_cloud_auth.token import AnacondaKeyring
+    from anaconda_auth.token import AnacondaKeyring
 
     fn = tmp_path / "keyring"
     AnacondaKeyring.keyring_path = fn
@@ -115,7 +115,7 @@ def test_anaconda_keyring_empty(tmp_path: Path) -> None:
     fn.touch()
     assert fn.exists()
 
-    from anaconda_cloud_auth.token import AnacondaKeyring
+    from anaconda_auth.token import AnacondaKeyring
 
     AnacondaKeyring.keyring_path = fn
 
@@ -127,7 +127,7 @@ def test_anaconda_keyring_empty(tmp_path: Path) -> None:
 
 
 def test_anaconda_keyring_not_writable(tmp_path: Path) -> None:
-    from anaconda_cloud_auth.token import AnacondaKeyring
+    from anaconda_auth.token import AnacondaKeyring
 
     AnacondaKeyring.keyring_path = tmp_path / "keyring"
     AnacondaKeyring.keyring_path.touch()
@@ -137,7 +137,7 @@ def test_anaconda_keyring_not_writable(tmp_path: Path) -> None:
 
 
 def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
-    from anaconda_cloud_auth.token import AnacondaKeyring
+    from anaconda_auth.token import AnacondaKeyring
 
     keyring_dir = tmp_path / "anaconda"
     keyring_dir.touch()
@@ -149,9 +149,9 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
 def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     import keyring
 
-    import anaconda_cloud_auth.token
+    import anaconda_auth.token
 
-    mocker.patch.dict(anaconda_cloud_auth.token.MIGRATIONS, {"modern": "legacy"})
+    mocker.patch.dict(anaconda_auth.token.MIGRATIONS, {"modern": "legacy"})
 
     # First make a token in the keyring with the legacy domain
     legacy_token = TokenInfo(
@@ -160,13 +160,13 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     assert legacy_token.version is None
     legacy_token.save()
 
-    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "legacy")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
     assert payload
 
     decoded = TokenInfo._decode(payload)
     assert "version" not in decoded
 
-    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "modern")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
     assert payload is None
 
     # Now when loaded the keyring username will switch from legacy to modern
@@ -174,10 +174,10 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     assert token.api_key == "one key to rule them all"
     assert token.version == 1
 
-    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "legacy")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
     assert payload is None
 
-    payload = keyring.get_password(anaconda_cloud_auth.token.KEYRING_NAME, "modern")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
     assert payload
 
     decoded = TokenInfo._decode(payload)

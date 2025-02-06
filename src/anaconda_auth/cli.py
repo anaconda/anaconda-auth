@@ -7,17 +7,17 @@ from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 
+from anaconda_auth import __version__
+from anaconda_auth.actions import login
+from anaconda_auth.actions import logout
+from anaconda_auth.client import BaseClient
+from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.exceptions import TokenExpiredError
+from anaconda_auth.token import TokenInfo
+from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
-from anaconda_cloud_auth import __version__
-from anaconda_cloud_auth.actions import login
-from anaconda_cloud_auth.actions import logout
-from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.exceptions import TokenExpiredError
-from anaconda_cloud_auth.token import TokenInfo
-from anaconda_cloud_auth.token import TokenNotFoundError
 
 
 def _continue_with_login() -> int:

@@ -7,8 +7,8 @@ from typing import Union
 import requests
 from pydantic import BaseModel
 
+from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
-from anaconda_cloud_auth import __version__ as version
 
 OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
 

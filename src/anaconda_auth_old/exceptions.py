@@ -1,1 +1,1 @@
-from anaconda_cloud_auth.exceptions import *  # noqa: F403
+from anaconda_auth.exceptions import *  # noqa: F403

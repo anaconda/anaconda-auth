@@ -38,7 +38,7 @@ def test_import_aliases(rel_attr_path):
     mod = importlib.import_module(mod_path)
     val_1 = getattr(mod, attr_name)
 
-    mod_path = "anaconda_cloud_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
+    mod_path = "anaconda_auth" + (f".{sub_mod_path}" if sub_mod_path else "")
     mod = importlib.import_module(mod_path)
     val_2 = getattr(mod, attr_name)
 

@@ -4,22 +4,22 @@ import pytest
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
-from anaconda_cloud_auth.cli import app
-from anaconda_cloud_auth.client import BaseClient
+from anaconda_auth.cli import app
+from anaconda_auth.client import BaseClient
 
 from .conftest import CLIInvoker
 
 
 @pytest.fixture
 def is_a_tty(mocker: MockerFixture) -> Generator[None, None, None]:
-    mocked = mocker.patch("anaconda_cloud_auth.cli.sys")
+    mocked = mocker.patch("anaconda_auth.cli.sys")
     mocked.stdout.isatty.return_value = True
     yield
 
 
 @pytest.fixture
 def is_not_a_tty(mocker: MockerFixture) -> Generator[None, None, None]:
-    mocked = mocker.patch("anaconda_cloud_auth.cli.sys")
+    mocked = mocker.patch("anaconda_auth.cli.sys")
     mocked.stdout.isatty.return_value = False
     yield
 
@@ -30,7 +30,7 @@ def test_login_required_tty(
 ) -> None:
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
-    login = mocker.patch("anaconda_cloud_auth.cli.login")
+    login = mocker.patch("anaconda_auth.cli.login")
 
     _ = invoke_cli(["cloud", "api-key"], input="n")
     login.assert_not_called()
@@ -44,7 +44,7 @@ def test_login_error_handler_no_tty(
     monkeypatch: MonkeyPatch, mocker: MockerFixture, invoke_cli: CLIInvoker
 ) -> None:
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
-    login = mocker.patch("anaconda_cloud_auth.cli.login")
+    login = mocker.patch("anaconda_auth.cli.login")
 
     result = invoke_cli(["cloud", "api-key"])
     login.assert_not_called()
@@ -68,7 +68,7 @@ def test_http_error_login(
     monkeypatch: MonkeyPatch, invoke_cli: CLIInvoker, mocker: MockerFixture
 ) -> None:
     monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "foo")
-    login = mocker.patch("anaconda_cloud_auth.cli.login")
+    login = mocker.patch("anaconda_auth.cli.login")
 
     result = invoke_cli(["cloud", "whoami"], input="y")
     login.assert_called_once()

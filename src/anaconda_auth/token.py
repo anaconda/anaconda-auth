@@ -21,9 +21,9 @@ from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
 
-from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.exceptions import TokenExpiredError
-from anaconda_cloud_auth.exceptions import TokenNotFoundError
+from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.exceptions import TokenExpiredError
+from anaconda_auth.exceptions import TokenNotFoundError
 
 # Note: we can remove this if we pin keyring>=23.9.0
 try:
@@ -89,8 +89,8 @@ class NavigatorFallback(KeyringBackend):
 
         token = NucleusToken.from_file()
         if token is not None:
-            from anaconda_cloud_auth.actions import get_api_key
-            from anaconda_cloud_auth.actions import refresh_access_token
+            from anaconda_auth.actions import get_api_key
+            from anaconda_auth.actions import refresh_access_token
 
             config = AnacondaCloudConfig(domain=auth_domain)
             if not token.valid:

@@ -23,13 +23,13 @@ requires-python = ">=3.8"
 urls = {repository = "https://github.com/anaconda/anaconda-auth"}
 
 [project.entry-points."anaconda_cli.subcommand"]
-cloud = "anaconda_cloud_auth.cli:app"
+cloud = "anaconda_auth.cli:app"
 
 [project.entry-points.conda]
-anaconda-cloud-auth = "anaconda_cloud_auth._conda.entrypoint"
+anaconda-cloud-auth = "anaconda_auth._conda.entrypoint"
 
 [project.entry-points."panel.auth"]
-anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
+anaconda_cloud = "anaconda_auth.panel:AnacondaCloudLoginHandler"
 
 [project.optional-dependencies]
 dev = [
@@ -53,17 +53,18 @@ paths.source = [
   ".tox*/*/lib/python*/site-packages"
 ]
 report.omit = [
-  "src/anaconda_cloud_auth/_version.py"
+  "src/anaconda_auth/_version.py"
 ]
 
 [tool.distutils.bdist_wheel]
 universal = true
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/anaconda_cloud_auth/_version.py"
+version-file = "src/anaconda_auth/_version.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
+  "/src/anaconda_auth",
   "/src/anaconda_cloud_auth",
   "/.env.template",
   "/pyproject.toml",

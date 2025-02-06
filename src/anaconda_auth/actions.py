@@ -8,13 +8,13 @@ from urllib.parse import urlencode
 import pkce
 import requests
 
+from anaconda_auth import __version__
+from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.exceptions import AuthenticationError
+from anaconda_auth.exceptions import TokenNotFoundError
+from anaconda_auth.handlers import capture_auth_code
+from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.console import console
-from anaconda_cloud_auth import __version__
-from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.exceptions import AuthenticationError
-from anaconda_cloud_auth.exceptions import TokenNotFoundError
-from anaconda_cloud_auth.handlers import capture_auth_code
-from anaconda_cloud_auth.token import TokenInfo
 
 logger = logging.getLogger(__name__)
 

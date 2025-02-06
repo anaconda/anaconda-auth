@@ -1,1 +1,1 @@
-from anaconda_cloud_auth.token import *  # noqa: F403
+from anaconda_auth.token import *  # noqa: F403

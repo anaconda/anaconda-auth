@@ -1,1 +1,1 @@
-from anaconda_cloud_auth.config import *  # noqa: F403
+from anaconda_auth.config import *  # noqa: F403

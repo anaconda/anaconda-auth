@@ -2,17 +2,15 @@ import pytest
 from requests import Response
 from requests.hooks import dispatch_hook
 
-from anaconda_cloud_auth.token import TokenInfo
+from anaconda_auth.token import TokenInfo
 
 conda = pytest.importorskip("conda")
 
 from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
 
-from anaconda_cloud_auth._conda.auth_handler import AnacondaCloudAuthError  # noqa: E402
-from anaconda_cloud_auth._conda.auth_handler import (  # noqa: E402
-    AnacondaCloudAuthHandler,
-)
+from anaconda_auth._conda.auth_handler import AnacondaCloudAuthError  # noqa: E402
+from anaconda_auth._conda.auth_handler import AnacondaCloudAuthHandler  # noqa: E402
 
 
 @pytest.fixture()
@@ -34,7 +32,7 @@ def mocked_conda_token(mocker):
 @pytest.fixture()
 def mocked_token_info(mocker):
     mocker.patch(
-        "anaconda_cloud_auth.token.TokenInfo.load",
+        "anaconda_auth.token.TokenInfo.load",
         return_value=TokenInfo(
             domain="repo.anaconda.cloud",
             repo_tokens=[
