@@ -2,6 +2,26 @@ import importlib
 
 import pytest
 
+# A list of all public imports, relative to the package name
+PUBLIC_IMPORTS = [
+    "__version__",
+    "login",
+    "logout",
+    "client_factory",
+    "actions.login",
+    "client.BaseClient",
+    "client.client_factory",
+    "config.AnacondaCloudConfig",
+    "exceptions.AuthenticationError",
+    "exceptions.InvalidTokenError",
+    "exceptions.TokenNotFoundError",
+    "exceptions.LoginRequiredError",
+    "exceptions.TokenExpiredError",
+    "handlers.capture_auth_code",
+    "handlers.shutdown_all_servers",
+    "token.TokenInfo",
+]
+
 
 @pytest.fixture(autouse=True)
 def reset_imports():
@@ -11,24 +31,7 @@ def reset_imports():
 
 @pytest.mark.parametrize(
     "rel_attr_path",
-    [
-        "__version__",
-        "login",
-        "logout",
-        "client_factory",
-        "actions.login",
-        "client.BaseClient",
-        "client.client_factory",
-        "config.AnacondaCloudConfig",
-        "exceptions.AuthenticationError",
-        "exceptions.InvalidTokenError",
-        "exceptions.TokenNotFoundError",
-        "exceptions.LoginRequiredError",
-        "exceptions.TokenExpiredError",
-        "handlers.capture_auth_code",
-        "handlers.shutdown_all_servers",
-        "token.TokenInfo",
-    ],
+    PUBLIC_IMPORTS,
 )
 def test_import_aliases(rel_attr_path):
     """Given a relative nested import, ensure it's the same for both anaconda_auth and anaconda_cloud_auth."""
