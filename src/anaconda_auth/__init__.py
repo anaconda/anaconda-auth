@@ -1,0 +1,1 @@
+from anaconda_cloud_auth import __version__ as __version__
