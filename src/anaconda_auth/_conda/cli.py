@@ -6,8 +6,8 @@ import os
 import sys
 from argparse import ArgumentParser
 
-from . import __version__
-from . import repo_config
+from anaconda_auth import __version__
+from anaconda_auth._conda import repo_config
 
 
 def token_list(args):
