@@ -27,8 +27,9 @@ def test_token_list(remove_token, capsys, repo_url):
     ret = cli.cli(["list"])
     captured = capsys.readouterr()
     assert ret == 1
-    assert captured.err.splitlines()[-1] == "No tokens have been configured for %s" % (
-        repo_url,
+    assert (
+        captured.err.splitlines()[-1]
+        == f"No tokens have been configured for {repo_url}"
     )
 
 
@@ -45,9 +46,8 @@ def test_token_set(remove_token, secret_token, capsys, repo_url):
     captured = capsys.readouterr()
     assert (
         captured.out
-        == """Success! Your token was validated and Conda has been configured.
-%s %s\n"""
-        % (repo_url, secret_token)
+        == f"""Success! Your token was validated and Conda has been configured.
+{repo_url} {secret_token}\n"""
     )
 
 
@@ -64,8 +64,9 @@ def test_token_set_error(remove_token, capsys, repo_url):
     ret = cli.cli(["list"])
     assert ret == 1
     captured = capsys.readouterr()
-    assert captured.err.splitlines()[-1] == "No tokens have been configured for %s" % (
-        repo_url,
+    assert (
+        captured.err.splitlines()[-1]
+        == f"No tokens have been configured for {repo_url}"
     )
 
 

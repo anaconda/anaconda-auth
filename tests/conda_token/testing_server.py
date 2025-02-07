@@ -15,12 +15,7 @@ class QuietHandler(wsgiref.simple_server.WSGIRequestHandler):
         """Log an arbitrary message (don't confuse test's stdout/stderr capture)."""
         message = format % args
         MESSAGES.write(
-            "%s - - [%s] %s\n"
-            % (
-                self.address_string(),
-                self.log_date_time_string(),
-                message.translate(self._control_char_table),
-            )
+            f"{self.address_string()} - - [{self.log_date_time_string()}] {message.translate(self._control_char_table)}\n"
         )
 
 
@@ -32,7 +27,7 @@ class App:
             status = "200 OK"
         else:
             status = "403 Forbidden"
-        response_body = "Request method: %s" % environ["REQUEST_METHOD"]
+        response_body = f"Request method: {environ['REQUEST_METHOD']}"
         response_headers = [
             ("Content-Type", "text/plain"),
             ("Content-Length", str(len(response_body))),
@@ -49,7 +44,7 @@ def run_server():
     address, port = server.socket.getsockname()
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
-    return "http://%s:%s" % (address, port)
+    return f"http://{address}:{port}"
 
 
 if __name__ == "__main__":
