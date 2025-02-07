@@ -8,6 +8,7 @@ import warnings
 from os.path import abspath
 from os.path import expanduser
 from os.path import join
+from urllib.parse import urljoin
 
 import conda
 import conda.gateways.logging  # noqa: F401
@@ -22,11 +23,6 @@ from conda.gateways.anaconda_client import set_binstar_token
 from conda.gateways.connection.session import CondaSession
 from conda.models.channel import Channel
 from packaging import version
-
-if sys.version_info[0] < 3:
-    from urlparse import urljoin
-else:
-    from urllib.parse import urljoin
 
 CONDA_VERSION = version.parse(conda.__version__)
 
