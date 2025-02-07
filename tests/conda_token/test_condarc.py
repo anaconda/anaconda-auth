@@ -18,7 +18,6 @@ from anaconda_auth._conda.repo_config import enable_extra_safety_checks
 def make_temp_condarc(value=None):
     try:
         tempfile = NamedTemporaryFile(suffix=".yml", delete=False)
-        tempfile.close()
         temp_path = tempfile.name
         if value:
             with open(temp_path, "w") as f:
