@@ -15,13 +15,13 @@ from anaconda_auth._conda.repo_config import enable_extra_safety_checks
 
 
 @contextmanager
-def make_temp_condarc(value=None):
+def make_temp_condarc(text: str = ""):
     try:
         tempfile = NamedTemporaryFile(suffix=".yml", delete=False)
         temp_path = tempfile.name
-        if value:
+        if text:
             with open(temp_path, "w") as f:
-                f.write(value)
+                f.write(text)
         reset_context([temp_path])
         yield temp_path
     finally:
@@ -34,7 +34,6 @@ def _read_test_condarc(rc):
 
 
 def test_default_channels():
-    empty_condarc = ""
     final_condarc = dedent(
         """\
         default_channels:
@@ -46,7 +45,7 @@ def test_default_channels():
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
-    with make_temp_condarc(empty_condarc) as rc:
+    with make_temp_condarc() as rc:
         configure_default_channels(condarc_file=rc)
         assert _read_test_condarc(rc) == final_condarc
 
@@ -107,7 +106,6 @@ def test_default_channels_with_inactive():
 
 
 def test_replace_default_channels_with_inactive():
-    empty_condarc = ""
     final_condarc = dedent(
         """\
         default_channels:
@@ -122,7 +120,7 @@ def test_replace_default_channels_with_inactive():
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
-    with make_temp_condarc(empty_condarc) as rc:
+    with make_temp_condarc() as rc:
         configure_default_channels(
             condarc_file=rc, include_archive_channels=["free", "pro", "mro-archive"]
         )
@@ -216,14 +214,13 @@ def test_no_ssl_verify_from_true():
 
 
 def test_no_ssl_verify_from_empty():
-    original_condarc = "\n"
     final_condarc = dedent(
         """\
         ssl_verify: false
         """
     )
 
-    with make_temp_condarc(original_condarc) as rc:
+    with make_temp_condarc() as rc:
         _set_ssl_verify_false(condarc_file=rc)
         assert _read_test_condarc(rc) == final_condarc
 
@@ -250,8 +247,6 @@ def test_no_ssl_verify_from_false():
     reason="Signature verification was added in Conda 4.10.1",
 )
 def test_enable_package_signing():
-    empty_condarc = ""
-
     final_condarc = dedent(
         """\
         extra_safety_checks: true
@@ -259,6 +254,6 @@ def test_enable_package_signing():
         """
     )
 
-    with make_temp_condarc(empty_condarc) as rc:
+    with make_temp_condarc() as rc:
         enable_extra_safety_checks(condarc_file=rc)
         assert _read_test_condarc(rc) == final_condarc
