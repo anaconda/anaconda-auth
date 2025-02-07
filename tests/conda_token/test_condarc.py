@@ -201,7 +201,7 @@ def test_default_channels_with_conda_forge():
 
 def test_no_ssl_verify_from_true():
     original_condarc = dedent(
-        """
+        """\
         ssl_verify: true
         """
     )
@@ -231,7 +231,7 @@ def test_no_ssl_verify_from_empty():
 
 def test_no_ssl_verify_from_false():
     original_condarc = dedent(
-        """
+        """\
         ssl_verify: false
         """
     )
