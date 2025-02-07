@@ -102,16 +102,20 @@ def secret_token():
 
 @pytest.fixture(scope="function")
 def uninstall_rope():
-    run_command(Commands.REMOVE, "rope", "-y", use_exception_handler=True)
+    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
     yield
-    run_command(Commands.REMOVE, "rope", "-y", use_exception_handler=True)
+    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
 
 
 @pytest.fixture(scope="function")
 def uninstall_colorama():
-    run_command(Commands.REMOVE, "colorama", "-y", use_exception_handler=True)
+    run_command(
+        Commands.REMOVE, "colorama", "-y", "--force", use_exception_handler=True
+    )
     yield
-    run_command(Commands.REMOVE, "colorama", "-y", use_exception_handler=True)
+    run_command(
+        Commands.REMOVE, "colorama", "-y", "--force", use_exception_handler=True
+    )
 
 
 @pytest.fixture
