@@ -34,7 +34,7 @@ def _read_test_condarc(rc):
 
 
 def test_default_channels():
-    empty_condarc = "\n"
+    empty_condarc = ""
     final_condarc = dedent(
         """\
         default_channels:
@@ -107,7 +107,7 @@ def test_default_channels_with_inactive():
 
 
 def test_replace_default_channels_with_inactive():
-    empty_condarc = "\n"
+    empty_condarc = ""
     final_condarc = dedent(
         """\
         default_channels:
