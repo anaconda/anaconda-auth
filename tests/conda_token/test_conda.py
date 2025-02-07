@@ -1,4 +1,5 @@
 import json
+from textwrap import dedent
 
 import pytest
 from conda.cli.python_api import Commands
@@ -23,17 +24,22 @@ def json_skip_preamble(text):
 
 
 def test_skip_garbage():
-    lines = """
-Error message
-Random text
- {"foo":
-"bar"
-}"""
+    lines = dedent(
+        """
+        Random text
+        Error message
+         {"foo":
+        "bar"
+        }
+        """
+    )
 
-    lines2 = """
-Unexpected warning
- [ 1 ]
-"""
+    lines2 = dedent(
+        """
+        Unexpected warning
+         [ 1 ]
+        """
+    )
     assert json_skip_preamble(lines) == {"foo": "bar"}
     assert json_skip_preamble(lines2) == [1]
 

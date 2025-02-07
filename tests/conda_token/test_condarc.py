@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
+from textwrap import dedent
 
 import pytest
 from conda.base.context import reset_context
@@ -35,12 +36,14 @@ def _read_test_condarc(rc):
 
 def test_default_channels():
     empty_condarc = "\n"
-    final_condarc = """\
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-"""
+    final_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.cloud/repo/main
+          - https://repo.anaconda.cloud/repo/r
+          - https://repo.anaconda.cloud/repo/msys2
+        """
+    )
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
@@ -50,18 +53,22 @@ default_channels:
 
 
 def test_replace_default_channels():
-    original_condarc = """\
-default_channels:
-  - https://repo.anaconda.com/pkg/main
-  - https://repo.anaconda.com/pkg/r
-  - https://repo.anaconda.com/pkg/msys2
-"""
-    final_condarc = """\
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-"""
+    original_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.com/pkg/main
+          - https://repo.anaconda.com/pkg/r
+          - https://repo.anaconda.com/pkg/msys2
+        """
+    )
+    final_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.cloud/repo/main
+          - https://repo.anaconda.cloud/repo/r
+          - https://repo.anaconda.cloud/repo/msys2
+        """
+    )
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
@@ -71,21 +78,25 @@ default_channels:
 
 
 def test_default_channels_with_inactive():
-    original_condarc = """\
-default_channels:
-  - https://repo.anaconda.com/pkg/main
-  - https://repo.anaconda.com/pkg/r
-  - https://repo.anaconda.com/pkg/msys2
-"""
-    final_condarc = """\
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-  - https://repo.anaconda.cloud/repo/free
-  - https://repo.anaconda.cloud/repo/pro
-  - https://repo.anaconda.cloud/repo/mro-archive
-"""
+    original_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.com/pkg/main
+          - https://repo.anaconda.com/pkg/r
+          - https://repo.anaconda.com/pkg/msys2
+        """
+    )
+    final_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.cloud/repo/main
+          - https://repo.anaconda.cloud/repo/r
+          - https://repo.anaconda.cloud/repo/msys2
+          - https://repo.anaconda.cloud/repo/free
+          - https://repo.anaconda.cloud/repo/pro
+          - https://repo.anaconda.cloud/repo/mro-archive
+        """
+    )
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
@@ -98,15 +109,17 @@ default_channels:
 
 def test_replace_default_channels_with_inactive():
     empty_condarc = "\n"
-    final_condarc = """\
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-  - https://repo.anaconda.cloud/repo/free
-  - https://repo.anaconda.cloud/repo/pro
-  - https://repo.anaconda.cloud/repo/mro-archive
-"""
+    final_condarc = dedent(
+        """\
+        default_channels:
+          - https://repo.anaconda.cloud/repo/main
+          - https://repo.anaconda.cloud/repo/r
+          - https://repo.anaconda.cloud/repo/msys2
+          - https://repo.anaconda.cloud/repo/free
+          - https://repo.anaconda.cloud/repo/pro
+          - https://repo.anaconda.cloud/repo/mro-archive
+        """
+    )
     if can_restore_free_channel():
         final_condarc = "restore_free_channel: false\n" + final_condarc
 
@@ -119,78 +132,84 @@ default_channels:
 
 def test_default_channels_with_conda_forge():
     if can_restore_free_channel():
-        original_condarc = """\
-ssl_verify: true
-restore_free_channel: true
+        original_condarc = dedent(
+            """\
+            ssl_verify: true
+            restore_free_channel: true
 
-default_channels:
-  - https://repo.anaconda.com/pkgs/main
-channels:
-  - defaults
-  - conda-forge
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
 
-channel_alias: https://conda.anaconda.org/
-"""
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
 
         with make_temp_condarc(original_condarc) as rc:
             configure_default_channels(condarc_file=rc)
-            assert (
-                _read_test_condarc(rc)
-                == """\
-ssl_verify: true
-restore_free_channel: false
+            assert _read_test_condarc(rc) == dedent(
+                """\
+                ssl_verify: true
+                restore_free_channel: false
 
-channels:
-  - defaults
-  - conda-forge
+                channels:
+                  - defaults
+                  - conda-forge
 
-channel_alias: https://conda.anaconda.org/
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-"""
+                channel_alias: https://conda.anaconda.org/
+                default_channels:
+                  - https://repo.anaconda.cloud/repo/main
+                  - https://repo.anaconda.cloud/repo/r
+                  - https://repo.anaconda.cloud/repo/msys2
+                """
             )
     else:
-        original_condarc = """\
-ssl_verify: true
+        original_condarc = dedent(
+            """\
+            ssl_verify: true
 
-default_channels:
-  - https://repo.anaconda.com/pkgs/main
-channels:
-  - defaults
-  - conda-forge
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
 
-channel_alias: https://conda.anaconda.org/
-"""
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
 
         with make_temp_condarc(original_condarc) as rc:
             configure_default_channels(condarc_file=rc)
-            assert (
-                _read_test_condarc(rc)
-                == """\
-ssl_verify: true
+            assert _read_test_condarc(rc) == dedent(
+                """\
+                ssl_verify: true
 
-channels:
-  - defaults
-  - conda-forge
+                channels:
+                  - defaults
+                  - conda-forge
 
-channel_alias: https://conda.anaconda.org/
-default_channels:
-  - https://repo.anaconda.cloud/repo/main
-  - https://repo.anaconda.cloud/repo/r
-  - https://repo.anaconda.cloud/repo/msys2
-"""
+                channel_alias: https://conda.anaconda.org/
+                default_channels:
+                  - https://repo.anaconda.cloud/repo/main
+                  - https://repo.anaconda.cloud/repo/r
+                  - https://repo.anaconda.cloud/repo/msys2
+                """
             )
 
 
 def test_no_ssl_verify_from_true():
-    original_condarc = """
-ssl_verify: true
-"""
-    final_condarc = """\
-ssl_verify: false
-"""
+    original_condarc = dedent(
+        """
+        ssl_verify: true
+        """
+    )
+    final_condarc = dedent(
+        """\
+        ssl_verify: false
+        """
+    )
 
     with make_temp_condarc(original_condarc) as rc:
         _set_ssl_verify_false(condarc_file=rc)
@@ -199,9 +218,11 @@ ssl_verify: false
 
 def test_no_ssl_verify_from_empty():
     original_condarc = "\n"
-    final_condarc = """\
-ssl_verify: false
-"""
+    final_condarc = dedent(
+        """\
+        ssl_verify: false
+        """
+    )
 
     with make_temp_condarc(original_condarc) as rc:
         _set_ssl_verify_false(condarc_file=rc)
@@ -209,12 +230,16 @@ ssl_verify: false
 
 
 def test_no_ssl_verify_from_false():
-    original_condarc = """
-ssl_verify: false
-"""
-    final_condarc = """\
-ssl_verify: false
-"""
+    original_condarc = dedent(
+        """
+        ssl_verify: false
+        """
+    )
+    final_condarc = dedent(
+        """\
+        ssl_verify: false
+        """
+    )
 
     with make_temp_condarc(original_condarc) as rc:
         _set_ssl_verify_false(condarc_file=rc)
@@ -228,9 +253,12 @@ ssl_verify: false
 def test_enable_package_signing():
     empty_condarc = ""
 
-    final_condarc = """extra_safety_checks: true
-signing_metadata_url_base: https://repo.anaconda.cloud/repo
-"""
+    final_condarc = dedent(
+        """\
+        extra_safety_checks: true
+        signing_metadata_url_base: https://repo.anaconda.cloud/repo
+        """
+    )
 
     with make_temp_condarc(empty_condarc) as rc:
         enable_extra_safety_checks(condarc_file=rc)
