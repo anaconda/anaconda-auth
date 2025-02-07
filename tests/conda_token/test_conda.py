@@ -126,9 +126,7 @@ def test_conda_install_rope(set_secret_token, uninstall_rope):
         assert rope["base_url"] == "https://repo.anaconda.cloud/repo/main"
 
 
-def test_conda_install_with_conda_forge(
-    set_secret_token, uninstall_rope, uninstall_colorama
-):
+def test_conda_install_with_conda_forge(set_secret_token, uninstall_rope):
     run_command(
         Commands.INSTALL,
         "-c",
