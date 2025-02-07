@@ -128,7 +128,7 @@ def repodata_url(repo_url):
 def repo_url(test_server_url):
     repo_url = test_server_url + "/repo/"
     with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
-        with mock.patch("conda_token.repo_config.REPO_URL", repo_url):
+        with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
             yield repo_url
 
 

@@ -16,7 +16,7 @@ from anaconda_auth._conda.auth_handler import AnacondaCloudAuthHandler  # noqa: 
 @pytest.fixture()
 def mocked_empty_conda_token(mocker):
     mocker.patch(
-        "conda_token.repo_config.token_list",
+        "anaconda_auth._conda.repo_config.token_list",
         return_value={},
     )
 
@@ -24,7 +24,7 @@ def mocked_empty_conda_token(mocker):
 @pytest.fixture()
 def mocked_conda_token(mocker):
     mocker.patch(
-        "conda_token.repo_config.token_list",
+        "anaconda_auth._conda.repo_config.token_list",
         return_value={"https://repo.anaconda.cloud/repo/": "my-test-token"},
     )
 
