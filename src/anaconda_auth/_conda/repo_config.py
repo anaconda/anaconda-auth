@@ -317,8 +317,7 @@ def configure_default_channels(
             )
         else:
             raise ValueError(
-                "The archive channel %s is not one of %s"
-                % (c, ", ".join(ARCHIVE_CHANNELS))
+                f"The archive channel {c} is not one of {', '.join(ARCHIVE_CHANNELS)}"
             )
 
 
