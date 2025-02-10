@@ -2,6 +2,8 @@
 Configure Conda to use Anaconda Commercial Edition.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import warnings
@@ -44,16 +46,16 @@ class CondaVersionWarning(UserWarning):
     pass
 
 
-def can_restore_free_channel():
+def can_restore_free_channel() -> bool:
     return CONDA_VERSION >= version.parse("4.7.0")
 
 
-def get_ssl_verify():
+def get_ssl_verify() -> bool:
     context = reset_context()
     return context.ssl_verify
 
 
-def clean_index():
+def clean_index() -> None:
     """Runs conda clean -i.
 
     It is important to remove index cache when
@@ -63,7 +65,7 @@ def clean_index():
     run_command(Commands.CLEAN, "-i")
 
 
-def validate_token(token, no_ssl_verify=False):
+def validate_token(token: str, no_ssl_verify: bool = False) -> None:
     """Checks that token can be used with the repository."""
 
     # Force ssl_verify: false
@@ -79,7 +81,7 @@ def validate_token(token, no_ssl_verify=False):
     else:
         # what cache_clear() does
         try:
-            CondaSession._thread_local.sessions.clear()
+            CondaSession._thread_local.sessions.clear()  # type: ignore
         except AttributeError:
             # AttributeError: thread's session cache has not been initialized
             pass
@@ -98,8 +100,10 @@ def validate_token(token, no_ssl_verify=False):
 
 
 def enable_extra_safety_checks(
-    condarc_system=False, condarc_env=False, condarc_file=None
-):
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Enable package signature verification.
 
     This will set extra_safety_checks: True and
@@ -130,8 +134,10 @@ def enable_extra_safety_checks(
 
 
 def disable_extra_safety_checks(
-    condarc_system=False, condarc_env=False, condarc_file=None
-):
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Disable package signature verification.
 
     This will set extra_safety_checks: false and remove
@@ -164,7 +170,11 @@ def disable_extra_safety_checks(
         pass
 
 
-def _set_add_anaconda_token(condarc_system=False, condarc_env=False, condarc_file=None):
+def _set_add_anaconda_token(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Run conda config --set add_anaconda_token true.
 
     Setting this parameter to true ensures that the token
@@ -182,7 +192,11 @@ def _set_add_anaconda_token(condarc_system=False, condarc_env=False, condarc_fil
     run_command(Commands.CONFIG, *config_args)
 
 
-def _set_ssl_verify_false(condarc_system=False, condarc_env=False, condarc_file=None):
+def _set_ssl_verify_false(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Run conda config --set ssl_verify false.
 
     Setting this parameter to false disables all
@@ -201,8 +215,10 @@ def _set_ssl_verify_false(condarc_system=False, condarc_env=False, condarc_file=
 
 
 def _unset_restore_free_channel(
-    condarc_system=False, condarc_env=False, condarc_file=None
-):
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Runs conda config --set restore_free_channel false.
 
     The free channel is provided by Commercial Edition as
@@ -220,8 +236,12 @@ def _unset_restore_free_channel(
 
 
 def _set_channel(
-    channel, prepend=True, condarc_system=False, condarc_env=False, condarc_file=None
-):
+    channel: str,
+    prepend: bool = True,
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Adds a named Commercial Edition channel to default_channels."""
     channel_url = urljoin(REPO_URL, channel)
 
@@ -242,8 +262,10 @@ def _set_channel(
 
 
 def _remove_default_channels(
-    condarc_system=False, condarc_env=False, condarc_file=None
-):
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> None:
     """Runs conda config --remove-key default_channels
 
     It is best to remove the default_channels in case they
@@ -266,11 +288,11 @@ def _remove_default_channels(
 
 
 def configure_default_channels(
-    condarc_system=False,
-    condarc_env=False,
-    condarc_file=None,
-    include_archive_channels=None,
-):
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+    include_archive_channels: list[str] | None = None,
+) -> None:
     """Configure the default_channels to utilize only Commercial Edition.
 
 
@@ -321,7 +343,7 @@ def configure_default_channels(
             )
 
 
-def token_list():
+def token_list() -> dict[str, str]:
     """Return a dictionary of tokens for all configured repository urls.
 
     Note that this function will return tokens configured for non-Commercial Edition
@@ -329,7 +351,9 @@ def token_list():
     return read_binstar_tokens()
 
 
-def token_remove(system=False, env=False, file=None):
+def token_remove(
+    system: bool = False, env: bool = False, file: str | None = None
+) -> None:
     """Completely remove the Commercial Edition token and default_channels.
 
     This function performs three actions.
@@ -345,14 +369,14 @@ def token_remove(system=False, env=False, file=None):
 
 
 def token_set(
-    token,
-    system=False,
-    env=False,
-    file=None,
-    include_archive_channels=None,
-    no_ssl_verify=False,
-    enable_signature_verification=False,
-):
+    token: str,
+    system: bool = False,
+    env: bool = False,
+    file: str | None = None,
+    include_archive_channels: list[str] | None = None,
+    no_ssl_verify: bool = False,
+    enable_signature_verification: bool = False,
+) -> None:
     """Set the Commercial Edition token and configure default_channels.
 
 
