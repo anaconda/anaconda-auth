@@ -3,7 +3,7 @@ import requests
 import responses
 from pytest_mock import MockerFixture
 
-from anaconda_cloud_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaCloudConfig
 
 
 @pytest.fixture(autouse=True)

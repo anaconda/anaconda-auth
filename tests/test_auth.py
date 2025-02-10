@@ -7,13 +7,13 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
-from anaconda_cloud_auth import __version__
-from anaconda_cloud_auth import login
-from anaconda_cloud_auth.actions import get_api_key
-from anaconda_cloud_auth.actions import is_logged_in
-from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.config import AnacondaCloudConfig
-from anaconda_cloud_auth.token import TokenInfo
+from anaconda_auth import __version__
+from anaconda_auth import login
+from anaconda_auth.actions import get_api_key
+from anaconda_auth.actions import is_logged_in
+from anaconda_auth.client import BaseClient
+from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
 
@@ -21,8 +21,8 @@ HERE = os.path.dirname(__file__)
 
 
 def test_login_to_api_key(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value="api-key")
-    mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
+    mocker.patch("anaconda_auth.actions.get_api_key", return_value="api-key")
+    mocker.patch("anaconda_auth.actions._do_auth_flow")
 
     login()
 
@@ -39,16 +39,16 @@ def test_login_to_api_key(mocker: MockerFixture) -> None:
 
 
 def test_login_ssl_verify(mocker: MockerFixture, api_key: str) -> None:
-    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value=api_key)
-    do_auth_flow = mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
+    mocker.patch("anaconda_auth.actions.get_api_key", return_value=api_key)
+    do_auth_flow = mocker.patch("anaconda_auth.actions._do_auth_flow")
 
     login(ssl_verify=True)
     assert do_auth_flow.call_args_list[-1].kwargs["config"].ssl_verify
 
 
 def test_login_no_ssl_verify(mocker: MockerFixture, api_key: str) -> None:
-    mocker.patch("anaconda_cloud_auth.actions.get_api_key", return_value=api_key)
-    do_auth_flow = mocker.patch("anaconda_cloud_auth.actions._do_auth_flow")
+    mocker.patch("anaconda_auth.actions.get_api_key", return_value=api_key)
+    do_auth_flow = mocker.patch("anaconda_auth.actions._do_auth_flow")
 
     login(ssl_verify=False)
     assert not do_auth_flow.call_args_list[-1].kwargs["config"].ssl_verify
@@ -70,8 +70,8 @@ def mocked_do_login(mocker: MockerFixture) -> MagicMock:
     def _mocked_login(config: AnacondaCloudConfig, basic: bool) -> None:
         TokenInfo(domain=config.domain, api_key="from-login").save()
 
-    mocker.patch("anaconda_cloud_auth.actions._do_login", _mocked_login)
-    from anaconda_cloud_auth import actions
+    mocker.patch("anaconda_auth.actions._do_login", _mocked_login)
+    from anaconda_auth import actions
 
     login_spy = mocker.spy(actions, "_do_login")
     return login_spy
@@ -90,7 +90,7 @@ def test_login_has_valid_token(
 ) -> None:
     config = AnacondaCloudConfig()
 
-    mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
     TokenInfo(domain=config.domain, api_key="pre-existing").save()
 
     login(config=config)
@@ -104,7 +104,7 @@ def test_force_login_with_valid_token(
 ) -> None:
     config = AnacondaCloudConfig()
 
-    mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
     TokenInfo(domain=config.domain, api_key="pre-existing").save()
 
     login(config=config, force=True)
@@ -118,7 +118,7 @@ def test_login_has_expired_token(
 ) -> None:
     config = AnacondaCloudConfig()
 
-    mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", True)
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", True)
     TokenInfo(domain=config.domain, api_key="pre-existing-expired").save()
 
     login(config=config)

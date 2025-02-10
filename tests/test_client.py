@@ -10,9 +10,9 @@ from pytest_mock import MockerFixture
 from requests import Request
 from requests.exceptions import SSLError
 
-from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.client import client_factory
-from anaconda_cloud_auth.token import TokenInfo
+from anaconda_auth.client import BaseClient
+from anaconda_auth.client import client_factory
+from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
 
@@ -164,7 +164,7 @@ def test_token_included(
     outdated_token_info: TokenInfo,
 ) -> None:
     monkeypatch.setenv("ANACONDA_CLOUD_DOMAIN", "mocked-domain")
-    mocker.patch("anaconda_cloud_auth.token.TokenInfo.expired", False)
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
     monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
 
     outdated_token_info.save()
@@ -212,7 +212,7 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
     }
 
     mocker.patch(
-        "anaconda_cloud_auth.client.BaseClient.account",
+        "anaconda_auth.client.BaseClient.account",
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
@@ -233,7 +233,7 @@ def test_first_and_last_name(mocker: MockerFixture) -> None:
     }
 
     mocker.patch(
-        "anaconda_cloud_auth.client.BaseClient.account",
+        "anaconda_auth.client.BaseClient.account",
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
@@ -254,7 +254,7 @@ def test_gravatar_missing(mocker: MockerFixture) -> None:
     }
 
     mocker.patch(
-        "anaconda_cloud_auth.client.BaseClient.account",
+        "anaconda_auth.client.BaseClient.account",
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
@@ -274,7 +274,7 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
     }
 
     mocker.patch(
-        "anaconda_cloud_auth.client.BaseClient.account",
+        "anaconda_auth.client.BaseClient.account",
         return_value=account,
         new_callable=mocker.PropertyMock,
     )

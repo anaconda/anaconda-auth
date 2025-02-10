@@ -14,8 +14,8 @@ from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
 
-from anaconda_cloud_auth.exceptions import TokenNotFoundError
-from anaconda_cloud_auth.token import TokenInfo
+from anaconda_auth.exceptions import TokenNotFoundError
+from anaconda_auth.token import TokenInfo
 
 CLOUD_URI_PREFIX = "/repo/"
 

@@ -14,22 +14,22 @@ dependencies = [
   "semver<4",
   "anaconda-cli-base >=0.4.0"
 ]
-description = "A client auth library for Anaconda.cloud APIs"
+description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
-name = "anaconda-cloud-auth"
+name = "anaconda-auth"
 readme = "README.md"
 requires-python = ">=3.8"
 urls = {repository = "https://github.com/anaconda/anaconda-auth"}
 
 [project.entry-points."anaconda_cli.subcommand"]
-cloud = "anaconda_cloud_auth.cli:app"
+cloud = "anaconda_auth.cli:app"
 
 [project.entry-points.conda]
-anaconda-cloud-auth = "anaconda_cloud_auth._conda.entrypoint"
+anaconda-cloud-auth = "anaconda_auth._conda.entrypoint"
 
 [project.entry-points."panel.auth"]
-anaconda_cloud = "anaconda_cloud_auth.panel:AnacondaCloudLoginHandler"
+anaconda_cloud = "anaconda_auth.panel:AnacondaCloudLoginHandler"
 
 [project.optional-dependencies]
 dev = [
@@ -53,17 +53,18 @@ paths.source = [
   ".tox*/*/lib/python*/site-packages"
 ]
 report.omit = [
-  "src/anaconda_cloud_auth/_version.py"
+  "src/anaconda_auth/_version.py"
 ]
 
 [tool.distutils.bdist_wheel]
 universal = true
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/anaconda_cloud_auth/_version.py"
+version-file = "src/anaconda_auth/_version.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
+  "/src/anaconda_auth",
   "/src/anaconda_cloud_auth",
   "/.env.template",
   "/pyproject.toml",
@@ -71,6 +72,9 @@ include = [
   "/Makefile",
   "/environment-dev.yml"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anaconda_auth", "src/anaconda_cloud_auth"]
 
 [tool.hatch.version]
 source = "vcs"
@@ -80,7 +84,7 @@ disallow_untyped_defs = true
 files = [
   "src/**/*.py"
 ]
-python_version = "3.8"
+python_version = "3.9"
 
 [[tool.mypy.overrides]]
 ignore_errors = true
@@ -227,15 +231,3 @@ commands =
     coverage report
     coverage xml -o coverage.xml
 """
-
-[tool.vendoring]
-destination = "src/anaconda_cloud_auth/_vendor/"
-namespace = "anaconda_cloud_auth._vendor"
-protected-files = ["__init__.py", "requirements.txt"]
-requirements = "src/anaconda_cloud_auth/_vendor/requirements.txt"
-
-[tool.vendoring.license.directories]
-setuptools = "pkg_resources"
-
-[tool.vendoring.license.fallback-urls]
-pkce = "https://github.com/RomeoDespres/pkce/raw/master/LICENSE"

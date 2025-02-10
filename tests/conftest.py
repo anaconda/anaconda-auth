@@ -21,9 +21,9 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
+from anaconda_auth.client import BaseClient
+from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
-from anaconda_cloud_auth.client import BaseClient
-from anaconda_cloud_auth.token import TokenInfo
 
 load_dotenv()
 
@@ -55,7 +55,7 @@ def clear_mocked_keyring() -> None:
 
 @pytest.fixture(autouse=True)
 def set_keyring_name(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_cloud_auth.token.KEYRING_NAME", "Anaconda Cloud Test")
+    mocker.patch("anaconda_auth.token.KEYRING_NAME", "Anaconda Cloud Test")
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def is_not_none() -> Any:
 
 @pytest.fixture
 def disable_dot_env(mocker: MockerFixture) -> None:
-    from anaconda_cloud_auth.config import AnacondaCloudConfig
+    from anaconda_auth.config import AnacondaCloudConfig
 
     mocker.patch.dict(AnacondaCloudConfig.model_config, {"env_file": ""})
 
@@ -133,7 +133,7 @@ def integration_test_client(api_key: str | None) -> BaseClient:
 
 @pytest.fixture()
 def save_api_key_to_token(api_key: str | None) -> Generator[None, None, None]:
-    from anaconda_cloud_auth.config import AnacondaCloudConfig
+    from anaconda_auth.config import AnacondaCloudConfig
 
     conf = AnacondaCloudConfig()
     token = TokenInfo(api_key=api_key, domain=conf.domain)
@@ -169,14 +169,12 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch(
-        "anaconda_cloud_auth.config.AnacondaCloudConfig.aau_token", "anon-token"
-    )
+    mocker.patch("anaconda_auth.config.AnacondaCloudConfig.aau_token", "anon-token")
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_cloud_auth.config.AnacondaCloudConfig.aau_token", None)
+    mocker.patch("anaconda_auth.config.AnacondaCloudConfig.aau_token", None)
 
 
 class MockResponse:
@@ -233,8 +231,7 @@ class CLIInvoker(Protocol):
 
 
 @pytest.fixture()
-@pytest.mark.usefixtures("tmp_cwd")
-def invoke_cli() -> CLIInvoker:
+def invoke_cli(tmp_cwd: Path) -> CLIInvoker:
     """Returns a function, which can be used to call the CLI from within a temporary directory."""
 
     runner = CliRunner()

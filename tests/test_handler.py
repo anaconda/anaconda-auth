@@ -6,10 +6,10 @@ from typing import Iterator
 import pytest
 import requests
 
-from anaconda_cloud_auth.exceptions import AuthenticationError
-from anaconda_cloud_auth.handlers import AuthCodeRedirectServer
-from anaconda_cloud_auth.handlers import capture_auth_code
-from anaconda_cloud_auth.handlers import shutdown_all_servers
+from anaconda_auth.exceptions import AuthenticationError
+from anaconda_auth.handlers import AuthCodeRedirectServer
+from anaconda_auth.handlers import capture_auth_code
+from anaconda_auth.handlers import shutdown_all_servers
 
 SERVER_PORT = 8123
 

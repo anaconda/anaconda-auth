@@ -3,7 +3,7 @@ from functools import cached_property
 from panel.auth import OAuthLoginHandler
 from panel.config import config
 
-from anaconda_cloud_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaCloudConfig
 
 
 class AnacondaCloudLoginHandler(OAuthLoginHandler):

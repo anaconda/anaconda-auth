@@ -1,18 +1,4 @@
-class AuthenticationError(Exception):
-    pass
+from anaconda_auth.exceptions import *  # noqa: F403
+from anaconda_cloud_auth import warn  # noqa: F401
 
-
-class InvalidTokenError(AuthenticationError):
-    pass
-
-
-class TokenNotFoundError(Exception):
-    pass
-
-
-class LoginRequiredError(Exception):
-    pass
-
-
-class TokenExpiredError(Exception):
-    pass
+warn()
