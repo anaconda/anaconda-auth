@@ -208,7 +208,6 @@ conda_deps =
     anaconda-anon-usage
     # Optionally install conda to test plugins
     conda: conda
-    conda: conda-token
 conda_channels =
     anaconda-cloud
     defaults
