@@ -3,12 +3,15 @@ import warnings
 from unittest import mock
 
 import pytest
-from conda.cli.python_api import Commands
-from conda.cli.python_api import run_command
 
-from anaconda_auth._conda.repo_config import clean_index
-from anaconda_auth._conda.repo_config import token_remove
-from anaconda_auth._conda.repo_config import token_set
+conda = pytest.importorskip("conda")
+
+from conda.cli.python_api import Commands  # noqa: E402
+from conda.cli.python_api import run_command  # noqa: E402
+
+from anaconda_auth._conda.repo_config import clean_index  # noqa: E402
+from anaconda_auth._conda.repo_config import token_remove  # noqa: E402
+from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
 
 def pytest_configure(config):
