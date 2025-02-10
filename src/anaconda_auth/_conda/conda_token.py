@@ -2,15 +2,18 @@
 CLI for conda-token.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 from argparse import ArgumentParser
+from argparse import Namespace
 
 from anaconda_auth import __version__
 from anaconda_auth._conda import repo_config
 
 
-def token_list(args):
+def token_list(args: Namespace) -> int:
     """Default function for list subparser."""
     tokens = {
         k: v for k, v in repo_config.token_list().items() if k == repo_config.REPO_URL
@@ -28,7 +31,7 @@ def token_list(args):
     return 0
 
 
-def token_set(args):
+def token_set(args: Namespace) -> int:
     try:
         repo_config.validate_token(args.token, no_ssl_verify=args.no_ssl_verify)
     except repo_config.CondaTokenError as e:
@@ -48,12 +51,12 @@ def token_set(args):
     return 0
 
 
-def token_remove(args):
+def token_remove(args: Namespace) -> int:
     repo_config.token_remove()
     return 0
 
 
-def condarc_path_args(parser):
+def condarc_path_args(parser: ArgumentParser) -> None:
     """Add condarc path arguments."""
     config_file_location_group = parser.add_argument_group(
         "Config File Location Selection",
@@ -70,13 +73,13 @@ def condarc_path_args(parser):
         action="store_true",
         help=(
             f"Write to the active conda environment .condarc file ({os.getenv('CONDA_PREFIX', '<no active environment>').replace('%', '%%')}). "
-            f"If no environment is active, write to the user config file ({repo_config.escaped_user_rc_path}).",
+            f"If no environment is active, write to the user config file ({repo_config.escaped_user_rc_path})."
         ),
     )
     location.add_argument("--file", action="store", help="Write to the given file.")
 
 
-def cli(argv=None):
+def cli(argv: list[str] | None = None) -> int:
     parser = ArgumentParser(
         "conda-token",
         usage="conda token",
