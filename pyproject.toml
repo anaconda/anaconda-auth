@@ -172,7 +172,14 @@ known-first-party = ["anaconda_*"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda},py311,py312,mypy,report
+envlist =
+    py38
+    py39
+    py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
+    py311
+    py312
+    mypy
+    report
 isolated_build = True
 
 [gh-actions]
@@ -184,10 +191,11 @@ python =
     3.12: py312
 
 [testenv]
-pass_env =
-  TEST_API_KEY
-  ANACONDA_CLOUD_DOMAIN
-  ANACONDA_CLOUD_CLIENT_ID
+passenv =
+    TEST_API_KEY
+    CE_TOKEN
+    ANACONDA_CLOUD_DOMAIN
+    ANACONDA_CLOUD_CLIENT_ID
 deps =
     mypy
     pytest
