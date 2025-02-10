@@ -47,6 +47,9 @@ publish = [
   "wheel"
 ]
 
+[project.scripts]
+conda-token = "anaconda_auth._conda.conda_token:cli"
+
 [tool.coverage]
 paths.source = [
   "src",
