@@ -47,6 +47,9 @@ publish = [
   "wheel"
 ]
 
+[project.scripts]
+conda-token = "anaconda_auth._conda.conda_token:cli"
+
 [tool.coverage]
 paths.source = [
   "src",
@@ -169,7 +172,14 @@ known-first-party = ["anaconda_*"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38,py39,py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda},py311,py312,mypy,report
+envlist =
+    py38
+    py39
+    py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
+    py311
+    py312
+    mypy
+    report
 isolated_build = True
 
 [gh-actions]
@@ -177,14 +187,15 @@ python =
     3.8: py38, mypy
     3.9: py39, mypy
     3.10: py310, mypy
-    3.11: py311
-    3.12: py312
+    3.11: py311, mypy
+    3.12: py312, mypy
 
 [testenv]
-pass_env =
-  TEST_API_KEY
-  ANACONDA_CLOUD_DOMAIN
-  ANACONDA_CLOUD_CLIENT_ID
+passenv =
+    TEST_API_KEY
+    CE_TOKEN
+    ANACONDA_CLOUD_DOMAIN
+    ANACONDA_CLOUD_CLIENT_ID
 deps =
     mypy
     pytest
@@ -205,7 +216,6 @@ conda_deps =
     anaconda-anon-usage
     # Optionally install conda to test plugins
     conda: conda
-    conda: conda-token
 conda_channels =
     anaconda-cloud
     defaults

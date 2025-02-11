@@ -24,9 +24,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install testing dependencies
-        run: python -m pip install tox tox-gh-actions
+        run: |
+          python -m pip install tox tox-gh-actions
       - name: Test with tox
-        run: tox
+        env:
+          CE_TOKEN: ${{ secrets.TEST_REPO_TOKEN }}
+        run: |
+          tox
 
   build-conda-package:
     name: Build conda package
