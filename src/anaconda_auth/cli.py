@@ -2,8 +2,8 @@ import sys
 from textwrap import dedent
 
 import typer
-from requests.exceptions import HTTPError
-from requests.exceptions import JSONDecodeError
+from niquests.exceptions import HTTPError
+from niquests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 

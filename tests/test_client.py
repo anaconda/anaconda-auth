@@ -7,8 +7,8 @@ from uuid import uuid4
 import pytest
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
-from requests import Request
-from requests.exceptions import SSLError
+from niquests import Request
+from niquests.exceptions import SSLError
 
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
@@ -100,7 +100,7 @@ def test_client_subclass_api_version() -> None:
 )
 def test_client_base_uri(attr_name: str, value: str, expected_base_uri: str) -> None:
     client = BaseClient(**{attr_name: value})  # type: ignore
-    assert client._base_uri == expected_base_uri
+    assert client.base_url == expected_base_uri
 
 
 def test_client_base_uri_and_domain_raises_error() -> None:
