@@ -7,12 +7,11 @@ from typing import Dict
 from typing import Optional
 from typing import Union
 from typing import cast
-from urllib.parse import urljoin
 
-import requests
-from requests import PreparedRequest
-from requests import Response
-from requests.auth import AuthBase
+import niquests
+from niquests import PreparedRequest
+from niquests import Response
+from niquests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.config import AnacondaCloudConfig
@@ -34,7 +33,7 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
     if response.status_code in [401, 403]:
         try:
             error_code = response.json().get("error", {}).get("code", "")
-        except requests.JSONDecodeError:
+        except niquests.JSONDecodeError:
             error_code = ""
 
         if error_code == "auth_required":
@@ -72,8 +71,8 @@ class BearerAuth(AuthBase):
         return r
 
 
-class BaseClient(requests.Session):
-    _user_agent: str = f"anaconda-cloud-auth/{version}"
+class BaseClient(niquests.Session):
+    _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
 
     def __init__(
@@ -104,7 +103,7 @@ class BaseClient(requests.Session):
         self.config = AnacondaCloudConfig(**kwargs)
 
         # base_url overrides domain
-        self._base_uri = base_uri or f"https://{self.config.domain}"
+        self.base_url = base_uri or f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
         self.api_version = api_version or self._api_version
         if self.api_version:
@@ -128,27 +127,17 @@ class BaseClient(requests.Session):
         self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
-    def urljoin(self, url: str) -> str:
-        return urljoin(self._base_uri, url)
-
-    def prepare_request(self, request: requests.Request) -> PreparedRequest:
-        request.url = self.urljoin(str(request.url))
-        return super().prepare_request(request)
-
     def request(
         self,
         method: Union[str, bytes],
-        url: Union[str, bytes],
         *args: Any,
         **kwargs: Any,
     ) -> Response:
-        joined_url = self.urljoin(str(url))
-
         # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
         # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
         kwargs.setdefault("verify", self.config.ssl_verify)
 
-        response = super().request(method, joined_url, *args, **kwargs)
+        response = super().request(method, *args, **kwargs)
 
         min_api_version_string = response.headers.get("Min-Api-Version")
         self._validate_api_version(min_api_version_string)
@@ -186,7 +175,7 @@ class BaseClient(requests.Session):
     @cached_property
     def avatar(self) -> Union[bytes, None]:
         hashed = md5(self.email.encode("utf-8")).hexdigest()
-        res = requests.get(
+        res = niquests.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
         )
@@ -213,6 +202,64 @@ class BaseClient(requests.Session):
                 "You may need to update your client.",
                 DeprecationWarning,
             )
+
+
+class BaseAsyncClient(niquests.AsyncSession):
+    _user_agent: str = f"anaconda-auth/{version}"
+    _api_version: Optional[str] = None
+
+    def __init__(
+        self,
+        base_uri: Optional[str] = None,
+        domain: Optional[str] = None,
+        api_key: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        api_version: Optional[str] = None,
+        ssl_verify: Optional[bool] = None,
+        extra_headers: Optional[Union[str, dict]] = None,
+    ):
+        super().__init__()
+
+        if base_uri and domain:
+            raise ValueError("Can only specify one of `domain` or `base_uri` argument")
+
+        kwargs: Dict[str, Any] = {}
+        if domain is not None:
+            kwargs["domain"] = domain
+        if api_key is not None:
+            kwargs["api_key"] = api_key
+        if ssl_verify is not None:
+            kwargs["ssl_verify"] = ssl_verify
+        if extra_headers is not None:
+            kwargs["extra_headers"] = extra_headers
+
+        self.config = AnacondaCloudConfig(**kwargs)
+
+        # base_url overrides domain
+        self.base_url = base_uri or f"https://{self.config.domain}"
+        self.headers["User-Agent"] = user_agent or self._user_agent
+        self.api_version = api_version or self._api_version
+        if self.api_version:
+            self.headers["Api-Version"] = self.api_version
+
+        if self.config.extra_headers is not None:
+            if isinstance(self.config.extra_headers, str):
+                try:
+                    self.config.extra_headers = cast(
+                        dict, json.loads(self.config.extra_headers)
+                    )
+                except json.decoder.JSONDecodeError:
+                    raise ValueError(
+                        f"{repr(self.config.extra_headers)} is not valid JSON."
+                    )
+
+            keys_to_add = self.config.extra_headers.keys() - self.headers.keys()
+            for k in keys_to_add:
+                self.headers[k] = self.config.extra_headers[k]
+
+        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.hooks["response"].append(login_required)
+
 
 
 def _parse_semver_string(version: str) -> Optional[Version]:
