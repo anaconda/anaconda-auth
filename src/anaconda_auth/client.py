@@ -7,14 +7,16 @@ from typing import Dict
 from typing import Optional
 from typing import Union
 from typing import cast
-from typing import overload
-from typing import Literal
 
 import niquests
-from niquests import Response, PreparedRequest, AsyncResponse
-from niquests.auth import BearerTokenAuth, AuthBase
+from niquests import AsyncResponse
+from niquests import PreparedRequest
+from niquests import Response
+from niquests._typing import HookCallableType
+from niquests._typing import HttpMethodType
+from niquests.auth import AuthBase
+from niquests.auth import BearerTokenAuth
 from niquests.structures import CaseInsensitiveDict
-from niquests._typing import HttpMethodType, HookCallableType
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.config import AnacondaCloudConfig
@@ -30,7 +32,9 @@ except ImportError:
     from semver import VersionInfo as Version
 
 
-def login_required(response: Response, *args: Any, **kwargs: Any) -> Union[PreparedRequest, Response]:
+def login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
     if response.request is None:
         return response
 
@@ -56,24 +60,22 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Union[Prepa
 
     return response
 
+
 class TokenInfoAuth(AuthBase):
-    def __init__(
-        self, token_info: TokenInfo
-    ) -> None:
+    def __init__(self, token_info: TokenInfo) -> None:
         self._token_info = token_info
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
         if r.headers is None:
             r.headers = CaseInsensitiveDict()
         try:
-            r.headers["Authorization"] = (
-                f"Bearer {self._token_info.get_access_token()}"
-            )
+            r.headers["Authorization"] = f"Bearer {self._token_info.get_access_token()}"
         except (TokenNotFoundError, TokenExpiredError):
             pass
         return r
 
-class AnacondaClientMixin():
+
+class AnacondaClientMixin:
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
     token_info: Optional[TokenInfo] = None
@@ -162,7 +164,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
-        **session_kwargs: Any
+        **session_kwargs: Any,
     ):
         super().__init__(**session_kwargs)
         self._initialize(
@@ -171,7 +173,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             user_agent=user_agent,
             api_version=api_version,
             ssl_verify=ssl_verify,
-            extra_headers=extra_headers
+            extra_headers=extra_headers,
         )
 
     def request(
@@ -250,7 +252,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             user_agent=user_agent,
             api_version=api_version,
             ssl_verify=ssl_verify,
-            extra_headers=extra_headers
+            extra_headers=extra_headers,
         )
 
     async def request(  # type: ignore[override]
