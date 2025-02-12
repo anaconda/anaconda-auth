@@ -75,6 +75,8 @@ class AnacondaClientMixin():
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
     token_info: Optional[TokenInfo] = None
+    headers: dict
+    hooks: Dict[str, list]
 
     def _initialize(
         self,
@@ -126,6 +128,26 @@ class AnacondaClientMixin():
         else:
             self.token_info = TokenInfo(domain=self.config.domain)
             self.auth = TokenInfoAuth(self.token_info)
+
+    def _validate_api_version(self, min_api_version_string: Optional[str]) -> None:
+        """Validate that the client API version against the min API version from the service."""
+        if min_api_version_string is None or self.api_version is None:
+            return None
+
+        # Convert to optional Version objects
+        api_version = _parse_semver_string(self.api_version)
+        min_api_version = _parse_semver_string(min_api_version_string)
+
+        if api_version is None or min_api_version is None:
+            return None
+
+        if api_version < min_api_version:
+            warnings.warn(
+                f"Client API version is {self.api_version}, minimum supported API version is {min_api_version_string}. "
+                "You may need to update your client.",
+                DeprecationWarning,
+            )
+
 
 class BaseClient(niquests.Session, AnacondaClientMixin):
     def __init__(
@@ -206,25 +228,6 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         else:
             return None
 
-    def _validate_api_version(self, min_api_version_string: Optional[str]) -> None:
-        """Validate that the client API version against the min API version from the service."""
-        if min_api_version_string is None or self.api_version is None:
-            return None
-
-        # Convert to optional Version objects
-        api_version = _parse_semver_string(self.api_version)
-        min_api_version = _parse_semver_string(min_api_version_string)
-
-        if api_version is None or min_api_version is None:
-            return None
-
-        if api_version < min_api_version:
-            warnings.warn(
-                f"Client API version is {self.api_version}, minimum supported API version is {min_api_version_string}. "
-                "You may need to update your client.",
-                DeprecationWarning,
-            )
-
 
 class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
     def __init__(
@@ -245,6 +248,23 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             ssl_verify=ssl_verify,
             extra_headers=extra_headers
         )
+    async def request(
+        self,
+        method: HttpMethodType,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
+        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
+        if kwargs.get("verify") is None:
+            kwargs["verify"] = self.config.ssl_verify
+
+        response = await super().request(method, *args, **kwargs)
+
+        min_api_version_string = response.headers.get("Min-Api-Version")
+        self._validate_api_version(min_api_version_string)
+
+        return response
 
 
 def _parse_semver_string(version: str) -> Optional[Version]:
