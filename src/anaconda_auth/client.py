@@ -7,9 +7,11 @@ from typing import Dict
 from typing import Optional
 from typing import Union
 from typing import cast
+from typing import overload
+from typing import Literal
 
 import niquests
-from niquests import Response, PreparedRequest
+from niquests import Response, PreparedRequest, AsyncResponse
 from niquests.auth import BearerTokenAuth, AuthBase
 from niquests.structures import CaseInsensitiveDict
 from niquests._typing import HttpMethodType, HookCallableType
@@ -75,8 +77,10 @@ class AnacondaClientMixin():
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
     token_info: Optional[TokenInfo] = None
-    headers: dict
-    hooks: Dict[str, list]
+    headers: Any
+    hooks: Any
+    auth: Any
+    base_url: Any
 
     def _initialize(
         self,
@@ -86,7 +90,7 @@ class AnacondaClientMixin():
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
-    ):
+    ) -> None:
         config_kwargs: Dict[str, Any] = {}
         if domain is not None:
             config_kwargs["domain"] = domain
@@ -248,12 +252,13 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             ssl_verify=ssl_verify,
             extra_headers=extra_headers
         )
-    async def request(
+
+    async def request(  # type: ignore[override]
         self,
         method: HttpMethodType,
         *args: Any,
         **kwargs: Any,
-    ) -> Response:
+    ) -> Union[AsyncResponse, Response]:
         # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
         # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
         if kwargs.get("verify") is None:

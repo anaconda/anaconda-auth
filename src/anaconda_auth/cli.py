@@ -75,11 +75,19 @@ def token_expired(e: Exception) -> int:
 @register_error_handler(HTTPError)
 def http_error(e: HTTPError) -> int:
     try:
-        error_code = e.response.json().get("error", {}).get("code", "")
+        if e.response is None:
+            error_code = ""
+        else:
+            error_code = e.response.json().get("error", {}).get("code", "")
     except JSONDecodeError:
         error_code = ""
 
     if error_code == "auth_required":
+        if e.request is None:
+            return 1
+        if e.request.headers is None:
+            return 1
+
         if "Authorization" in e.request.headers:
             console.print(
                 "[bold][red]InvalidAuthentication:[/red][/bold] Your provided API Key or login token is invalid"
