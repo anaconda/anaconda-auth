@@ -9,9 +9,10 @@ from typing import Union
 from typing import cast
 
 import niquests
-from niquests import PreparedRequest
-from niquests import Response
-from niquests.auth import AuthBase
+from niquests import Response, PreparedRequest
+from niquests.auth import BearerTokenAuth, AuthBase
+from niquests.structures import CaseInsensitiveDict
+from niquests._typing import HttpMethodType, HookCallableType
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.config import AnacondaCloudConfig
@@ -27,7 +28,13 @@ except ImportError:
     from semver import VersionInfo as Version
 
 
-def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
+def login_required(response: Response, *args: Any, **kwargs: Any) -> Union[PreparedRequest, Response]:
+    if response.request is None:
+        return response
+
+    if response.request.headers is None:
+        return response
+
     has_auth_header = response.request.headers.get("Authorization", False)
 
     if response.status_code in [401, 403]:
@@ -47,64 +54,55 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
 
     return response
 
-
-class BearerAuth(AuthBase):
+class TokenInfoAuth(AuthBase):
     def __init__(
-        self, domain: Optional[str] = None, api_key: Optional[str] = None
+        self, token_info: TokenInfo
     ) -> None:
-        self.api_key = api_key
-        if domain is None:
-            domain = AnacondaCloudConfig().domain
-
-        self._token_info = TokenInfo(domain=domain)
+        self._token_info = token_info
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
-        if not self.api_key:
-            try:
-                r.headers["Authorization"] = (
-                    f"Bearer {self._token_info.get_access_token()}"
-                )
-            except (TokenNotFoundError, TokenExpiredError):
-                pass
-        else:
-            r.headers["Authorization"] = f"Bearer {self.api_key}"
+        if r.headers is None:
+            r.headers = CaseInsensitiveDict()
+        try:
+            r.headers["Authorization"] = (
+                f"Bearer {self._token_info.get_access_token()}"
+            )
+        except (TokenNotFoundError, TokenExpiredError):
+            pass
         return r
-
 
 class BaseClient(niquests.Session):
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
+    token_info: Optional[TokenInfo] = None
 
     def __init__(
         self,
-        base_uri: Optional[str] = None,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
+        **session_kwargs: Any
     ):
-        super().__init__()
+        super().__init__(**session_kwargs)
 
-        if base_uri and domain:
-            raise ValueError("Can only specify one of `domain` or `base_uri` argument")
-
-        kwargs: Dict[str, Any] = {}
+        config_kwargs: Dict[str, Any] = {}
         if domain is not None:
-            kwargs["domain"] = domain
+            config_kwargs["domain"] = domain
         if api_key is not None:
-            kwargs["api_key"] = api_key
+            config_kwargs["api_key"] = api_key
         if ssl_verify is not None:
-            kwargs["ssl_verify"] = ssl_verify
+            config_kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
-            kwargs["extra_headers"] = extra_headers
+            config_kwargs["extra_headers"] = extra_headers
 
-        self.config = AnacondaCloudConfig(**kwargs)
+        self.config = AnacondaCloudConfig(**config_kwargs)
 
-        # base_url overrides domain
-        self.base_url = base_uri or f"https://{self.config.domain}"
+        self.base_url = f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
+        self.verify = self.config.ssl_verify
         self.api_version = api_version or self._api_version
         if self.api_version:
             self.headers["Api-Version"] = self.api_version
@@ -124,18 +122,24 @@ class BaseClient(niquests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
-        self.hooks["response"].append(login_required)
+        self.hooks["response"].append(cast(HookCallableType, login_required))
+
+        if self.config.api_key:
+            self.auth = BearerTokenAuth(self.config.api_key)
+        else:
+            self.token_info = TokenInfo(domain=self.config.domain)
+            self.auth = TokenInfoAuth(self.token_info)
 
     def request(
         self,
-        method: Union[str, bytes],
+        method: HttpMethodType,
         *args: Any,
         **kwargs: Any,
     ) -> Response:
         # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
         # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
-        kwargs.setdefault("verify", self.config.ssl_verify)
+        if kwargs.get("verify") is None:
+            kwargs["verify"] = self.config.ssl_verify
 
         response = super().request(method, *args, **kwargs)
 

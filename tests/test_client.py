@@ -90,22 +90,15 @@ def test_client_subclass_api_version() -> None:
 
 
 @pytest.mark.parametrize(
-    "attr_name, value, expected_base_uri",
+    "attr_name, value, expected_base_url",
     [
         ("domain", "anaconda.cloud", "https://anaconda.cloud"),
         ("domain", "dev.anaconda.cloud", "https://dev.anaconda.cloud"),
-        ("base_uri", "https://anaconda.cloud", "https://anaconda.cloud"),
-        ("base_uri", "https://dev.anaconda.cloud", "https://dev.anaconda.cloud"),
     ],
 )
-def test_client_base_uri(attr_name: str, value: str, expected_base_uri: str) -> None:
+def test_client_base_url(attr_name: str, value: str, expected_base_url: str) -> None:
     client = BaseClient(**{attr_name: value})  # type: ignore
-    assert client.base_url == expected_base_uri
-
-
-def test_client_base_uri_and_domain_raises_error() -> None:
-    with pytest.raises(ValueError):
-        BaseClient(domain="anaconda.cloud", base_uri="https://anaconda.cloud")
+    assert client.base_url == expected_base_url
 
 
 @pytest.fixture()
@@ -115,7 +108,7 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     mocked_request = MockedRequest(
         response_status_code=200, response_headers={"Min-Api-Version": "2023.02.02"}
     )
-    mocker.patch("requests.Session.request", mocked_request)
+    mocker.patch("niquests.Session.request", mocked_request)
     return mocked_request
 
 
