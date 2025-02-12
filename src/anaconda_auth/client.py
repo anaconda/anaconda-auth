@@ -71,12 +71,12 @@ class TokenInfoAuth(AuthBase):
             pass
         return r
 
-class BaseClient(niquests.Session):
+class AnacondaClientMixin():
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
     token_info: Optional[TokenInfo] = None
 
-    def __init__(
+    def _initialize(
         self,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
@@ -84,10 +84,7 @@ class BaseClient(niquests.Session):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
-        **session_kwargs: Any
     ):
-        super().__init__(**session_kwargs)
-
         config_kwargs: Dict[str, Any] = {}
         if domain is not None:
             config_kwargs["domain"] = domain
@@ -129,6 +126,27 @@ class BaseClient(niquests.Session):
         else:
             self.token_info = TokenInfo(domain=self.config.domain)
             self.auth = TokenInfoAuth(self.token_info)
+
+class BaseClient(niquests.Session, AnacondaClientMixin):
+    def __init__(
+        self,
+        domain: Optional[str] = None,
+        api_key: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        api_version: Optional[str] = None,
+        ssl_verify: Optional[bool] = None,
+        extra_headers: Optional[Union[str, dict]] = None,
+        **session_kwargs: Any
+    ):
+        super().__init__(**session_kwargs)
+        self._initialize(
+            domain=domain,
+            api_key=api_key,
+            user_agent=user_agent,
+            api_version=api_version,
+            ssl_verify=ssl_verify,
+            extra_headers=extra_headers
+        )
 
     def request(
         self,
@@ -208,13 +226,9 @@ class BaseClient(niquests.Session):
             )
 
 
-class BaseAsyncClient(niquests.AsyncSession):
-    _user_agent: str = f"anaconda-auth/{version}"
-    _api_version: Optional[str] = None
-
+class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
     def __init__(
         self,
-        base_uri: Optional[str] = None,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
@@ -223,47 +237,14 @@ class BaseAsyncClient(niquests.AsyncSession):
         extra_headers: Optional[Union[str, dict]] = None,
     ):
         super().__init__()
-
-        if base_uri and domain:
-            raise ValueError("Can only specify one of `domain` or `base_uri` argument")
-
-        kwargs: Dict[str, Any] = {}
-        if domain is not None:
-            kwargs["domain"] = domain
-        if api_key is not None:
-            kwargs["api_key"] = api_key
-        if ssl_verify is not None:
-            kwargs["ssl_verify"] = ssl_verify
-        if extra_headers is not None:
-            kwargs["extra_headers"] = extra_headers
-
-        self.config = AnacondaCloudConfig(**kwargs)
-
-        # base_url overrides domain
-        self.base_url = base_uri or f"https://{self.config.domain}"
-        self.headers["User-Agent"] = user_agent or self._user_agent
-        self.api_version = api_version or self._api_version
-        if self.api_version:
-            self.headers["Api-Version"] = self.api_version
-
-        if self.config.extra_headers is not None:
-            if isinstance(self.config.extra_headers, str):
-                try:
-                    self.config.extra_headers = cast(
-                        dict, json.loads(self.config.extra_headers)
-                    )
-                except json.decoder.JSONDecodeError:
-                    raise ValueError(
-                        f"{repr(self.config.extra_headers)} is not valid JSON."
-                    )
-
-            keys_to_add = self.config.extra_headers.keys() - self.headers.keys()
-            for k in keys_to_add:
-                self.headers[k] = self.config.extra_headers[k]
-
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
-        self.hooks["response"].append(login_required)
-
+        self._initialize(
+            domain=domain,
+            api_key=api_key,
+            user_agent=user_agent,
+            api_version=api_version,
+            ssl_verify=ssl_verify,
+            extra_headers=extra_headers
+        )
 
 
 def _parse_semver_string(version: str) -> Optional[Version]:
