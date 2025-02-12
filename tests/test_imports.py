@@ -16,7 +16,7 @@ PUBLIC_IMPORTS = [
     "actions.refresh_access_token",
     "actions.request_access_token",
     "client.BaseClient",
-    "client.BearerAuth",
+    "client.TokenInfoAuth",
     "client.client_factory",
     "client.login_required",
     "config.AnacondaCloudConfig",
