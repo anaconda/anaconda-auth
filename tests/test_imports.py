@@ -8,6 +8,7 @@ PUBLIC_IMPORTS = [
     "login",
     "logout",
     "client_factory",
+    "actions._do_auth_flow",
     "actions.get_api_key",
     "actions.is_logged_in",
     "actions.login",
