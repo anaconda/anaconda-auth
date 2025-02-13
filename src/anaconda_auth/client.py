@@ -32,7 +32,7 @@ except ImportError:
     from semver import VersionInfo as Version
 
 
-def login_required(
+def _login_required(
     response: Response, *args: Any, **kwargs: Any
 ) -> Union[PreparedRequest, Response]:
     if response.request is None:
@@ -59,6 +59,18 @@ def login_required(
                 )
 
     return response
+
+
+def login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
+    return _login_required(response=response, *args, **kwargs)
+
+
+async def async_login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
+    return _login_required(response=response, *args, **kwargs)
 
 
 class TokenInfoAuth(AuthBase):
@@ -127,8 +139,6 @@ class AnacondaClientMixin:
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.hooks["response"].append(cast(HookCallableType, login_required))
-
         if self.config.api_key:
             self.auth = BearerTokenAuth(self.config.api_key)
         else:
@@ -175,6 +185,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             ssl_verify=ssl_verify,
             extra_headers=extra_headers,
         )
+        self.hooks["response"].append(cast(HookCallableType, login_required))
 
     def request(
         self,
@@ -254,6 +265,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             ssl_verify=ssl_verify,
             extra_headers=extra_headers,
         )
+        self.hooks["response"].append(cast(HookCallableType, async_login_required))
 
     async def request(  # type: ignore[override]
         self,
