@@ -55,7 +55,7 @@ def test_preferred_token_storage(monkeypatch: MonkeyPatch) -> None:
         > backends["chainer ChainerBackend"].priority
     )
 
-    monkeypatch.setenv("ANACONDA_CLOUD_PREFERRED_TOKEN_STORAGE", "system")
+    monkeypatch.setenv("ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE", "system")
     backends = {k.name: k for k in keyring.backend.get_all_keyring()}
 
     assert "token AnacondaKeyring" in backends

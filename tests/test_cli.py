@@ -28,7 +28,7 @@ def is_not_a_tty(mocker: MockerFixture) -> Generator[None, None, None]:
 def test_login_required_tty(
     monkeypatch: MonkeyPatch, mocker: MockerFixture, invoke_cli: CLIInvoker
 ) -> None:
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     login = mocker.patch("anaconda_auth.cli.login")
 
@@ -43,7 +43,7 @@ def test_login_required_tty(
 def test_login_error_handler_no_tty(
     monkeypatch: MonkeyPatch, mocker: MockerFixture, invoke_cli: CLIInvoker
 ) -> None:
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
     login = mocker.patch("anaconda_auth.cli.login")
 
     result = invoke_cli(["cloud", "api-key"])
@@ -56,7 +56,7 @@ def test_login_error_handler_no_tty(
 def test_api_key_prefers_env_var(
     monkeypatch: MonkeyPatch, invoke_cli: CLIInvoker
 ) -> None:
-    monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "foo")
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "foo")
 
     result = invoke_cli(["cloud", "api-key"])
     assert result.exit_code == 0
@@ -67,7 +67,7 @@ def test_api_key_prefers_env_var(
 def test_http_error_login(
     monkeypatch: MonkeyPatch, invoke_cli: CLIInvoker, mocker: MockerFixture
 ) -> None:
-    monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "foo")
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "foo")
     login = mocker.patch("anaconda_auth.cli.login")
 
     result = invoke_cli(["cloud", "whoami"], input="y")

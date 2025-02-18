@@ -13,7 +13,7 @@ from anaconda_cli_base.config import AnacondaBaseSettings
 OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-auth/{version}"}
 
 
-class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="cloud"):
+class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.cloud"
     api_key: Optional[str] = None
