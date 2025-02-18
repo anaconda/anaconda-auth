@@ -20,7 +20,8 @@ PUBLIC_IMPORTS = [
     "client.BearerAuth",
     "client.client_factory",
     "client.login_required",
-    "config.AnacondaCloudConfig",
+    # TODO: figure out what to do with this import
+    # "config.AnacondaCloudConfig",
     "exceptions.AuthenticationError",
     "exceptions.InvalidTokenError",
     "exceptions.TokenNotFoundError",
