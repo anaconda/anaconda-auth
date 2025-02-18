@@ -11,7 +11,7 @@ from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
@@ -111,7 +111,7 @@ def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
 def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
     """Login"""
     try:
-        auth_domain = AnacondaCloudConfig().domain
+        auth_domain = AnacondaAuthConfig().domain
         expired = TokenInfo.load(domain=auth_domain).expired
         if expired:
             console.print("Your API key has expired, logging into Anaconda.cloud")
@@ -143,7 +143,7 @@ def auth_info() -> None:
 @app.command(name="api-key")
 def auth_key() -> None:
     """Display API Key for signed-in user"""
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
     if config.api_key:
         print(config.api_key)
         return

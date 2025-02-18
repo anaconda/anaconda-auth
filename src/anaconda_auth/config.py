@@ -13,7 +13,7 @@ from anaconda_cli_base.config import AnacondaBaseSettings
 OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
 
 
-class AnacondaCloudConfig(AnacondaBaseSettings, plugin_name="cloud"):
+class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="cloud"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.cloud"
     api_key: Optional[str] = None
@@ -24,7 +24,7 @@ class AnacondaCloudConfig(AnacondaBaseSettings, plugin_name="cloud"):
     openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
 
     @property
-    def well_known_url(self: "AnacondaCloudConfig") -> str:
+    def well_known_url(self: "AnacondaAuthConfig") -> str:
         """The URL from which to load the OpenID configuration."""
         return f"https://{self.domain}/{self.openid_config_path}"
 

@@ -3,7 +3,7 @@ from functools import cached_property
 from panel.auth import OAuthLoginHandler
 from panel.config import config
 
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 
 
 class AnacondaCloudLoginHandler(OAuthLoginHandler):
@@ -28,8 +28,8 @@ class AnacondaCloudLoginHandler(OAuthLoginHandler):
     _OAUTH_REDIRECT_URL: str = "http://localhost:5006"
 
     @cached_property
-    def _config(self) -> AnacondaCloudConfig:
-        c = AnacondaCloudConfig()
+    def _config(self) -> AnacondaAuthConfig:
+        c = AnacondaAuthConfig()
         return c
 
     @property

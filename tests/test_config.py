@@ -3,12 +3,12 @@ import requests
 import responses
 from pytest_mock import MockerFixture
 
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 
 
 @pytest.fixture(autouse=True)
 def mock_openid_configuration():
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
     """Mock return value of openid configuration to prevent requiring actual network calls."""
     expected = {
         "authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/authorize",
@@ -25,7 +25,7 @@ def mock_openid_configuration():
 def test_well_known_headers(mocker: MockerFixture) -> None:
     spy = mocker.spy(requests, "get")
 
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
     assert config.oidc
     spy.assert_called_once()
     assert (

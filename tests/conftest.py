@@ -110,9 +110,9 @@ def is_not_none() -> Any:
 
 @pytest.fixture
 def disable_dot_env(mocker: MockerFixture) -> None:
-    from anaconda_auth.config import AnacondaCloudConfig
+    from anaconda_auth.config import AnacondaAuthConfig
 
-    mocker.patch.dict(AnacondaCloudConfig.model_config, {"env_file": ""})
+    mocker.patch.dict(AnacondaAuthConfig.model_config, {"env_file": ""})
 
 
 @pytest.fixture(autouse=True)
@@ -133,9 +133,9 @@ def integration_test_client(api_key: str | None) -> BaseClient:
 
 @pytest.fixture()
 def save_api_key_to_token(api_key: str | None) -> Generator[None, None, None]:
-    from anaconda_auth.config import AnacondaCloudConfig
+    from anaconda_auth.config import AnacondaAuthConfig
 
-    conf = AnacondaCloudConfig()
+    conf = AnacondaAuthConfig()
     token = TokenInfo(api_key=api_key, domain=conf.domain)
     token.save()
     yield
@@ -169,12 +169,12 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaCloudConfig.aau_token", "anon-token")
+    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", "anon-token")
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaCloudConfig.aau_token", None)
+    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", None)
 
 
 class MockResponse:

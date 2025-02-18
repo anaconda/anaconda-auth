@@ -6,7 +6,7 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
 from anaconda_auth.actions import logout
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.token import TokenExpiredError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
@@ -18,7 +18,7 @@ def test_expired_token_error(outdated_token_info: TokenInfo) -> None:
 
 
 def test_token_not_found() -> None:
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
 
     with pytest.raises(TokenNotFoundError):
         _ = TokenInfo.load(config.domain)
@@ -33,7 +33,7 @@ def test_logout_multiple_okay(mocker: MockerFixture) -> None:
 
     delete_spy = mocker.spy(keyring, "delete_password")
 
-    config = AnacondaCloudConfig(domain="test")
+    config = AnacondaAuthConfig(domain="test")
     token_info = TokenInfo(api_key="key", domain=config.domain)
     token_info.save()
 
