@@ -7,8 +7,8 @@ from typing import Union
 import requests
 
 from anaconda_auth import __version__ as version
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import OpenIDConfiguration
-from anaconda_cli_base.config import AnacondaBaseSettings
 from anaconda_cloud_auth import warn
 
 warn()
@@ -16,7 +16,7 @@ warn()
 OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
 
 
-class AnacondaCloudConfig(AnacondaBaseSettings, plugin_name="cloud"):
+class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.cloud"
     api_key: Optional[str] = None
