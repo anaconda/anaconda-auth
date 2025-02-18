@@ -10,8 +10,6 @@ from pydantic import BaseModel
 from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
 
-OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-auth/{version}"}
-
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
@@ -22,7 +20,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
-    oidc_request_headers: dict[str, str] = OIDC_REQUEST_HEADERS
+    oidc_request_headers: dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
 
     @property
     def well_known_url(self: "AnacondaAuthConfig") -> str:
