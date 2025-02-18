@@ -31,5 +31,5 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
     assert (
         spy.call_args.kwargs.get("headers", {})
         .get("User-Agent")
-        .startswith("anaconda-cloud-auth")
+        .startswith("anaconda-auth")
     )

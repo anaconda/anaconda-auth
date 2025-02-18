@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
 
-OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
+OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-auth/{version}"}
 
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="cloud"):
