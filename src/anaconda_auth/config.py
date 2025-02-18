@@ -22,6 +22,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
+    oidc_request_headers: dict[str, str] = OIDC_REQUEST_HEADERS
 
     @property
     def well_known_url(self: "AnacondaAuthConfig") -> str:
@@ -32,7 +33,9 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
         res = requests.get(
-            self.well_known_url, headers=OIDC_REQUEST_HEADERS, verify=self.ssl_verify
+            self.well_known_url,
+            headers=self.oidc_request_headers,
+            verify=self.ssl_verify,
         )
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())
