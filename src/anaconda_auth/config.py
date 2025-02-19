@@ -15,14 +15,6 @@ from anaconda_cli_base.config import AnacondaBaseSettings
 
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
-    def __init__(self, **kwargs: Any):
-        if self.__class__ == AnacondaAuthConfig:
-            config = AnacondaCloudConfig()
-            set_fields = config.model_dump(exclude_unset=True)
-            # TODO: Raise Deprecation warning and instruct to use new env vars or config file keys
-            kwargs.update(**set_fields)
-        super().__init__(**kwargs)
-
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.cloud"
     api_key: Optional[str] = None
@@ -32,6 +24,14 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
     oidc_request_headers: Dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
+
+    def __init__(self, **kwargs: Any):
+        if self.__class__ == AnacondaAuthConfig:
+            config = AnacondaCloudConfig(raise_deprecation_warning=False)
+            set_fields = config.model_dump(exclude_unset=True)
+            # TODO: Raise Deprecation warning and instruct to use new env vars or config file keys
+            kwargs.update(**set_fields)
+        super().__init__(**kwargs)
 
     @property
     def well_known_url(self: "AnacondaAuthConfig") -> str:
