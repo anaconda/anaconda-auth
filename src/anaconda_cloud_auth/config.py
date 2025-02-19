@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Dict
 
 from pydantic_settings import SettingsConfigDict
 
@@ -27,4 +28,4 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         ignored_types=(cached_property,),
     )
     domain: str = "anaconda.cloud"
-    oidc_request_headers: dict[str, str] = OIDC_REQUEST_HEADERS
+    oidc_request_headers: Dict[str, str] = OIDC_REQUEST_HEADERS

@@ -32,7 +32,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
-    oidc_request_headers: dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
+    oidc_request_headers: Dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
 
     @property
     def well_known_url(self: "AnacondaAuthConfig") -> str:
