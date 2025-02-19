@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Any
 from typing import Dict
 from typing import Literal
 from typing import Optional
@@ -12,6 +13,17 @@ from anaconda_cli_base.config import AnacondaBaseSettings
 
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
+    def __init__(self, **kwargs: Any):
+        # TODO: Remove circular import and move base definition into this file
+        from anaconda_cloud_auth.config import AnacondaCloudConfig
+
+        if self.__class__ == AnacondaAuthConfig:
+            config = AnacondaCloudConfig()
+            set_fields = config.model_dump(exclude_unset=True)
+            # TODO: Raise Deprecation warning and instruct to use new env vars or config file keys
+            kwargs.update(**set_fields)
+        super().__init__(**kwargs)
+
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.cloud"
     api_key: Optional[str] = None

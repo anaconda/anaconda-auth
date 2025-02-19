@@ -33,3 +33,10 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
         .get("User-Agent")
         .startswith("anaconda-auth")
     )
+
+
+@pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
+def test_env_variables(monkeypatch, prefix: str):
+    monkeypatch.setenv(f"{prefix}_DOMAIN", "mocked-domain")
+    config = AnacondaAuthConfig()
+    assert config.domain == "mocked-domain"
