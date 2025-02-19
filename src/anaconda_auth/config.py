@@ -1,3 +1,4 @@
+import warnings
 from functools import cached_property
 from typing import Any
 from typing import Dict
@@ -90,3 +91,12 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
     )
     domain: str = "anaconda.cloud"
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
+
+    def __init__(self, raise_deprecation_warning: bool = True, **kwargs: Any):
+        if raise_deprecation_warning:
+            warnings.warn(
+                "AnacondaCloudConfig is deprecated, please use AnacondaAuthConfig instead.",
+                DeprecationWarning,
+            )
+
+        super().__init__(**kwargs)
