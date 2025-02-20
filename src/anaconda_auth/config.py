@@ -30,7 +30,9 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
             config = AnacondaCloudConfig(raise_deprecation_warning=False)
             set_fields = config.model_dump(exclude_unset=True)
             # TODO: Raise Deprecation warning and instruct to use new env vars or config file keys
-            kwargs.update(**set_fields)
+
+            # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
+            kwargs = {**set_fields, **kwargs}
         super().__init__(**kwargs)
 
     @property

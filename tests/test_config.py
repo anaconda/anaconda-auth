@@ -49,7 +49,8 @@ def test_env_variable_over_default(monkeypatch: MonkeyPatch) -> None:
     assert config.domain == "set-in-env"
 
 
-def test_init_arg_over_env_variable(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("ANACONDA_AUTH_DOMAIN", "set-in-env")
+@pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
+def test_init_arg_over_env_variable(monkeypatch: MonkeyPatch, prefix: str) -> None:
+    monkeypatch.setenv(f"{prefix}_DOMAIN", "set-in-env")
     config = AnacondaAuthConfig(domain="set-in-init")
     assert config.domain == "set-in-init"
