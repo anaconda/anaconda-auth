@@ -9,8 +9,8 @@ conda = pytest.importorskip("conda")
 from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
 
-from anaconda_auth._conda.auth_handler import AnacondaCloudAuthError  # noqa: E402
-from anaconda_auth._conda.auth_handler import AnacondaCloudAuthHandler  # noqa: E402
+from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
+from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
 
 
 @pytest.fixture()
@@ -48,7 +48,7 @@ def mocked_token_info(mocker):
 
 @pytest.fixture()
 def handler():
-    return AnacondaCloudAuthHandler(
+    return AnacondaAuthHandler(
         channel_name="https://repo.anaconda.cloud/repo/my-org/my-channel"
     )
 
@@ -79,7 +79,7 @@ def test_get_token_for_main_finds_first_token(handler):
 
 @pytest.mark.usefixtures("mocked_empty_conda_token")
 def test_get_token_missing(handler):
-    with pytest.raises(AnacondaCloudAuthError):
+    with pytest.raises(AnacondaAuthError):
         _ = handler._load_token(
             "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
         )
@@ -126,5 +126,5 @@ def test_response_callback_403(session, url, monkeypatch):
     monkeypatch.setattr(session, "send", trigger_403)
 
     # A 403 response is captured by the hook and a custom exception is raised
-    with pytest.raises(AnacondaCloudAuthError):
+    with pytest.raises(AnacondaAuthError):
         session.get(url)
