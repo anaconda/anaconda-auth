@@ -173,7 +173,7 @@ def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
         f"https://{config.domain}/api/iam/api-keys",
         json=dict(
             scopes=["cloud:read", "cloud:write"],
-            tags=[f"anaconda-cloud-auth/v{__version__}"],
+            tags=[f"anaconda-auth/v{__version__}"],
         ),
         headers=headers,
         verify=ssl_verify,
