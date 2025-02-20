@@ -1,33 +1,33 @@
-# anaconda-cloud-auth
+# anaconda-auth
 
-A client library for Anaconda.cloud APIs to authenticate and securely store API keys.
-This library is used by other Anaconda.cloud client packages to provide a centralized auth
-capability for the ecosystem. You will need to use this package to login to Anaconda.cloud
+A client library for Anaconda APIs to authenticate and securely store API keys.
+This library is used by other client packages to provide a centralized auth
+capability for the ecosystem. You will need to use this package to login to anaconda.com
 before utilizing many of the other client packages.
 
 This package provides a [requests](https://requests.readthedocs.io/en/latest/)
-client class that handles loading the API key for requests made to Anaconda Cloud services.
+client class that handles loading the API key for requests made to Anaconda services.
 
 This package provides a [Panel OAuth plugin](https://panel.holoviz.org/how_to/authentication/configuration.html)
-called `anaconda_cloud`.
+called `anaconda_auth`.
 
 ## Installation
 
 ```text
-conda install anaconda-cloud-auth
+conda install anaconda-auth
 ```
 
 ## Usage
 
 The primary usage of this package is to provide CLI actions for login, logout, user information, and api-keys
-to Anaconda Cloud API Services.
+to Anaconda API Services.
 
 ```text
-❯ anaconda cloud
+❯ anaconda auth
 
- Usage: anaconda cloud [OPTIONS] COMMAND [ARGS]...
+ Usage: anaconda auth [OPTIONS] COMMAND [ARGS]...
 
- Anaconda.cloud auth commands
+ Anaconda auth commands
 
 ╭─ Options ──────────────────────────────────────────────────────────────────────────────────╮
 │ --version  -V                                                                              │
@@ -43,24 +43,24 @@ to Anaconda Cloud API Services.
 
 ## Configuration
 
-You can configure `anaconda-cloud-auth` by either
+You can configure `anaconda-auth` by either
 
-1. Setting parameters in the `plugin.cloud` section of the `~/.anaconda/config.toml` file
-1. Setting one or more `ANACONDA_CLOUD_` environment variables or use a `.env` file in your working directory
+1. Setting parameters in the `plugin.auth` section of the `~/.anaconda/config.toml` file
+1. Setting one or more `ANACONDA_AUTH_` environment variables or use a `.env` file in your working directory
 
-`ANACONDA_CLOUD_` env vars or `.env` file take precedence over the `~/.anaconda/config.toml` file.
+`ANACONDA_AUTH_` env vars or `.env` file take precedence over the `~/.anaconda/config.toml` file.
 
-### Anaconda Cloud parameters
+### Anaconda parameters
 
-The following parameters in the `plugin.cloud` section control the login actions and API requests to Anaconda Cloud Services.
+The following parameters in the `plugin.auth` section control the login actions and API requests to Anaconda Services.
 
 | Parameter | Env variable | Description | Default value |
 |-|-|-|-|
-| `domain` | `ANACONDA_CLOUD_DOMAIN` | Authentication and API request domain | `"anaconda.cloud"` |
-| `ssl_verify` | `ANACONDA_CLOUD_SSL_VERIFY` | SSL verification for all requests | `True` |
-| `preferred_token_storage` | `ANACONDA_CLOUD_PREFERRED_TOKEN_STORAGE` | Where to store the login token, can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
-| `api_key` | `ANACONDA_CLOUD_API_KEY` | API key, if `None` defaults to keyring storage | `None` |
-| `extra_headers` | `ANACONDA_CLOUD_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
+| `domain` | `ANACONDA_AUTH_DOMAIN` | Authentication and API request domain | `"anaconda.cloud"` |
+| `ssl_verify` | `ANACONDA_AUTH_SSL_VERIFY` | SSL verification for all requests | `True` |
+| `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token, can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
+| `api_key` | `ANACONDA_AUTH_API_KEY` | API key, if `None` defaults to keyring storage | `None` |
+| `extra_headers` | `ANACONDA_AUTH_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
 
 ### Example
 
@@ -68,17 +68,17 @@ Here's an example `~/.anaconda/config.toml` where SSL verification is turned
 off for login and API requests and the preferred token storage is `anaconda-keyring`.
 
 ```toml
-[plugin.cloud]
+[plugin.auth]
 ssl_verify = false
 preferred_token_storage = "system"
 ```
 
 ## API Keys and tokens
 
-When you `login` with `anaconda-cloud-auth` an auth token is stored in the preferred keyring storage location and is
+When you `login` with `anaconda-auth` an auth token is stored in the preferred keyring storage location and is
 deleted when you run `logout`. The auth token will need to be renewed once a year.
 
-The `preferred_storage` configuration parameter in the `plugin.cloud` section of the config.toml file takes two
+The `preferred_storage` configuration parameter in the `plugin.auth` section of the config.toml file takes two
 possible values
 
 | Storage location | Description |
@@ -90,19 +90,19 @@ possible values
 
 ### Non-interactive use
 
-If you want to utilize Anaconda Cloud Services on a system where you do not have interactive access to a browser to
+If you want to utilize Anaconda Services on a system where you do not have interactive access to a browser to
 use the `login` command you have two options
 
-1. Use `anaconda cloud api-key` command on a system where you can login to print the API key to the terminal. You can then
-utilize the API key on the non-interactive system with the `ANACONDA_CLOUD_API_KEY` env var (or in `.env` file) or set
-the `key` parameter in the `plugin.cloud_api` section of the `~/.anaconda/config.toml` file.
+1. Use `anaconda auth api-key` command on a system where you can login to print the API key to the terminal. You can then
+utilize the API key on the non-interactive system with the `ANACONDA_AUTH_API_KEY` env var (or in `.env` file) or set
+the `key` parameter in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
 1. With `preferred_token_storage` set to `"anaconda-keyring"` run the `login` command to create the `~/.anaconda/keyring`
 file. Then copy `~/.anaconda/keyring` to the non-interactive system.
 
 ## Python API
 
 ```python
-from anaconda_cloud_auth import login
+from anaconda_auth import login
 
 login()
 ```
@@ -121,7 +121,7 @@ taken. You can replace the valid API key with `login(force=True)`.
 To remove the API key from your keyring storage use the `logout()` function.
 
 ```python
-from anaconda_cloud_auth import logout
+from anaconda_auth import logout
 
 logout()
 ```
@@ -136,7 +136,7 @@ The BaseClient class can be used for non-authenticated requests even when
 the user has not logged in or provided an API in the request.
 
 ```python
-from anaconda_cloud_auth.client import BaseClient
+from anaconda_auth.client import BaseClient
 
 client = BaseClient()
 
@@ -150,25 +150,23 @@ BaseClient accepts the following optional arguments.
 * `domain`: Domain to use for requests, defaults to `anaconda.cloud`
 * `ssl_verify`: Enable SSL verification, defaults to `True`
 * `api_key`: API key to use for requests, if unspecified uses token set by `anaconda login`
-* `user_agent`: Defaults to `anaconda-cloud-auth/<package-version>`
+* `user_agent`: Defaults to `anaconda-auth/<package-version>`
 * `api_version`: Requested API version, defaults to latest available from the domain
 * `extra_headers`: Dictionary or JSON string of extra headers to send in requests
 
 To create a Client class specific to your package, subclass BaseClient and set
-an appropriate user-agent and API version for your needs. This is automatically done
-if you use the [cookiecutter](https://github.com/anaconda/anaconda-cloud-tools/tree/main/cookiecutter)
-in this repository to create a new package.
+an appropriate user-agent and API version for your needs.
 
 ```python
-from anaconda_cloud_auth.client import BaseClient
+from anaconda_auth.client import BaseClient
 class Client(BaseClient):
-    _user_agent = "anaconda-cloud-<package>/<version>"
+    _user_agent = "anaconda-<package>/<version>"
     _api_version = "<api-version>"
 ```
 
 ## CLI Error handlers
 
-This plugin defines an [error handler](https://github.com/anaconda/anaconda-cloud-tools/tree/main/libs/anaconda-cli-base#error-handling) for the `HTTPError` exception when using `.raise_for_status()` on a response
+This plugin defines an [error handler](https://github.com/anaconda/anaconda-cli-base#error-handling) for the `HTTPError` exception when using `.raise_for_status()` on a response
 using BaseClient or subclasses of BaseClient. Errors are not caught automatically when using the BaseClient
 or subclasses outside of `anaconda` CLI subcommands.
 
@@ -180,12 +178,12 @@ interactive login. Once completed the command will be re-tried.
 * `TokenNotFoundError`: The subcommand requested to load the token from the keyring but none were present
 * `TokenExpiredError`: The token was successfully loaded but has expired
 * `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
-* `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token but Anaconda Cloud determines that the API was invalid
+* `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token but Anaconda determines that the API was invalid
 
 Here's an example demonstrating that the user has not previously run `anaconda login` but attempted a CLI command that at some point requires authentication. By typing `y` the login action is triggered and their browser will open.
 
 ```text
-❯ anaconda cloud api-key
+❯ anaconda auth api-key
 TokenNotFoundError: Login is required to complete this action.
 Continue with interactive login? [y/n]: y
 <api-key>
@@ -195,24 +193,24 @@ If the user typed `n` or the command was not run on an interactive terminal an e
 the user how to login or configure the API key.
 
 ```text
-❯ anaconda cloud whoami
+❯ anaconda auth whoami
 AuthenticationMissingError: Login is required to complete this action.
 Continue with interactive login? [y/n]: n
 
 To configure your credentials you can run
   anaconda login --at cloud
 
-or set your API key using the ANACONDA_CLOUD_API_KEY env var
+or set your API key using the ANACONDA_AUTH_API_KEY env var
 
 or set
 
-[plugin.cloud]
+[plugin.auth]
 api_key = "<api-key>"
 
 in ~/.anaconda/config.toml
 
 To see a more detailed error message run the command again as
-  anaconda --verbose cloud whoami
+  anaconda --verbose auth whoami
 ```
 
 ### HTTPError
@@ -243,7 +241,7 @@ To see a more detailed error message run the command again as
 
 ## Panel OAuth Provider
 
-In order to use the `anaconda_cloud` auth plugin you will need an OAuth client
+In order to use the `anaconda_auth` auth plugin you will need an OAuth client
 ID (key) and secret. The client must be configured as follows
 
 ```text
@@ -255,13 +253,13 @@ Set access token type: JWT
 Set Authentication Method: HTTP Body
 ```
 
-To run the app with the anaconda_cloud auth provider you will need to set several
+To run the app with the anaconda_auth auth provider you will need to set several
 environment variables or command-line arguments. See the
 [Panel OAuth documentation](https://panel.holoviz.org/how_to/authentication/configuration.html)
 for more details
 
 ```text
-PANEL_OAUTH_PROVIDER=anaconda_cloud or --oauth-provider anaconda_cloud
+PANEL_OAUTH_PROVIDER=anaconda_auth or --oauth-provider anaconda_auth
 PANEL_OAUTH_KEY=<key>               or --oauth-key=<key>
 PANEL_OAUTH_SECRET=<secret>         or --oauth-secret=<key>
 PANEL_COOKIE_SECRET=<cookie-name>   or --cookie-secret=<value>
