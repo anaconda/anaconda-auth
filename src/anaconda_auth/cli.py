@@ -32,17 +32,19 @@ def _continue_with_login() -> int:
                 To configure your credentials you can run
                   [green]anaconda login --at cloud[/green]
 
-                or set your API key using the [green]ANACONDA_CLOUD_API_KEY[/green] env var
+                or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
                 or set
                 """)
             )
             console.print(
                 Syntax(
-                    dedent("""\
-                  [plugin.cloud]
-                  api_key = "<api-key>"
-                """),
+                    dedent(
+                        """\
+                        [plugin.auth]
+                        api_key = "<api-key>"
+                        """
+                    ),
                     "toml",
                     background_color=None,
                 )
@@ -92,16 +94,14 @@ def http_error(e: HTTPError) -> int:
         return 1
 
 
-app = typer.Typer(
-    name="cloud", add_completion=False, help="Anaconda.cloud auth commands"
-)
+app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth commands")
 
 
 @app.callback(invoke_without_command=True)
 def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
     if version:
         console.print(
-            f"Anaconda Cloud Auth, version [cyan]{__version__}[/cyan]",
+            f"anaconda-auth, version [cyan]{__version__}[/cyan]",
             style="bold green",
         )
         raise typer.Exit()
@@ -114,14 +114,14 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
         auth_domain = AnacondaAuthConfig().domain
         expired = TokenInfo.load(domain=auth_domain).expired
         if expired:
-            console.print("Your API key has expired, logging into Anaconda.cloud")
+            console.print("Your API key has expired, logging into anaconda.com")
             login(force=True, ssl_verify=ssl_verify)
             raise typer.Exit()
     except TokenNotFoundError:
         pass  # Proceed to login
     else:
         force = force or Confirm.ask(
-            f"You are already logged into Anaconda Cloud ({auth_domain}). Would you like to force a new login?",
+            f"You are already logged into Anaconda ({auth_domain}). Would you like to force a new login?",
             default=False,
         )
         if not force:
@@ -136,7 +136,7 @@ def auth_info() -> None:
     client = BaseClient()
     response = client.get("/api/account")
     response.raise_for_status()
-    console.print("Your Anaconda Cloud info:")
+    console.print("Your anaconda.com info:")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
 
