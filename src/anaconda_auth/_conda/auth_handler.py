@@ -18,7 +18,7 @@ from anaconda_auth._conda import repo_config
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 
-CLOUD_URI_PREFIX = "/repo/"
+URI_PREFIX = "/repo/"
 
 
 class AnacondaCloudAuthError(CondaError):
@@ -50,8 +50,8 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
             return None
 
         path = parsed_url.path
-        if path.startswith(CLOUD_URI_PREFIX):
-            path = path[len(CLOUD_URI_PREFIX) :]
+        if path.startswith(URI_PREFIX):
+            path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
 
         # First we attempt to return an organization-specific token
