@@ -199,7 +199,7 @@ def login(
     force: bool = False,
     ssl_verify: bool = True,
 ) -> None:
-    """Log into Anaconda.cloud and store the token information in the keyring."""
+    """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
         config = AnacondaAuthConfig(ssl_verify=ssl_verify)
 
@@ -208,7 +208,7 @@ def login(
 
 
 def logout(config: Optional[AnacondaAuthConfig] = None) -> None:
-    """Log out of Anaconda.cloud."""
+    """Log out of anaconda.com."""
     if config is None:
         config = AnacondaAuthConfig()
     try:
