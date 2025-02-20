@@ -37,14 +37,8 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
-def test_env_variables_multiple_names(monkeypatch: MonkeyPatch, prefix: str) -> None:
-    monkeypatch.setenv(f"{prefix}_DOMAIN", "mocked-domain")
-    config = AnacondaAuthConfig()
-    assert config.domain == "mocked-domain"
-
-
-def test_env_variable_over_default(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("ANACONDA_AUTH_DOMAIN", "set-in-env")
+def test_env_variable_over_default(monkeypatch: MonkeyPatch, prefix: str) -> None:
+    monkeypatch.setenv(f"{prefix}_DOMAIN", "set-in-env")
     config = AnacondaAuthConfig()
     assert config.domain == "set-in-env"
 
