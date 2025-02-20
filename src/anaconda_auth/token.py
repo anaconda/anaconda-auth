@@ -37,6 +37,7 @@ except AttributeError:
 
 logger = logging.getLogger(__name__)
 
+# TODO: Rename to "Anaconda" and then migrate existing
 KEYRING_NAME = "Anaconda Cloud"
 
 
