@@ -6,11 +6,11 @@ from panel.config import config
 from anaconda_auth.config import AnacondaAuthConfig
 
 
-class AnacondaCloudLoginHandler(OAuthLoginHandler):
-    """Anaconda.cloud OAuth2 Authentication
+class AnacondaLoginHandler(OAuthLoginHandler):
+    """Anaconda.com OAuth2 Authentication
 
     To utilize this handler you must have a Client ID (key)
-    and secret. The OAuth client at Anaconda.cloud must be
+    and secret. The OAuth client at Anaconda.com must be
     configured for
 
     Set scopes: offline_access, openid, email, profile

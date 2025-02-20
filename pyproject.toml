@@ -31,7 +31,7 @@ cloud = "anaconda_cloud_auth.cli:app"
 anaconda-cloud-auth = "anaconda_auth._conda.entrypoint"
 
 [project.entry-points."panel.auth"]
-anaconda_cloud = "anaconda_auth.panel:AnacondaCloudLoginHandler"
+anaconda_auth = "anaconda_auth.panel:AnacondaLoginHandler"
 
 [project.optional-dependencies]
 dev = [
