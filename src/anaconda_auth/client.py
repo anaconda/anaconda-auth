@@ -73,7 +73,7 @@ class BearerAuth(AuthBase):
 
 
 class BaseClient(requests.Session):
-    _user_agent: str = f"anaconda-cloud-auth/{version}"
+    _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
 
     def __init__(
