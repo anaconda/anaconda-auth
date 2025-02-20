@@ -93,7 +93,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             url: The URL for the request.
 
         Raises:
-             AnacondaCloudAuthError: If no token is found using either method.
+             AnacondaAuthError: If no token is found using either method.
 
         """
 
@@ -105,7 +105,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         else:
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
-                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+                "`anaconda token install`."
             )
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
@@ -113,7 +113,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if response.status_code == 403:
             raise AnacondaAuthError(
                 f"Token is invalid for {self.channel_name}. Please re-install token with "
-                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+                "`anaconda token install`."
             )
         return response
 
