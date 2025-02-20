@@ -55,7 +55,7 @@ def clear_mocked_keyring() -> None:
 
 @pytest.fixture(autouse=True)
 def set_keyring_name(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.token.KEYRING_NAME", "Anaconda Cloud Test")
+    mocker.patch("anaconda_auth.token.KEYRING_NAME", "Anaconda Test")
 
 
 @pytest.fixture
