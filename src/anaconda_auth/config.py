@@ -15,7 +15,7 @@ from anaconda_cli_base.config import AnacondaBaseSettings
 from anaconda_cli_base.console import console
 
 
-def _raise_deprecated_field_set_warning(set_fields: dict[str, Any]) -> None:
+def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     fields_str = ", ".join(sorted(f'"{s}"' for s in set_fields.keys()))
     warning_text = (
         "The following fields have been set using legacy environment variables "
