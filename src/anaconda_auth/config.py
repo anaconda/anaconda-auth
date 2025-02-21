@@ -14,6 +14,9 @@ from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
 from anaconda_cli_base.console import console
 
+LOGIN_SUCCESS_URL = "https://anaconda.cloud/local-login-success"
+LOGIN_ERROR_URL = "https://anaconda.cloud/local-login-error"
+
 
 def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     fields_str = ", ".join(sorted(f'"{s}"' for s in set_fields.keys()))
