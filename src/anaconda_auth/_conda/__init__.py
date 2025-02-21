@@ -1,6 +1,6 @@
 """This module provides conda plugins.
 
-Since conda is not a strict dependency of `anaconda-cloud-auth`, the modules here should
+Since conda is not a strict dependency of `anaconda-auth`, the modules here should
 NOT be imported outside of this module. This package is declared as the plugin entrypoint
 inside `pyproject.toml` such that it will be imported and, if conda is installed, the
 plugin definitions will be imported. However, if conda is not installed, no plugins are

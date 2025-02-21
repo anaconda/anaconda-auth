@@ -18,16 +18,16 @@ from anaconda_auth._conda import repo_config
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 
-CLOUD_URI_PREFIX = "/repo/"
+URI_PREFIX = "/repo/"
 
 
-class AnacondaCloudAuthError(CondaError):
+class AnacondaAuthError(CondaError):
     """
     A generic error to raise that is a subclass of CondaError so we don't trigger the unhandled exception traceback.
     """
 
 
-class AnacondaCloudAuthHandler(ChannelAuthBase):
+class AnacondaAuthHandler(ChannelAuthBase):
     @staticmethod
     def _load_token_from_keyring(url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
@@ -50,8 +50,8 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
             return None
 
         path = parsed_url.path
-        if path.startswith(CLOUD_URI_PREFIX):
-            path = path[len(CLOUD_URI_PREFIX) :]
+        if path.startswith(URI_PREFIX):
+            path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
 
         # First we attempt to return an organization-specific token
@@ -93,7 +93,7 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
             url: The URL for the request.
 
         Raises:
-             AnacondaCloudAuthError: If no token is found using either method.
+             AnacondaAuthError: If no token is found using either method.
 
         """
 
@@ -103,17 +103,17 @@ class AnacondaCloudAuthHandler(ChannelAuthBase):
         elif token := self._load_token_via_conda_token(url):
             return token
         else:
-            raise AnacondaCloudAuthError(
+            raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
-                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+                "`anaconda token install`."
             )
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
         if response.status_code == 403:
-            raise AnacondaCloudAuthError(
+            raise AnacondaAuthError(
                 f"Token is invalid for {self.channel_name}. Please re-install token with "
-                "`anaconda cloud token install` or install `conda-token` for legacy usage."
+                "`anaconda token install`."
             )
         return response
 

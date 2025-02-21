@@ -9,7 +9,7 @@ from typing import Iterable
 
 from conda import plugins
 
-from anaconda_auth._conda.auth_handler import AnacondaCloudAuthHandler
+from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 
 __all__ = ["conda_auth_handlers"]
 
@@ -23,11 +23,11 @@ def conda_auth_handlers() -> Iterable[plugins.CondaAuthHandler]:
     ```yaml
     channel_settings:
       - channel: https://repo.anaconda.cloud/repo/main
-        auth: anaconda-cloud-auth
+        auth: anaconda-auth
     ```
 
     """
     yield plugins.CondaAuthHandler(
-        name="anaconda-cloud-auth",
-        handler=AnacondaCloudAuthHandler,
+        name="anaconda-auth",
+        handler=AnacondaAuthHandler,
     )

@@ -19,6 +19,9 @@ from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
 
+LOGIN_SUCCESS_URL = "https://anaconda.cloud/local-login-success"
+LOGIN_ERROR_URL = "https://anaconda.cloud/local-login-error"
+
 
 class Result(BaseModel):
     """This class is needed to capture the auth code redirect data"""
@@ -88,14 +91,14 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_auth(self, query_params: Dict[str, List[str]]) -> None:
         if "code" in query_params and "state" in query_params:
-            location = "https://anaconda.cloud/local-login-success"
+            location = LOGIN_SUCCESS_URL
             self.server.result = Result(
                 auth_code=query_params["code"][0],
                 state=query_params["state"][0],
                 scopes=query_params.get("scope", []),
             )
         else:
-            location = "https://anaconda.cloud/local-login-error"
+            location = LOGIN_ERROR_URL
 
         self.send_response(HTTPStatus.TEMPORARY_REDIRECT)
         self.send_header("Location", location)

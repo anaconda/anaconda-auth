@@ -23,13 +23,15 @@ requires-python = ">=3.8"
 urls = {repository = "https://github.com/anaconda/anaconda-auth"}
 
 [project.entry-points."anaconda_cli.subcommand"]
-cloud = "anaconda_auth.cli:app"
+auth = "anaconda_auth.cli:app"
+# TODO: Deprecated plugin name
+cloud = "anaconda_cloud_auth.cli:app"
 
 [project.entry-points.conda]
-anaconda-cloud-auth = "anaconda_auth._conda.entrypoint"
+anaconda-auth = "anaconda_auth._conda.entrypoint"
 
 [project.entry-points."panel.auth"]
-anaconda_cloud = "anaconda_auth.panel:AnacondaCloudLoginHandler"
+anaconda_auth = "anaconda_auth.panel:AnacondaLoginHandler"
 
 [project.optional-dependencies]
 dev = [
@@ -194,8 +196,8 @@ python =
 passenv =
     TEST_API_KEY
     CE_TOKEN
-    ANACONDA_CLOUD_DOMAIN
-    ANACONDA_CLOUD_CLIENT_ID
+    ANACONDA_AUTH_DOMAIN
+    ANACONDA_AUTH_CLIENT_ID
 deps =
     mypy
     pytest

@@ -21,7 +21,7 @@ from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
 
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 
@@ -37,6 +37,7 @@ except AttributeError:
 
 logger = logging.getLogger(__name__)
 
+# TODO: Rename to "Anaconda" and then migrate existing
 KEYRING_NAME = "Anaconda Cloud"
 
 
@@ -92,7 +93,7 @@ class NavigatorFallback(KeyringBackend):
             from anaconda_auth.actions import get_api_key
             from anaconda_auth.actions import refresh_access_token
 
-            config = AnacondaCloudConfig(domain=auth_domain)
+            config = AnacondaAuthConfig(domain=auth_domain)
             if not token.valid:
                 try:
                     access_token = refresh_access_token(
@@ -140,7 +141,7 @@ class AnacondaKeyring(KeyringBackend):
 
     @classproperty
     def priority(cls) -> float:
-        config = AnacondaCloudConfig()
+        config = AnacondaAuthConfig()
         if config.preferred_token_storage == "system":
             return 0.2
         elif config.preferred_token_storage == "anaconda-keyring":

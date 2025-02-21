@@ -15,7 +15,7 @@ from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -55,7 +55,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaCloudConfig().domain
+            domain = AnacondaAuthConfig().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -73,7 +73,7 @@ class BearerAuth(AuthBase):
 
 
 class BaseClient(requests.Session):
-    _user_agent: str = f"anaconda-cloud-auth/{version}"
+    _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
 
     def __init__(
@@ -101,7 +101,7 @@ class BaseClient(requests.Session):
         if extra_headers is not None:
             kwargs["extra_headers"] = extra_headers
 
-        self.config = AnacondaCloudConfig(**kwargs)
+        self.config = AnacondaAuthConfig(**kwargs)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
