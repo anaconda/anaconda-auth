@@ -12,6 +12,24 @@ from pydantic_settings import SettingsConfigDict
 
 from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
+from anaconda_cli_base.console import console
+
+
+def _raise_deprecated_field_set_warning(set_fields: dict[str, Any]) -> None:
+    fields_str = ", ".join(sorted(f'"{s}"' for s in set_fields.keys()))
+    warning_text = (
+        "The following fields have been set using legacy environment variables "
+        + "prefixed with 'ANACONDA_CLOUD_` or in the `plugins.cloud` section "
+        + f"of `~/.anaconda/config.toml`: {fields_str}\n\n"
+        + "Please either rename environment variables to the corresponding "
+        + "`ANACONDA_AUTH_` version, or replace the `plugins.cloud` section "
+        + "of the config file with `plugins.auth`."
+    )
+    console.print(f"[red]{warning_text}[/red]")
+    warnings.warn(
+        warning_text,
+        DeprecationWarning,
+    )
 
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
@@ -29,10 +47,11 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
         if self.__class__ == AnacondaAuthConfig:
             config = AnacondaCloudConfig(raise_deprecation_warning=False)
             set_fields = config.model_dump(exclude_unset=True)
-            # TODO: Raise Deprecation warning and instruct to use new env vars or config file keys
+            if set_fields:
+                _raise_deprecated_field_set_warning(set_fields)
 
-            # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
-            kwargs = {**set_fields, **kwargs}
+                # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
+                kwargs = {**set_fields, **kwargs}
         super().__init__(**kwargs)
 
     @property
