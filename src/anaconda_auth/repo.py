@@ -79,9 +79,11 @@ def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
     except repo_config.CondaTokenError as e:
         raise typer.Abort(e)
 
+    console.print("Configuring your [cyan].condarc[/cyan] file")
     try:
         repo_config.configure_condarc()
     except repo_config.CondaRCError as e:
+        console.print("Error configuring .condarc")
         raise typer.Abort(e)
 
     _set_repo_token(org_name=org_name, token=token)
