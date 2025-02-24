@@ -9,6 +9,7 @@ from anaconda_auth.client import BaseClient
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base import console
+from anaconda_cli_base.console import select_from_list
 
 app = typer.Typer(name="token")
 
@@ -51,15 +52,24 @@ def list_tokens():
         console.print(url, token)
 
 
+def _select_org_name(client: BaseClient) -> str:
+    response = client.get("/api/organizations/my")
+    data = response.json()
+    organizations = {o["title"]: o["name"] for o in data}
+    org_title = select_from_list(
+        "Please select an organization",
+        choices=[o["title"] for o in data],
+    )
+    return organizations[org_title]
+
+
 @app.command(name="install")
 def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
     """Create and install a new repository token."""
-    if not org_name:
-        # TODO: We should try to load this dynamically and present a picker
-        console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
-        raise typer.Abort()
-
     client = _get_client()
+
+    if not org_name:
+        org_name = _select_org_name(client)
 
     response = client.put(
         f"/api/organizations/{org_name}/ce/current-token",
