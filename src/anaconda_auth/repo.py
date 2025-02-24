@@ -66,6 +66,10 @@ def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
         json={"confirm": "yes"},
     )
 
+    if response.status_code != 200:
+        # TODO: Better exception handling
+        raise Exception
+
     console.print(response.json())
 
     token = response.json()["token"]
