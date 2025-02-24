@@ -150,11 +150,18 @@ def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
     return access_token
 
 
+# TODO: This is a hack we should remove
+ACCESS_TOKEN = None
+
+
 def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
+    global ACCESS_TOKEN
+
     if basic:
         access_token = _login_with_username(config=config)
     else:
         access_token = _do_auth_flow(config=config)
+    ACCESS_TOKEN = access_token
     api_key = get_api_key(access_token, config.ssl_verify)
     token_info = TokenInfo(api_key=api_key, domain=config.domain)
     token_info.save()

@@ -2,6 +2,7 @@ from typing import Optional
 
 import typer
 
+import anaconda_auth.actions
 from anaconda_auth._conda import repo_config
 from anaconda_auth._conda.condarc import CondaRC
 from anaconda_auth.actions import _do_auth_flow
@@ -16,7 +17,10 @@ app = typer.Typer(name="token")
 
 def _get_client() -> BaseClient:
     """Perform browser-based auth flow and create a new Client instance to make authenticated HTTP requests."""
-    access_token = _do_auth_flow()
+    if anaconda_auth.actions.ACCESS_TOKEN is not None:
+        access_token = anaconda_auth.actions.ACCESS_TOKEN
+    else:
+        access_token = _do_auth_flow()
     return BaseClient(api_key=access_token)
 
 
@@ -52,24 +56,35 @@ def list_tokens():
         console.print(url, token)
 
 
-def _select_org_name(client: BaseClient) -> str:
+def _select_org_name() -> str:
+    client = BaseClient()
     response = client.get("/api/organizations/my")
+    response.raise_for_status()
     data = response.json()
-    organizations = {o["title"]: o["name"] for o in data}
+
+    name_map = {}
+    choices = []
+    for o in data:
+        key = f"{o['title']} ([cyan]{o['name']}[/cyan])"
+        value = o["name"]
+        choices.append(key)
+        name_map[key] = value
+
     org_title = select_from_list(
-        "Please select an organization",
-        choices=[o["title"] for o in data],
+        "Please select an organization:",
+        choices=choices,
     )
-    return organizations[org_title]
+    return name_map[org_title]
 
 
 @app.command(name="install")
 def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
     """Create and install a new repository token."""
-    client = _get_client()
 
     if not org_name:
-        org_name = _select_org_name(client)
+        org_name = _select_org_name()
+
+    client = _get_client()
 
     response = client.put(
         f"/api/organizations/{org_name}/ce/current-token",
