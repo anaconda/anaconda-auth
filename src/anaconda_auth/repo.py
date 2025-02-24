@@ -215,9 +215,11 @@ def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     token_info.set_repo_token(org_name, response.token)
     token_info.save()
 
+    console.print("Configuring your [cyan].condarc[/cyan] file")
     try:
         repo_config.configure_condarc()
     except repo_config.CondaRCError as e:
+        console.print("Error configuring .condarc")
         raise typer.Abort(e)
 
     console.print("Success! Your token was validated and conda has been configured.")
