@@ -26,7 +26,10 @@ def _set_repo_token(org_name: str, token: Optional[str]) -> None:
     except TokenNotFoundError:
         token_info = TokenInfo(domain=domain)
 
-    token_info.set_repo_token(org_name, token)
+    if token is not None:
+        token_info.set_repo_token(org_name=org_name, token=token)
+    else:
+        token_info.delete_repo_token(org_name=org_name)
     token_info.save()
 
 
@@ -78,3 +81,14 @@ def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
 
     _set_repo_token(org_name=org_name, token=token)
     console.print("Success! Your token was validated and conda has been configured.")
+
+
+@app.command(name="uninstall")
+def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")):
+    """Uninstall a repository token for a specific organization."""
+    # TODO: Add --all option
+    if not org_name:
+        # TODO: We should try to load this dynamically and present a picker
+        console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
+        raise typer.Abort()
+    _set_repo_token(org_name=org_name, token=None)
