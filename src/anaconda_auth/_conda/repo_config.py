@@ -91,6 +91,9 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
 
     session = CondaSession()
 
+    # Ensure the index cache is cleaned first
+    run_command(Commands.CLEAN, "-iy")
+
     channel = Channel(urljoin(REPO_URL, "main/noarch/repodata.json"))
     channel.token = token
     token_url = str(channel.url(with_credentials=True))
