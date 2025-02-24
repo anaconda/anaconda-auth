@@ -1,8 +1,12 @@
+from typing import Optional
+
 import typer
 
 from anaconda_auth._conda import repo_config
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
+from anaconda_auth.exceptions import TokenNotFoundError
+from anaconda_auth.token import TokenInfo
 from anaconda_cli_base import console
 
 app = typer.Typer(name="token")
@@ -12,6 +16,18 @@ def _get_client() -> BaseClient:
     """Perform browser-based auth flow and create a new Client instance to make authenticated HTTP requests."""
     access_token = _do_auth_flow()
     return BaseClient(api_key=access_token)
+
+
+def _set_repo_token(org_name: str, token: Optional[str]) -> None:
+    # TODO: Construct this from the config
+    domain = "repo.anaconda.cloud"
+    try:
+        token_info = TokenInfo.load(domain)
+    except TokenNotFoundError:
+        token_info = TokenInfo(domain=domain)
+
+    token_info.set_repo_token(org_name, token)
+    token_info.save()
 
 
 @app.callback(invoke_without_command=True, no_args_is_help=True)
@@ -35,29 +51,25 @@ def list_tokens():
 def install_token():
     client = _get_client()
 
+    org_name = "anacondiacsbusiness"
     response = client.put(
-        "/api/organizations/anacondiacsbusiness/ce/current-token",
+        f"/api/organizations/{org_name}/ce/current-token",
         json={"confirm": "yes"},
     )
 
     console.print(response.json())
 
     token = response.json()["token"]
+    expires_at = response.json()["expires_at"]
 
-    console.print(f"Your conda token is: [cyan]{token}[/cyan]")
+    console.print(
+        f"Your conda token is: [cyan]{token}[/cyan], which expires [cyan]{expires_at}[/cyan]"
+    )
 
     try:
         repo_config.validate_token(token, no_ssl_verify=False)
     except repo_config.CondaTokenError as e:
         raise typer.Abort(e)
 
-    repo_config.token_set(
-        token=token,
-        system=False,
-        env=True,
-        file=None,
-        include_archive_channels=[],
-        no_ssl_verify=False,
-        enable_signature_verification=False,
-    )
-    console.print("Success! Your token was validated and Conda has been configured.")
+    _set_repo_token(org_name=org_name, token=token)
+    console.print("Success! Your token was validated and conda has been configured.")
