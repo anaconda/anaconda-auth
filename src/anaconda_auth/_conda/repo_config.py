@@ -71,7 +71,7 @@ def clean_index() -> None:
     changing the condarc to ensure that the downloaded
     repodata is correct.
     """
-    run_command(Commands.CLEAN, "-i")
+    run_command(Commands.CLEAN, "-i", "-y", "-q")
 
 
 def validate_token(token: str, no_ssl_verify: bool = False) -> None:
@@ -98,7 +98,7 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
     session = CondaSession()
 
     # Ensure the index cache is cleaned first
-    run_command(Commands.CLEAN, "-iy")
+    clean_index()
 
     channel = Channel(urljoin(REPO_URL, "main/noarch/repodata.json"))
     channel.token = token
