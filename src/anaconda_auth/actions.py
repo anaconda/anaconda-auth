@@ -205,8 +205,16 @@ def login(
     basic: bool = False,
     force: bool = False,
     ssl_verify: bool = True,
+    install_repo_token: bool = False,
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
+
+    if install_repo_token:
+        from anaconda_cloud_auth.repo import _install_token
+
+        _install_token()
+        return
+
     if config is None:
         config = AnacondaAuthConfig(ssl_verify=ssl_verify)
 

@@ -1,3 +1,4 @@
+from typing import Annotated
 from typing import Optional
 
 import typer
@@ -77,10 +78,7 @@ def _select_org_name() -> str:
     return name_map[org_title]
 
 
-@app.command(name="install")
-def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
-    """Create and install a new repository token."""
-
+def _install_token(org_name: str):
     if not org_name:
         org_name = _select_org_name()
 
@@ -118,6 +116,13 @@ def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
 
     _set_repo_token(org_name=org_name, token=token)
     console.print("Success! Your token was validated and conda has been configured.")
+
+
+@app.command(name="install")
+def install_token(org_name: Annotated[str, typer.Option] = ""):
+    """Create and install a new repository token."""
+
+    _install_token(org_name=org_name)
 
 
 @app.command(name="uninstall")
