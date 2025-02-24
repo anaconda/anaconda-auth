@@ -1,25 +1,11 @@
-from typing import NamedTuple
-from typing import Optional
-
 import typer
 
 from anaconda_auth._conda import repo_config
-from anaconda_auth._conda.conda_token import token_set
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_cli_base import console
 
 app = typer.Typer(name="token")
-
-
-class Args(NamedTuple):
-    token: str
-    no_ssl_verify: bool = False
-    system: bool = False
-    env: bool = True
-    file: Optional[str] = None
-    include_archive_channels: list[str] = []
-    enable_signature_verification: bool = False
 
 
 def _get_client() -> BaseClient:
@@ -60,4 +46,18 @@ def install_token():
 
     console.print(f"Your conda token is: [cyan]{token}[/cyan]")
 
-    token_set(Args(token=token))
+    try:
+        repo_config.validate_token(token, no_ssl_verify=False)
+    except repo_config.CondaTokenError as e:
+        raise typer.Abort(e)
+
+    repo_config.token_set(
+        token=token,
+        system=False,
+        env=True,
+        file=None,
+        include_archive_channels=[],
+        no_ssl_verify=False,
+        enable_signature_verification=False,
+    )
+    console.print("Success! Your token was validated and Conda has been configured.")
