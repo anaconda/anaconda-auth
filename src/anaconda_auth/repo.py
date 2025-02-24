@@ -234,6 +234,12 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
         console.print("Must explicitly provide an [cyan]--org[/cyan] option")
         raise typer.Abort()
 
+    from anaconda_auth._conda.condarc import CondaRC
+
+    # TODO: Is this the right place to do this? Probably not
+    condarc = CondaRC()
+    condarc.restore()
+
     token_info = TokenInfo.load()
     token_info.delete_repo_token(org_name=org_name)
     token_info.save()

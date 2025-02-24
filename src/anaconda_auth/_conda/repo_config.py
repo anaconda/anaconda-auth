@@ -110,6 +110,7 @@ def configure_condarc():
     run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
 
     condarc = CondaRC()
+    condarc.backup()
     channel = Channel(channel_url)
     condarc.update_channel_settings(
         channel.canonical_name, "anaconda-auth", username=None
