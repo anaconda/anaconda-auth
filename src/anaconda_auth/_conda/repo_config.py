@@ -112,6 +112,13 @@ def configure_condarc():
     channel_url = "https://repo.anaconda.cloud/repo/main"
     run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
 
+    # Delete defaults from channels list
+    try:
+        run_command(Commands.CONFIG, "--remove", "channels", "defaults")
+    except CondaKeyError:
+        # It's okay to ignore if we just can't remove a non-existent key
+        pass
+
     condarc = CondaRC()
     condarc.backup()
     channel = Channel(channel_url)
