@@ -65,6 +65,13 @@ class CondaRC:
 
         self._loaded_yaml["channel_settings"] = filter_settings
 
+    def restore(self) -> None:
+        self.load(self.condarc_path.with_suffix(".bak"))
+        self.save()
+
+    def backup(self) -> None:
+        self.save(self.condarc_path.with_suffix(".bak"))
+
     def save(self, path: Path | None = None) -> None:
         """Save the condarc file"""
         path = path or self.condarc_path
