@@ -26,6 +26,9 @@ from conda.gateways.connection.session import CondaSession
 from conda.models.channel import Channel
 from packaging import version
 
+from anaconda_auth._conda.condarc import CondaRC
+from anaconda_auth._conda.condarc import CondaRCError as CondaRCError
+
 CONDA_VERSION = version.parse(conda.__version__)
 
 REPO_URL = os.getenv("CONDA_TOKEN_REPO_URL", "https://repo.anaconda.cloud/repo/")
@@ -97,6 +100,21 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
         raise CondaTokenError(
             "The token could not be validated. Please check that you have typed it correctly."
         )
+
+
+def configure_condarc():
+    # TODO: Review the hard-coding of channel URL here
+    # TODO: Make the plugin name a constant somewhere
+    # TODO: Integrate the contents of this module with condarc.py
+    channel_url = "https://repo.anaconda.cloud/repo/main"
+    run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
+
+    condarc = CondaRC()
+    channel = Channel(channel_url)
+    condarc.update_channel_settings(
+        channel.canonical_name, "anaconda-auth", username=None
+    )
+    condarc.save()
 
 
 def enable_extra_safety_checks(
