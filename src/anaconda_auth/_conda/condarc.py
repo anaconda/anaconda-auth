@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -19,17 +18,21 @@ class CondaRC:
         Initializes the CondaRC object by attempting to open and load the contents
         of the condarc file found in the user's home directory.
         """
-        self.condarc_path = condarc_path or Path(os.path.expanduser("~/.condarc"))
+        self.condarc_path = condarc_path or Path("~/.condarc").expanduser()
+        self._loaded_yaml = {}
+        self.load()
 
+    def load(self, path: Path | None = None) -> None:
+        path = path or self.condarc_path
         try:
-            self.condarc_path.touch()
-            with self.condarc_path.open("r") as fp:
+            path.touch()
+            with path.open("r") as fp:
                 contents = fp.read()
         except OSError as exc:
             raise CondaRCError(f"Could not open condarc file: {exc}")
 
         try:
-            self.loaded_yaml = yaml.load(contents) or {}
+            self._loaded_yaml = yaml.load(contents) or {}
         except YAMLError as exc:
             raise CondaRCError(f"Could not parse condarc: {exc}")
 
@@ -48,7 +51,7 @@ class CondaRC:
                 "username": username,
             }
 
-        channel_settings = self.loaded_yaml.get("channel_settings", []) or []
+        channel_settings = self._loaded_yaml.get("channel_settings", []) or []
 
         # Filter out the existing channel's entry if it's there
         filter_settings = [
@@ -60,12 +63,13 @@ class CondaRC:
         # Add the updated settings map
         filter_settings.append(updated_settings)
 
-        self.loaded_yaml["channel_settings"] = filter_settings
+        self._loaded_yaml["channel_settings"] = filter_settings
 
-    def save(self):
+    def save(self, path: Path | None = None) -> None:
         """Save the condarc file"""
+        path = path or self.condarc_path
         try:
-            with self.condarc_path.open("w") as fp:
-                yaml.dump(self.loaded_yaml, fp)
+            with path.open("w") as fp:
+                yaml.dump(self._loaded_yaml, fp)
         except OSError as exc:
             raise CondaRCError(f"Could not save file: {exc}")
