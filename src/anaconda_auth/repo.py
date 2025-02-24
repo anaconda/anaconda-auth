@@ -49,6 +49,7 @@ def list_tokens():
 
 @app.command(name="install")
 def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
+    """Create and install a new repository token."""
     if not org_name:
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
