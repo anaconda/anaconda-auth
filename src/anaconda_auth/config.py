@@ -5,6 +5,7 @@ from typing import Dict
 from typing import Literal
 from typing import Optional
 from typing import Union
+from urllib.parse import urljoin
 
 import requests
 from pydantic import BaseModel
@@ -43,7 +44,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
-    openid_config_path: str = "api/auth/oauth2/.well-known/openid-configuration"
+    openid_config_path: str = "/.well-known/openid-configuration"
     oidc_request_headers: Dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
 
     def __init__(self, **kwargs: Any):
@@ -56,11 +57,17 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
                 # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
                 kwargs = {**set_fields, **kwargs}
         super().__init__(**kwargs)
+        print(f"{self.well_known_url=}")
 
     @property
-    def well_known_url(self: "AnacondaAuthConfig") -> str:
+    def auth_domain(self) -> str:
+        # TODO: remove hard-code
+        return f"https://auth.{self.domain}"
+
+    @property
+    def well_known_url(self) -> str:
         """The URL from which to load the OpenID configuration."""
-        return f"https://{self.domain}/{self.openid_config_path}"
+        return urljoin(self.auth_domain, self.openid_config_path)
 
     @property
     def oidc(self) -> "OpenIDConfiguration":
