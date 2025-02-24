@@ -79,6 +79,11 @@ def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
     except repo_config.CondaTokenError as e:
         raise typer.Abort(e)
 
+    try:
+        repo_config.configure_condarc()
+    except repo_config.CondaRCError as e:
+        raise typer.Abort(e)
+
     _set_repo_token(org_name=org_name, token=token)
     console.print("Success! Your token was validated and conda has been configured.")
 
