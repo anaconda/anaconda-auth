@@ -48,10 +48,14 @@ def list_tokens():
 
 
 @app.command(name="install")
-def install_token():
+def install_token(org_name: str = typer.Option("", "-o", "--org-name")):
+    if not org_name:
+        # TODO: We should try to load this dynamically and present a picker
+        console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
+        raise typer.Abort()
+
     client = _get_client()
 
-    org_name = "anacondiacsbusiness"
     response = client.put(
         f"/api/organizations/{org_name}/ce/current-token",
         json={"confirm": "yes"},
