@@ -3,6 +3,7 @@ from typing import Optional
 import typer
 
 from anaconda_auth._conda import repo_config
+from anaconda_auth._conda.condarc import CondaRC
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.exceptions import TokenNotFoundError
@@ -98,4 +99,9 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")):
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
         raise typer.Abort()
+
+    # TODO: Is this the right place to do this? Probably not
+    condarc = CondaRC()
+    condarc.restore()
+
     _set_repo_token(org_name=org_name, token=None)
