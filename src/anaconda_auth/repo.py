@@ -50,6 +50,14 @@ class RepoAPIClient(BaseClient):
         return TokenInfoResponse(**response.json())
 
     def create_repo_token(self, org_name: str) -> TokenCreateResponse:
+        """Create a new repo token.
+
+        Args:
+            org_name: The name of the organization.
+
+        Returns:
+            The token information, including its value and expiration date.
+        """
         response = self.put(
             f"/api/organizations/{org_name}/ce/current-token",
             json={"confirm": "yes"},
