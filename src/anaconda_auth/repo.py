@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typer
+from rich.table import Table
 
 from anaconda_cli_base import console
 
@@ -14,14 +15,24 @@ def main() -> None:
 
 @app.command(name="list")
 def list_tokens() -> None:
-    from anaconda_auth._conda import repo_config
+    from anaconda_auth._conda.repo_config import token_list
 
-    # The contents of this
-    tokens = repo_config.token_list()
+    tokens = token_list()
+
     if not tokens:
         console.print("No repo tokens are installed. Run `anaconda token install`.")
         raise typer.Abort()
 
-    console.print("Listing tokens")
+    _print_repo_token_table(tokens)
+
+
+def _print_repo_token_table(tokens: dict[str, str]) -> None:
+    table = Table(title="Anaconda Repository Tokens", title_style="green")
+
+    table.add_column("Channel URL")
+    table.add_column("Token")
+
     for url, token in tokens.items():
-        console.print(url, token)
+        table.add_row(url, token)
+
+    console.print(table)

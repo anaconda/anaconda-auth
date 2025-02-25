@@ -35,4 +35,6 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     mock.assert_called_once()
 
     assert result.exit_code == 0
-    assert f"{REPO_URL} {test_repo_token}" in result.stdout
+    assert "Anaconda Repository Tokens" in result.stdout
+    assert REPO_URL in result.stdout
+    assert test_repo_token in result.stdout
