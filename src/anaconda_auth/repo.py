@@ -139,3 +139,37 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")):
     condarc.restore()
 
     _set_repo_token(org_name=org_name, token=None)
+
+
+def _get_available_channels() -> str:
+    client = _get_client()
+    response = client.get("/api/organizations/my")
+    response.raise_for_status()
+    org_data_json = response.json()
+
+    channel_names = []
+    for org_data in org_data_json:
+        org_name = org_data["name"]
+        response = client.get(f"/api/organizations/{org_name}/channels")
+        if response.status_code == 403:
+            console.print("Warning: Got a 403 error, because it's not a business org")
+            continue
+        response.raise_for_status()
+        data = response.json()
+
+        for channel_data in data:
+            channel_names.append(channel_data["name"])
+
+    return sorted(
+        set(channel_names),
+        key=lambda x: ("/" in x, x),
+    )
+
+
+@app.command("show-channels")
+def show_channels(
+    org_name: Annotated[str, typer.Option] = "",
+):
+    channel_names = _get_available_channels()
+    channel_name = select_from_list("Select a channel:", channel_names)
+    console.print(f"You selected {channel_name}")
