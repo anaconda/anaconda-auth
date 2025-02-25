@@ -210,7 +210,7 @@ def login(
     """Log into anaconda.com and store the token information in the keyring."""
 
     if install_repo_token:
-        from anaconda_cloud_auth.repo import _install_token
+        from anaconda_auth.repo import _install_token
 
         _install_token()
         return

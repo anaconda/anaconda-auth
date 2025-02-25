@@ -108,7 +108,9 @@ def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
 
 
 @app.command("login")
-def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
+def auth_login(
+    force: bool = False, ssl_verify: bool = True, install_repo_token: bool = False
+) -> None:
     """Login"""
     try:
         auth_domain = AnacondaAuthConfig().domain
@@ -127,7 +129,7 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
         if not force:
             raise typer.Exit()
 
-    login(force=force, ssl_verify=ssl_verify)
+    login(force=force, ssl_verify=ssl_verify, install_repo_token=install_repo_token)
 
 
 @app.command(name="whoami")

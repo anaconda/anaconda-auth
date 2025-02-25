@@ -1,7 +1,7 @@
-from typing import Annotated
-from typing import Optional
+from __future__ import annotations
 
 import typer
+from typing_extensions import Annotated
 
 import anaconda_auth.actions
 from anaconda_auth._conda import repo_config
@@ -25,7 +25,7 @@ def _get_client() -> BaseClient:
     return BaseClient(api_key=access_token)
 
 
-def _set_repo_token(org_name: str, token: Optional[str]) -> None:
+def _set_repo_token(org_name: str, token: str | None) -> None:
     # TODO: Construct this from the config
     domain = "repo.anaconda.cloud"
     try:
@@ -46,7 +46,7 @@ def main() -> None:
 
 
 @app.command(name="list")
-def list_tokens():
+def list_tokens() -> None:
     # The contents of this
     tokens = repo_config.token_list()
     if not tokens:
@@ -78,7 +78,7 @@ def _select_org_name() -> str:
     return name_map[org_title]
 
 
-def _install_token(org_name: str):
+def _install_token(org_name: str | None = None) -> None:
     if not org_name:
         org_name = _select_org_name()
 
@@ -119,14 +119,14 @@ def _install_token(org_name: str):
 
 
 @app.command(name="install")
-def install_token(org_name: Annotated[str, typer.Option] = ""):
+def install_token(org_name: Annotated[str, typer.Option] = "") -> None:
     """Create and install a new repository token."""
 
     _install_token(org_name=org_name)
 
 
 @app.command(name="uninstall")
-def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")):
+def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")) -> None:
     """Uninstall a repository token for a specific organization."""
     # TODO: Add --all option
     if not org_name:
@@ -141,7 +141,7 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")):
     _set_repo_token(org_name=org_name, token=None)
 
 
-def _get_available_channels() -> str:
+def _get_available_channels() -> list[str]:
     client = _get_client()
     response = client.get("/api/organizations/my")
     response.raise_for_status()
@@ -169,7 +169,7 @@ def _get_available_channels() -> str:
 @app.command("show-channels")
 def show_channels(
     org_name: Annotated[str, typer.Option] = "",
-):
+) -> None:
     channel_names = _get_available_channels()
     channel_name = select_from_list("Select a channel:", channel_names)
     console.print(f"You selected {channel_name}")
