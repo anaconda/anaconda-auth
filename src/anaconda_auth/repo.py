@@ -4,6 +4,7 @@ from datetime import datetime
 
 import typer
 from pydantic import BaseModel
+from rich.prompt import Confirm
 from rich.table import Table
 
 from anaconda_auth.actions import _do_auth_flow
@@ -15,7 +16,12 @@ from anaconda_cli_base import console
 app = typer.Typer(name="token")
 
 
-class TokenResponse(BaseModel):
+class TokenInfoResponse(BaseModel):
+    id: str
+    expires_at: datetime
+
+
+class TokenCreateResponse(BaseModel):
     token: str
     expires_at: datetime
 
@@ -25,12 +31,30 @@ class RepoAPIClient(BaseClient):
         access_token = _do_auth_flow()
         super().__init__(api_key=access_token)
 
-    def create_repo_token(self, org_name: str) -> TokenResponse:
+    def get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
+        """Return the token information, if it exists.
+
+        Args:
+            org_name: The name of the organization.
+
+        Returns:
+            The token information, including its id and expiration date, or
+            None if a token doesn't exist.
+        """
+
+        response = self.get(
+            f"/api/organizations/{org_name}/ce/current-token",
+        )
+        if response.status_code == 404:
+            return None
+        return TokenInfoResponse(**response.json())
+
+    def create_repo_token(self, org_name: str) -> TokenCreateResponse:
         response = self.put(
             f"/api/organizations/{org_name}/ce/current-token",
             json={"confirm": "yes"},
         )
-        return TokenResponse(**response.json())
+        return TokenCreateResponse(**response.json())
 
 
 def _set_repo_token(org_name: str, token: str) -> None:
@@ -80,6 +104,20 @@ def install_token() -> None:
     org_name = "anacondiacsbusiness"
 
     client = RepoAPIClient()
+
+    token_info = client.get_repo_token_info(org_name=org_name)
+
+    if token_info is not None:
+        console.print(
+            f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
+        )
+        should_continue = Confirm.ask(
+            "Would you like to issue a new token?",
+            default=True,
+        )
+        if not should_continue:
+            raise typer.Abort()
+
     response = client.create_repo_token(org_name=org_name)
 
     console.print(
