@@ -4,8 +4,6 @@ import typer
 from typing_extensions import Annotated
 
 import anaconda_auth.actions
-from anaconda_auth._conda import repo_config
-from anaconda_auth._conda.condarc import CondaRC
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.exceptions import TokenNotFoundError
@@ -47,6 +45,8 @@ def main() -> None:
 
 @app.command(name="list")
 def list_tokens() -> None:
+    from anaconda_auth._conda import repo_config
+
     # The contents of this
     tokens = repo_config.token_list()
     if not tokens:
@@ -102,6 +102,8 @@ def _install_token(org_name: str | None = None) -> None:
         f"Your conda token is: [cyan]{token}[/cyan], which expires [cyan]{expires_at}[/cyan]"
     )
 
+    from anaconda_auth._conda import repo_config
+
     try:
         repo_config.validate_token(token, no_ssl_verify=False)
     except repo_config.CondaTokenError as e:
@@ -133,6 +135,8 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org-name")) -> Non
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
         raise typer.Abort()
+
+    from anaconda_auth._conda.condarc import CondaRC
 
     # TODO: Is this the right place to do this? Probably not
     condarc = CondaRC()
