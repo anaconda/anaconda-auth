@@ -6,6 +6,7 @@ from .conftest import CLIInvoker
 pytest.importorskip("conda")
 
 from anaconda_auth._conda.repo_config import REPO_URL  # noqa: E402
+from anaconda_auth.repo import RepoAPIClient  # noqa: E402
 
 
 def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
@@ -38,3 +39,19 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     assert "Anaconda Repository Tokens" in result.stdout
     assert REPO_URL in result.stdout
     assert test_repo_token in result.stdout
+
+
+def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
+    # TODO: This is just a test of the mock ...
+    mocker.patch(
+        "anaconda_auth.repo._do_auth_flow",
+        return_value="test-access-token",
+    )
+    mocker.patch(
+        "anaconda_auth.repo.RepoAPIClient.get_repo_token_info",
+        return_value=None,
+    )
+
+    client = RepoAPIClient()
+    token_info = client.get_repo_token_info(org_name="test-org-name")
+    assert token_info is None
