@@ -329,7 +329,9 @@ def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.integration
 @pytest.mark.usefixtures("save_api_key_to_token")
 def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
 
     client = BaseClient(ssl_verify=True)
     with pytest.raises(SSLError):
@@ -339,7 +341,9 @@ def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.integration
 @pytest.mark.usefixtures("save_api_key_to_token")
 def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
 
     client = BaseClient(ssl_verify=False)
     res = client.get("api/account")
