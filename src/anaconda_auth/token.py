@@ -257,7 +257,11 @@ class TokenInfo(BaseModel):
         domain = domain or AnacondaAuthConfig().domain
 
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
-        if keyring_data is None:
+        if keyring_data is not None:
+            logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+            decoded_dict = cls._decode(keyring_data)
+            return TokenInfo(**decoded_dict)
+        else:
             # Try again to see if there is a legacy token on disk
             legacy_domain = MIGRATIONS.get(domain, domain)
             keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
@@ -267,10 +271,6 @@ class TokenInfo(BaseModel):
                 )
             if not create:
                 raise TokenNotFoundError
-        else:
-            logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
-            decoded_dict = cls._decode(keyring_data)
-            return TokenInfo(**decoded_dict)
 
         logger.debug("🔓 Token has been successfully created 🎉")
         return TokenInfo(domain=domain)
