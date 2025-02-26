@@ -261,13 +261,12 @@ class TokenInfo(BaseModel):
             # Try again to see if there is a legacy token on disk
             legacy_domain = MIGRATIONS.get(domain, domain)
             keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-            if keyring_data is None:
-                if not create:
-                    raise TokenNotFoundError
-            else:
+            if keyring_data is not None:
                 return cls._migrate(
                     keyring_data, from_domain=legacy_domain, to_domain=domain
                 )
+            if not create:
+                raise TokenNotFoundError
 
         if keyring_data:
             logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
