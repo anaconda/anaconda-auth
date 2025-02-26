@@ -76,7 +76,6 @@ class RepoAPIClient(BaseClient):
         response = self.get("/api/organizations/my")
         response.raise_for_status()
         data = response.json()
-        print(data)
         return [OrganizationData(**item) for item in data]
 
 
