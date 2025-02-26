@@ -273,9 +273,9 @@ class TokenInfo(BaseModel):
             logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
             decoded_dict = cls._decode(keyring_data)
             return TokenInfo(**decoded_dict)
-        else:
-            logger.debug("🔓 Token has been successfully created 🎉")
-            return TokenInfo(domain=domain)
+
+        logger.debug("🔓 Token has been successfully created 🎉")
+        return TokenInfo(domain=domain)
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
