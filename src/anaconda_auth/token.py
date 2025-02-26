@@ -226,12 +226,13 @@ class TokenInfo(BaseModel):
         return decoded_dict
 
     @classmethod
-    def load(cls, domain: Union[str] = None) -> "TokenInfo":
+    def load(cls, domain: Union[str] = None, create: bool = False) -> "TokenInfo":
         """Load the token information from the system keyring.
 
         Args:
             domain: The domain for which to load the token information. If
                 not provided, defaults to the configuration domain.
+            create: If True, create a new TokenInfo object if not found.
 
         Returns:
             The token information.
@@ -245,7 +246,8 @@ class TokenInfo(BaseModel):
             legacy_domain = MIGRATIONS.get(domain, domain)
             keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
             if keyring_data is None:
-                raise TokenNotFoundError
+                if not create:
+                    raise TokenNotFoundError
             else:
                 # Migrate the domain and save token under new domain
                 decoded_dict = cls._decode(keyring_data)
@@ -258,9 +260,13 @@ class TokenInfo(BaseModel):
                     f"🔓 Token has been migrated from legacy domain '{legacy_domain}' to '{domain}' 🎉"
                 )
 
-        logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
-        decoded_dict = cls._decode(keyring_data)
-        return TokenInfo(**decoded_dict)
+        if keyring_data:
+            logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+            decoded_dict = cls._decode(keyring_data)
+            return TokenInfo(**decoded_dict)
+        else:
+            logger.debug("🔓 Token has been successfully created 🎉")
+            return TokenInfo(domain=domain)
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
