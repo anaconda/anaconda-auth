@@ -1,3 +1,6 @@
+from datetime import datetime
+from uuid import uuid4
+
 import pytest
 from pytest_mock import MockerFixture
 
@@ -7,6 +10,7 @@ pytest.importorskip("conda")
 
 from anaconda_auth._conda.repo_config import REPO_URL  # noqa: E402
 from anaconda_auth.repo import RepoAPIClient  # noqa: E402
+from anaconda_auth.repo import TokenInfoResponse  # noqa: E402
 
 
 def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
@@ -55,3 +59,25 @@ def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
     client = RepoAPIClient()
     token_info = client.get_repo_token_info(org_name="test-org-name")
     assert token_info is None
+
+
+def test_get_repo_token_info_has_token(mocker: MockerFixture, requests_mock) -> None:
+    # TODO: This is just a test of the mock ...
+    mocker.patch(
+        "anaconda_auth.repo._do_auth_flow",
+        return_value="test-access-token",
+    )
+
+    org_name = "test-org-name"
+    expected_token_info = TokenInfoResponse(
+        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
+    )
+
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=expected_token_info.model_dump(mode="json"),
+    )
+
+    client = RepoAPIClient()
+    token_info = client.get_repo_token_info(org_name="test-org-name")
+    assert token_info == expected_token_info

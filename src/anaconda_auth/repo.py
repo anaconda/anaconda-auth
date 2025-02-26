@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
 import typer
 from pydantic import BaseModel
@@ -17,7 +18,7 @@ app = typer.Typer(name="token")
 
 
 class TokenInfoResponse(BaseModel):
-    id: str
+    id: UUID
     expires_at: datetime
 
 
