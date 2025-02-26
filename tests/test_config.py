@@ -1,23 +1,21 @@
 import pytest
 import requests
-import responses
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 
 from anaconda_auth.config import AnacondaAuthConfig
 
 
 @pytest.fixture(autouse=True)
-def mock_openid_configuration():
+def mock_openid_configuration(requests_mock: RequestMocker):
     config = AnacondaAuthConfig()
     """Mock return value of openid configuration to prevent requiring actual network calls."""
     expected = {
         "authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/authorize",
         "token_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/token",
     }
-    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
-        rsps.get(url=config.well_known_url, json=expected)
-        yield rsps
+    requests_mock.get(url=config.well_known_url, json=expected)
 
 
 def test_well_known_headers(mocker: MockerFixture) -> None:

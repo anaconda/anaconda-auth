@@ -205,7 +205,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
-    responses
+    requests-mock
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
