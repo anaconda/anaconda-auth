@@ -45,12 +45,16 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     assert test_repo_token in result.stdout
 
 
-def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
-    # TODO: This is just a test of the mock ...
+@pytest.fixture(autouse=True)
+def mock_do_auth_flow(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.repo._do_auth_flow",
         return_value="test-access-token",
     )
+
+
+def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
+    # TODO: This is just a test of the mock ...
     mocker.patch(
         "anaconda_auth.repo.RepoAPIClient.get_repo_token_info",
         return_value=None,
@@ -62,12 +66,6 @@ def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
 
 
 def test_get_repo_token_info_has_token(mocker: MockerFixture, requests_mock) -> None:
-    # TODO: This is just a test of the mock ...
-    mocker.patch(
-        "anaconda_auth.repo._do_auth_flow",
-        return_value="test-access-token",
-    )
-
     org_name = "test-org-name"
     expected_token_info = TokenInfoResponse(
         id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
