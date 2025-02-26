@@ -264,10 +264,10 @@ class TokenInfo(BaseModel):
 
         # Try again to see if there is a legacy token on disk
         legacy_domain = MIGRATIONS.get(domain, domain)
-        keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-        if keyring_data is not None:
+        existing_keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+        if existing_keyring_data is not None:
             return cls._migrate(
-                keyring_data, from_domain=legacy_domain, to_domain=domain
+                existing_keyring_data, from_domain=legacy_domain, to_domain=domain
             )
 
         if create:
