@@ -234,3 +234,33 @@ def test_set_repo_token() -> None:
     token_info = TokenInfo()
     token_info.set_repo_token("org-name", "test-token")
     assert token_info.get_repo_token("org-name") == "test-token"
+
+
+def test_set_repo_token_same_org_overwritten() -> None:
+    token_info = TokenInfo()
+    assert len(token_info.repo_tokens) == 0
+
+    # Write the first token
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+    assert len(token_info.repo_tokens) == 1
+
+    # Token gets overwritten
+    token_info.set_repo_token("org-name", "another-test-token")
+    assert token_info.get_repo_token("org-name") == "another-test-token"
+    assert len(token_info.repo_tokens) == 1
+
+
+def test_set_repo_token_different_organization() -> None:
+    token_info = TokenInfo()
+    assert len(token_info.repo_tokens) == 0
+
+    # Write the first token
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+    assert len(token_info.repo_tokens) == 1
+
+    # Write another token for a different organization
+    token_info.set_repo_token("another-org-name", "another-test-token")
+    assert token_info.get_repo_token("another-org-name") == "another-test-token"
+    assert len(token_info.repo_tokens) == 2
