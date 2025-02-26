@@ -11,6 +11,7 @@ pytest.importorskip("conda")
 
 from anaconda_auth._conda.repo_config import REPO_URL  # noqa: E402
 from anaconda_auth.repo import RepoAPIClient  # noqa: E402
+from anaconda_auth.repo import TokenCreateResponse  # noqa: E402
 from anaconda_auth.repo import TokenInfoResponse  # noqa: E402
 
 
@@ -81,3 +82,20 @@ def test_get_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
     client = RepoAPIClient()
     token_info = client.get_repo_token_info(org_name=org_name)
     assert token_info == expected_token_info
+
+
+def test_create_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
+    org_name = "test-org-name"
+    expected_response_data = {
+        "token": "test-token",
+        "expires_at": "2025-01-01T00:00:00",
+    }
+
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=expected_response_data,
+    )
+
+    client = RepoAPIClient()
+    token_info = client.create_repo_token(org_name=org_name)
+    assert token_info == TokenCreateResponse(**expected_response_data)
