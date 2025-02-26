@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 
 from .conftest import CLIInvoker
 
@@ -53,19 +54,20 @@ def mock_do_auth_flow(mocker: MockerFixture) -> None:
     )
 
 
-def test_get_repo_token_info_no_token(mocker: MockerFixture) -> None:
-    # TODO: This is just a test of the mock ...
-    mocker.patch(
-        "anaconda_auth.repo.RepoAPIClient.get_repo_token_info",
-        return_value=None,
+def test_get_repo_token_info_no_token(requests_mock: RequestMocker) -> None:
+    org_name = "test-org-name"
+
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
     )
 
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name="test-org-name")
+    token_info = client.get_repo_token_info(org_name=org_name)
     assert token_info is None
 
 
-def test_get_repo_token_info_has_token(mocker: MockerFixture, requests_mock) -> None:
+def test_get_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
     org_name = "test-org-name"
     expected_token_info = TokenInfoResponse(
         id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
@@ -77,5 +79,5 @@ def test_get_repo_token_info_has_token(mocker: MockerFixture, requests_mock) -> 
     )
 
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name="test-org-name")
+    token_info = client.get_repo_token_info(org_name=org_name)
     assert token_info == expected_token_info
