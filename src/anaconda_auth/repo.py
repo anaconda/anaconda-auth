@@ -10,6 +10,7 @@ from rich.table import Table
 
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
+from anaconda_auth.token import RepoToken
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base import console
 from anaconda_cli_base.console import select_from_list
@@ -85,14 +86,20 @@ def _set_repo_token(org_name: str, token: str) -> None:
     token_info.save()
 
 
-def _print_repo_token_table(tokens: dict[str, str]) -> None:
+def _print_repo_token_table(
+    tokens: list[RepoToken], legacy_tokens: dict[str, str]
+) -> None:
     table = Table(title="Anaconda Repository Tokens", title_style="green")
 
+    table.add_column("Organization")
     table.add_column("Channel URL")
     table.add_column("Token")
 
-    for url, token in tokens.items():
-        table.add_row(url, token)
+    for token in tokens:
+        table.add_row(token.org_name, None, token.token)
+
+    for url, token in legacy_tokens.items():
+        table.add_row(None, url, token)
 
     console.print(table)
 
@@ -142,11 +149,14 @@ def list_tokens() -> None:
 
     tokens = token_list()
 
+    token_info = TokenInfo.load()
+    repo_tokens = token_info.repo_tokens
+
     if not tokens:
         console.print("No repo tokens are installed. Run `anaconda token install`.")
         raise typer.Abort()
 
-    _print_repo_token_table(tokens)
+    _print_repo_token_table(tokens=repo_tokens, legacy_tokens=tokens)
 
 
 @app.command(name="install")
