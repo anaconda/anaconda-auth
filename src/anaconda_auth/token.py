@@ -270,11 +270,11 @@ class TokenInfo(BaseModel):
                 keyring_data, from_domain=legacy_domain, to_domain=domain
             )
 
-        if not create:
-            raise TokenNotFoundError
+        if create:
+            logger.debug("🔓 Token has been successfully created 🎉")
+            return TokenInfo(domain=domain)
 
-        logger.debug("🔓 Token has been successfully created 🎉")
-        return TokenInfo(domain=domain)
+        raise TokenNotFoundError
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
