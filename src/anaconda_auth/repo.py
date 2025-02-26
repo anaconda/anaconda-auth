@@ -97,22 +97,21 @@ def _print_repo_token_table(tokens: dict[str, str]) -> None:
     console.print(table)
 
 
-@app.callback(invoke_without_command=True, no_args_is_help=True)
-def main() -> None:
-    """Manage your Anaconda repo tokens."""
+def _select_org_name(client: RepoAPIClient) -> str:
+    organizations = client.get_organizations_for_user()
 
+    name_map = {}
+    choices = []
+    for org in organizations:
+        key = f"{org.title} ([cyan]{org.name}[/cyan])"
+        name_map[key] = org.name
+        choices.append(key)
 
-@app.command(name="list")
-def list_tokens() -> None:
-    from anaconda_auth._conda.repo_config import token_list
-
-    tokens = token_list()
-
-    if not tokens:
-        console.print("No repo tokens are installed. Run `anaconda token install`.")
-        raise typer.Abort()
-
-    _print_repo_token_table(tokens)
+    org_title = select_from_list(
+        "Please select an organization:",
+        choices=choices,
+    )
+    return name_map[org_title]
 
 
 def _select_org_name(client: RepoAPIClient) -> str:
@@ -130,6 +129,24 @@ def _select_org_name(client: RepoAPIClient) -> str:
         choices=choices,
     )
     return name_map[org_title]
+
+
+@app.callback(invoke_without_command=True, no_args_is_help=True)
+def main() -> None:
+    """Manage your Anaconda repo tokens."""
+
+
+@app.command(name="list")
+def list_tokens() -> None:
+    from anaconda_auth._conda.repo_config import token_list
+
+    tokens = token_list()
+
+    if not tokens:
+        console.print("No repo tokens are installed. Run `anaconda token install`.")
+        raise typer.Abort()
+
+    _print_repo_token_table(tokens)
 
 
 @app.command(name="install")
