@@ -182,3 +182,16 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
 
     decoded = TokenInfo._decode(payload)
     assert decoded["version"] == 1
+
+
+def test_init_token_info_no_domain() -> None:
+    """If we create a TokenInfo with no domain, it defaults to the config value."""
+    config = AnacondaAuthConfig()
+    token_info = TokenInfo()
+    assert token_info.domain == config.domain
+
+
+def test_set_repo_token() -> None:
+    token_info = TokenInfo()
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
