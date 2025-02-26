@@ -47,6 +47,7 @@ class RepoAPIClient(BaseClient):
         )
         if response.status_code == 404:
             return None
+        response.raise_for_status()
         return TokenInfoResponse(**response.json())
 
     def create_repo_token(self, org_name: str) -> TokenCreateResponse:
