@@ -10,7 +10,6 @@ from rich.table import Table
 
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
-from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base import console
 
@@ -68,13 +67,7 @@ class RepoAPIClient(BaseClient):
 
 
 def _set_repo_token(org_name: str, token: str) -> None:
-    # TODO: Construct this from the config
-    domain = "repo.anaconda.cloud"
-    try:
-        token_info = TokenInfo.load(domain)
-    except TokenNotFoundError:
-        token_info = TokenInfo(domain=domain)
-
+    token_info = TokenInfo.load(create=True)
     token_info.set_repo_token(org_name, token)
     token_info.save()
 

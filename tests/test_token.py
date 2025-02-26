@@ -228,3 +228,9 @@ def test_load_token_info_create_true_explicit_domain() -> None:
     expected_domain = "some-site.com"
     token_info = TokenInfo.load(domain=expected_domain, create=True)
     assert token_info.domain == expected_domain
+
+
+def test_set_repo_token() -> None:
+    token_info = TokenInfo()
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
