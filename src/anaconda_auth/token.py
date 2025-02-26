@@ -227,7 +227,7 @@ class TokenInfo(BaseModel):
 
     @classmethod
     def _migrate(
-        cls, keyring_data: bytes, from_domain: str, to_domain: str
+        cls, keyring_data: str, from_domain: str, to_domain: str
     ) -> "TokenInfo":
         """Migrate the domain and save token under new domain."""
         decoded_dict = cls._decode(keyring_data)
@@ -242,7 +242,7 @@ class TokenInfo(BaseModel):
         return token_info
 
     @classmethod
-    def load(cls, domain: Union[str] = None, *, create: bool = False) -> "TokenInfo":
+    def load(cls, domain: Optional[str] = None, *, create: bool = False) -> "TokenInfo":
         """Load the token information from the system keyring.
 
         Args:
