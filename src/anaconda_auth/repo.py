@@ -12,6 +12,7 @@ from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base import console
+from anaconda_cli_base.console import select_from_list
 
 app = typer.Typer(name="token")
 
@@ -24,6 +25,11 @@ class TokenInfoResponse(BaseModel):
 class TokenCreateResponse(BaseModel):
     token: str
     expires_at: datetime
+
+
+class OrganizationData(BaseModel):
+    name: str
+    title: str
 
 
 class RepoAPIClient(BaseClient):
@@ -65,6 +71,14 @@ class RepoAPIClient(BaseClient):
         )
         return TokenCreateResponse(**response.json())
 
+    def get_organizations_for_user(self) -> list[OrganizationData]:
+        """Get a list of all organizations the user belongs to."""
+        response = self.get("/api/organizations/my")
+        response.raise_for_status()
+        data = response.json()
+        print(data)
+        return [OrganizationData(**item) for item in data]
+
 
 def _set_repo_token(org_name: str, token: str) -> None:
     token_info = TokenInfo.load(create=True)
@@ -102,15 +116,23 @@ def list_tokens() -> None:
     _print_repo_token_table(tokens)
 
 
+def _select_org_name(client: RepoAPIClient) -> str:
+    organizations = client.get_organizations_for_user()
+    organization_map = {o.title: o.name for o in organizations}
+    org_title = select_from_list(
+        "Please select an organization",
+        choices=[o.title for o in organizations],
+    )
+    return organization_map[org_title]
+
+
 @app.command(name="install")
 def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     """Create and install a new repository token."""
-    if not org_name:
-        # TODO: We should try to load this dynamically and present a picker
-        console.print("Must explicitly provide an [cyan]--org-name[/cyan] option")
-        raise typer.Abort()
-
     client = RepoAPIClient()
+
+    if not org_name:
+        org_name = _select_org_name(client)
 
     token_info = client.get_repo_token_info(org_name=org_name)
 

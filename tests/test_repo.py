@@ -10,6 +10,7 @@ from .conftest import CLIInvoker
 pytest.importorskip("conda")
 
 from anaconda_auth._conda.repo_config import REPO_URL  # noqa: E402
+from anaconda_auth.repo import OrganizationData  # noqa: E402
 from anaconda_auth.repo import RepoAPIClient  # noqa: E402
 from anaconda_auth.repo import TokenCreateResponse  # noqa: E402
 from anaconda_auth.repo import TokenInfoResponse  # noqa: E402
@@ -99,3 +100,22 @@ def test_create_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
     client = RepoAPIClient()
     token_info = client.create_repo_token(org_name=org_name)
     assert token_info == TokenCreateResponse(**expected_response_data)
+
+
+def test_get_organizations_for_user(requests_mock: RequestMocker) -> None:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": "2902d4e4-7ad8-45dd-8d67-13bbed665409",
+                "name": "my-org",
+                "title": "My Cool Organization",
+            }
+        ],
+    )
+
+    client = RepoAPIClient()
+    organizations = client.get_organizations_for_user()
+    assert organizations == [
+        OrganizationData(name="my-org", title="My Cool Organization")
+    ]
