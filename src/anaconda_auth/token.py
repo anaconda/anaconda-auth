@@ -267,8 +267,7 @@ class TokenInfo(BaseModel):
                 )
             if not create:
                 raise TokenNotFoundError
-
-        if keyring_data:
+        else:
             logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
             decoded_dict = cls._decode(keyring_data)
             return TokenInfo(**decoded_dict)
