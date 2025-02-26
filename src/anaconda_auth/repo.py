@@ -118,12 +118,19 @@ def list_tokens() -> None:
 
 def _select_org_name(client: RepoAPIClient) -> str:
     organizations = client.get_organizations_for_user()
-    organization_map = {o.title: o.name for o in organizations}
+
+    name_map = {}
+    choices = []
+    for org in organizations:
+        key = f"{org.title} ([cyan]{org.name}[/cyan])"
+        name_map[key] = org.name
+        choices.append(key)
+
     org_title = select_from_list(
-        "Please select an organization",
-        choices=[o.title for o in organizations],
+        "Please select an organization:",
+        choices=choices,
     )
-    return organization_map[org_title]
+    return name_map[org_title]
 
 
 @app.command(name="install")
