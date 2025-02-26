@@ -261,16 +261,17 @@ class TokenInfo(BaseModel):
             logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
             decoded_dict = cls._decode(keyring_data)
             return TokenInfo(**decoded_dict)
-        else:
-            # Try again to see if there is a legacy token on disk
-            legacy_domain = MIGRATIONS.get(domain, domain)
-            keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-            if keyring_data is not None:
-                return cls._migrate(
-                    keyring_data, from_domain=legacy_domain, to_domain=domain
-                )
-            if not create:
-                raise TokenNotFoundError
+
+        # Try again to see if there is a legacy token on disk
+        legacy_domain = MIGRATIONS.get(domain, domain)
+        keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+        if keyring_data is not None:
+            return cls._migrate(
+                keyring_data, from_domain=legacy_domain, to_domain=domain
+            )
+
+        if not create:
+            raise TokenNotFoundError
 
         logger.debug("🔓 Token has been successfully created 🎉")
         return TokenInfo(domain=domain)
