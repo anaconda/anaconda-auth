@@ -172,14 +172,16 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     assert test_repo_token in result.stdout
 
 
+@pytest.mark.parametrize("option_flag", ["-o", "--org"])
 def test_token_install_does_not_exist_yet(
+    option_flag: str,
     org_name: str,
     token_does_not_exist_in_service: None,
     token_created_in_service: str,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", "--org", org_name])
+    result = invoke_cli(["token", "install", option_flag, org_name])
     assert result.exit_code == 0
 
     token_info = TokenInfo.load()
@@ -187,14 +189,16 @@ def test_token_install_does_not_exist_yet(
     assert repo_token == token_created_in_service.token
 
 
+@pytest.mark.parametrize("option_flag", ["-o", "--org"])
 def test_token_install_exists_already_accept(
+    option_flag: str,
     org_name: str,
     token_exists_in_service: None,
     token_created_in_service: TokenCreateResponse,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", "--org", org_name], input="y")
+    result = invoke_cli(["token", "install", option_flag, org_name], input="y")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
@@ -202,14 +206,16 @@ def test_token_install_exists_already_accept(
     assert repo_token == token_created_in_service.token
 
 
+@pytest.mark.parametrize("option_flag", ["-o", "--org"])
 def test_token_install_exists_already_decline(
+    option_flag: str,
     org_name: str,
     token_exists_in_service: None,
     token_created_in_service: str,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", "--org", org_name], input="n")
+    result = invoke_cli(["token", "install", option_flag, org_name], input="n")
     assert result.exit_code == 1, result.stdout
 
     token_info = TokenInfo.load()
@@ -266,13 +272,15 @@ def test_token_install_select_second_of_multiple_orgs(
     assert repo_token == token_created_in_service.token
 
 
+@pytest.mark.parametrize("option_flag", ["-o", "--org"])
 def test_token_uninstall(
+    option_flag: str,
     org_name: str,
     token_is_installed: TokenInfo,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "uninstall", "--org", org_name])
+    result = invoke_cli(["token", "uninstall", option_flag, org_name])
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
