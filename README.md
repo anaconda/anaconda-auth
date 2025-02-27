@@ -283,13 +283,13 @@ Then run:
 make setup
 ```
 
-## Run the unit tests
+### Run the unit tests
 
 ```shell
 make test
 ```
 
-## Run the unit tests across isolated environments with tox
+### Run the unit tests across isolated environments with tox
 
 ```shell
 make tox
