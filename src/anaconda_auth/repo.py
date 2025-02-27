@@ -104,9 +104,7 @@ class RepoAPIClient(BaseClient):
             SubscriptionData(**sub) for sub in self.account.get("subscriptions", [])
         ]
         business_subscription_org_ids = [
-            sub.org_id
-            for sub in subscriptions
-            if sub.product_code in {"security_subscription", "commercial_subscription"}
+            sub.org_id for sub in subscriptions if "starter" not in sub.product_code
         ]
         return [org for org in organizations if org.id in business_subscription_org_ids]
 
