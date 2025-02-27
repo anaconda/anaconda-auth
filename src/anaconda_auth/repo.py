@@ -43,7 +43,7 @@ class RepoAPIClient(BaseClient):
     def __init__(self) -> None:
         super().__init__()
         self._access_token: str | None = None
-        if self.auth.api_key is None:
+        if self.auth.api_key is None:  # type: ignore
             self._ensure_access_token()
 
     def _ensure_access_token(self) -> None:
@@ -53,7 +53,7 @@ class RepoAPIClient(BaseClient):
         if self._access_token is not None:
             return
         self._access_token = _do_auth_flow()
-        self.auth.api_key = self._access_token
+        self.auth.api_key = self._access_token  # type: ignore
 
     def get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
         """Return the token information, if it exists.
