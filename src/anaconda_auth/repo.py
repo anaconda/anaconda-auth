@@ -29,6 +29,7 @@ class TokenCreateResponse(BaseModel):
 
 
 class OrganizationData(BaseModel):
+    id: UUID
     name: str
     title: str
 

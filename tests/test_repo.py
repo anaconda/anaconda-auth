@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 from uuid import uuid4
 
 import pytest
@@ -22,6 +23,11 @@ from anaconda_auth.token import TokenNotFoundError
 @pytest.fixture()
 def org_name() -> str:
     return "test-org-name"
+
+
+@pytest.fixture()
+def business_org_id() -> UUID:
+    return uuid4()
 
 
 @pytest.fixture(autouse=True)
@@ -85,41 +91,50 @@ def token_created_in_service(
 
 @pytest.fixture()
 def user_has_one_org(
-    requests_mock: RequestMocker, org_name: str
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[
             {
-                "id": str(uuid4()),
+                "id": str(business_org_id),
                 "name": org_name,
                 "title": "My Cool Organization",
             }
         ],
     )
-    return [OrganizationData(name=org_name, title="My Cool Organization")]
+    return [
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Cool Organization"
+        )
+    ]
 
 
 @pytest.fixture()
 def user_has_multiple_orgs(
-    requests_mock: RequestMocker, org_name: str
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
+    first_id = uuid4()
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[
             {
+                "id": str(first_id),
                 "name": "first-org",
                 "title": "My First Organization",
             },
             {
+                "id": str(business_org_id),
                 "name": org_name,
-                "title": "My Cool Organization",
+                "title": "My Business Organization",
             },
         ],
     )
     return [
-        OrganizationData(name="first-org", title="My First Organizatoin"),
-        OrganizationData(name=org_name, title="My Cool Organization"),
+        OrganizationData(id=first_id, name="first-org", title="My First Organizatoin"),
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Business Organization"
+        ),
     ]
 
 
