@@ -182,3 +182,27 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
 
     decoded = TokenInfo._decode(payload)
     assert decoded["version"] == 1
+
+
+def test_init_token_info_no_domain() -> None:
+    """If we create a TokenInfo with no domain, it defaults to the config value."""
+    config = AnacondaAuthConfig()
+    token_info = TokenInfo()
+    assert token_info.domain == config.domain
+
+
+def test_load_token_info_create_false() -> None:
+    with pytest.raises(TokenNotFoundError):
+        _ = TokenInfo.load()
+
+
+def test_load_token_info_create_true_config_domain() -> None:
+    config = AnacondaAuthConfig()
+    token_info = TokenInfo.load(create=True)
+    assert token_info.domain == config.domain
+
+
+def test_load_token_info_create_true_explicit_domain() -> None:
+    expected_domain = "some-site.com"
+    token_info = TokenInfo.load(domain=expected_domain, create=True)
+    assert token_info.domain == expected_domain

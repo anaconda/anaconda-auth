@@ -20,6 +20,7 @@ from keyring.backend import properties
 from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
+from pydantic import Field
 
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
@@ -212,7 +213,7 @@ MIGRATIONS: Dict[str, str] = {
 
 
 class TokenInfo(BaseModel):
-    domain: str
+    domain: str = Field(default_factory=lambda: AnacondaAuthConfig().domain)
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
@@ -225,30 +226,55 @@ class TokenInfo(BaseModel):
         return decoded_dict
 
     @classmethod
-    def load(cls, domain: str) -> "TokenInfo":
-        """Load the token information from the system keyring."""
-        keyring_data = keyring.get_password(KEYRING_NAME, domain)
-        if keyring_data is None:
-            # Try again to see if there is a legacy token on disk
-            legacy_domain = MIGRATIONS.get(domain, domain)
-            keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-            if keyring_data is None:
-                raise TokenNotFoundError
-            else:
-                # Migrate the domain and save token under new domain
-                decoded_dict = cls._decode(keyring_data)
-                decoded_dict["domain"] = domain
-                decoded_dict["version"] = 1
-                token_info = TokenInfo(**decoded_dict)
-                token_info.save()
-                keyring.delete_password(KEYRING_NAME, legacy_domain)
-                logger.debug(
-                    f"🔓 Token has been migrated from legacy domain '{legacy_domain}' to '{domain}' 🎉"
-                )
-
-        logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+    def _migrate(
+        cls, keyring_data: str, from_domain: str, to_domain: str
+    ) -> "TokenInfo":
+        """Migrate the domain and save token under new domain."""
         decoded_dict = cls._decode(keyring_data)
-        return TokenInfo(**decoded_dict)
+        decoded_dict["domain"] = to_domain
+        decoded_dict["version"] = 1
+        token_info = TokenInfo(**decoded_dict)
+        token_info.save()
+        keyring.delete_password(KEYRING_NAME, from_domain)
+        logger.debug(
+            f"🔓 Token has been migrated from legacy domain '{from_domain}' to '{to_domain}' 🎉"
+        )
+        return token_info
+
+    @classmethod
+    def load(cls, domain: Optional[str] = None, *, create: bool = False) -> "TokenInfo":
+        """Load the token information from the system keyring.
+
+        Args:
+            domain: The domain for which to load the token information. If
+                not provided, defaults to the configuration domain.
+            create: If True, create a new TokenInfo object if not found.
+
+        Returns:
+            The token information.
+
+        """
+        domain = domain or AnacondaAuthConfig().domain
+
+        keyring_data = keyring.get_password(KEYRING_NAME, domain)
+        if keyring_data is not None:
+            logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+            decoded_dict = cls._decode(keyring_data)
+            return TokenInfo(**decoded_dict)
+
+        # Try again to see if there is a legacy token on disk
+        legacy_domain = MIGRATIONS.get(domain, domain)
+        existing_keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+        if existing_keyring_data is not None:
+            return cls._migrate(
+                existing_keyring_data, from_domain=legacy_domain, to_domain=domain
+            )
+
+        if create:
+            logger.debug("🔓 Token has been successfully created 🎉")
+            return TokenInfo(domain=domain)
+
+        raise TokenNotFoundError
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
