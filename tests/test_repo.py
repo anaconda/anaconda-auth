@@ -16,6 +16,7 @@ from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
+from anaconda_auth.token import TokenNotFoundError
 
 
 @pytest.fixture(autouse=True)
@@ -90,6 +91,60 @@ def test_token_install_does_not_exist_yet(
     token_info = TokenInfo.load()
     repo_token = token_info.get_repo_token(org_name=org_name)
     assert repo_token == test_token
+
+
+def test_token_install_exists_already_accept(
+    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+) -> None:
+    org_name = "test-org-name"
+    test_token = "test-token"
+
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json={"id": str(uuid4()), "expires_at": "2024-01-01T00:00:00"},
+    )
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
+    )
+    requests_mock.head(
+        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
+        status_code=200,
+    )
+
+    result = invoke_cli(["token", "install", "--org", org_name], input="y")
+    assert result.exit_code == 0, result.stdout
+
+    token_info = TokenInfo.load()
+    repo_token = token_info.get_repo_token(org_name=org_name)
+    assert repo_token == test_token
+
+
+def test_token_install_exists_already_decline(
+    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+) -> None:
+    org_name = "test-org-name"
+    test_token = "test-token"
+
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json={"id": str(uuid4()), "expires_at": "2024-01-01T00:00:00"},
+    )
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
+    )
+    requests_mock.head(
+        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
+        status_code=200,
+    )
+
+    result = invoke_cli(["token", "install", "--org", org_name], input="n")
+    assert result.exit_code == 1, result.stdout
+
+    token_info = TokenInfo.load()
+    with pytest.raises(TokenNotFoundError):
+        _ = token_info.get_repo_token(org_name=org_name)
 
 
 def test_get_repo_token_info_no_token(requests_mock: RequestMocker) -> None:
