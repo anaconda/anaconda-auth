@@ -242,7 +242,7 @@ class TokenInfo(BaseModel):
         return token_info
 
     @classmethod
-    def load(cls, domain: Union[str] = None, create: bool = False) -> "TokenInfo":
+    def load(cls, domain: Union[str] = None, *, create: bool = False) -> "TokenInfo":
         """Load the token information from the system keyring.
 
         Args:
