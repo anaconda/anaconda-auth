@@ -121,23 +121,6 @@ def _select_org_name(client: RepoAPIClient) -> str:
     return name_map[org_title]
 
 
-def _select_org_name(client: RepoAPIClient) -> str:
-    organizations = client.get_organizations_for_user()
-
-    name_map = {}
-    choices = []
-    for org in organizations:
-        key = f"{org.title} ([cyan]{org.name}[/cyan])"
-        name_map[key] = org.name
-        choices.append(key)
-
-    org_title = select_from_list(
-        "Please select an organization:",
-        choices=choices,
-    )
-    return name_map[org_title]
-
-
 @app.callback(invoke_without_command=True, no_args_is_help=True)
 def main() -> None:
     """Manage your Anaconda repo tokens."""
