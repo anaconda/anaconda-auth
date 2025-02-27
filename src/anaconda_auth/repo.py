@@ -133,6 +133,7 @@ def main() -> None:
 
 @app.command(name="list")
 def list_tokens() -> None:
+    """List all installed repository tokens."""
     from anaconda_auth._conda.repo_config import token_list
 
     tokens = token_list()
