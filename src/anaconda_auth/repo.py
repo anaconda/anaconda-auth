@@ -202,6 +202,7 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
 
     token_info = TokenInfo.load()
     token_info.delete_repo_token(org_name=org_name)
+    token_info.save()
 
     console.print(
         f"Successfully deleted token for organization: [cyan]{org_name}[/cyan]"

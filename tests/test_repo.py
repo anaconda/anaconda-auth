@@ -19,9 +19,21 @@ from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 
 
+@pytest.fixture()
+def org_name() -> str:
+    return "test-org-name"
+
+
 @pytest.fixture(autouse=True)
 def token_info():
     token_info = TokenInfo.load(create=True)
+    token_info.save()
+    return token_info
+
+
+@pytest.fixture()
+def token_is_installed(org_name: str, token_info: TokenInfo) -> TokenInfo:
+    token_info.set_repo_token(org_name=org_name, token="test-token")
     token_info.save()
     return token_info
 
@@ -32,11 +44,6 @@ def mock_do_auth_flow(mocker: MockerFixture) -> None:
         "anaconda_auth.repo._do_auth_flow",
         return_value="test-access-token",
     )
-
-
-@pytest.fixture()
-def org_name() -> str:
-    return "test-org-name"
 
 
 @pytest.fixture()
@@ -257,6 +264,20 @@ def test_token_install_select_second_of_multiple_orgs(
     token_info = TokenInfo.load()
     repo_token = token_info.get_repo_token(org_name=org_name)
     assert repo_token == token_created_in_service.token
+
+
+def test_token_uninstall(
+    org_name: str,
+    token_is_installed: TokenInfo,
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    result = invoke_cli(["token", "uninstall", "--org", org_name])
+    assert result.exit_code == 0, result.stdout
+
+    token_info = TokenInfo.load()
+    with pytest.raises(TokenNotFoundError):
+        _ = token_info.get_repo_token(org_name=org_name)
 
 
 def test_get_repo_token_info_no_token(
