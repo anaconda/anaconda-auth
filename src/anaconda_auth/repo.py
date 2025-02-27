@@ -95,8 +95,8 @@ def _print_repo_token_table(
     table.add_column("Channel URL")
     table.add_column("Token")
 
-    for token in tokens:
-        table.add_row(token.org_name, None, token.token)
+    for repo_token in tokens:
+        table.add_row(repo_token.org_name, None, repo_token.token)
 
     for url, token in legacy_tokens.items():
         table.add_row(None, url, token)
@@ -198,7 +198,7 @@ def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
 
 
 @app.command(name="uninstall")
-def uninstall_token(org_name: str = typer.Option("", "-o", "--org")):
+def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     """Uninstall a repository token for a specific organization."""
     # TODO: Add --all option
     if not org_name:
