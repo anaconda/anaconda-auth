@@ -9,11 +9,20 @@ from .conftest import CLIInvoker
 
 pytest.importorskip("conda")
 
-from anaconda_auth._conda.repo_config import REPO_URL  # noqa: E402
-from anaconda_auth.repo import OrganizationData  # noqa: E402
-from anaconda_auth.repo import RepoAPIClient  # noqa: E402
-from anaconda_auth.repo import TokenCreateResponse  # noqa: E402
-from anaconda_auth.repo import TokenInfoResponse  # noqa: E402
+# ruff: noqa: E402
+from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth.repo import OrganizationData
+from anaconda_auth.repo import RepoAPIClient
+from anaconda_auth.repo import TokenCreateResponse
+from anaconda_auth.repo import TokenInfoResponse
+from anaconda_auth.token import TokenInfo
+
+
+@pytest.fixture(autouse=True)
+def token_info():
+    token_info = TokenInfo.load(create=True)
+    token_info.save()
+    return token_info
 
 
 def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
