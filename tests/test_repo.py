@@ -147,6 +147,25 @@ def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
     return []
 
 
+@pytest.fixture(
+    autouse=True, params=["security_subscription", "commercial_subscription"]
+)
+def user_has_business_subscription(
+    request, requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/account",
+        json={
+            "subscriptions": [
+                {
+                    "org_id": str(business_org_id),
+                    "product_code": request.param,
+                }
+            ]
+        },
+    )
+
+
 @pytest.fixture(autouse=True)
 def repodata_json_available_with_token(
     requests_mock: RequestMocker, token_created_in_service: TokenCreateResponse
@@ -335,3 +354,18 @@ def test_get_organizations_for_user(user_has_one_org: list[OrganizationData]) ->
     client = RepoAPIClient()
     organizations = client.get_organizations_for_user()
     assert organizations == user_has_one_org
+
+
+def test_get_business_organizations_for_user(
+    org_name: str,
+    business_org_id: UUID,
+    user_has_multiple_orgs: list[OrganizationData],
+    user_has_business_subscription: None,
+) -> None:
+    client = RepoAPIClient()
+    organizations = client.get_business_organizations_for_user()
+    assert organizations == [
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Business Organization"
+        )
+    ]

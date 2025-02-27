@@ -34,6 +34,11 @@ class OrganizationData(BaseModel):
     title: str
 
 
+class SubscriptionData(BaseModel):
+    org_id: UUID
+    product_code: str
+
+
 class RepoAPIClient(BaseClient):
     def __init__(self) -> None:
         super().__init__()
@@ -92,6 +97,19 @@ class RepoAPIClient(BaseClient):
         data = response.json()
         return [OrganizationData(**item) for item in data]
 
+    def get_business_organizations_for_user(self) -> list[OrganizationData]:
+        """Get a list of all organizations the user belongs to that have a Business subscription."""
+        organizations = self.get_organizations_for_user()
+        subscriptions = [
+            SubscriptionData(**sub) for sub in self.account.get("subscriptions", [])
+        ]
+        business_subscription_org_ids = [
+            sub.org_id
+            for sub in subscriptions
+            if sub.product_code in {"security_subscription", "commercial_subscription"}
+        ]
+        return [org for org in organizations if org.id in business_subscription_org_ids]
+
 
 def _print_repo_token_table(
     tokens: list[RepoToken], legacy_tokens: dict[str, str]
@@ -112,7 +130,7 @@ def _print_repo_token_table(
 
 
 def _select_org_name(client: RepoAPIClient) -> str:
-    organizations = client.get_organizations_for_user()
+    organizations = client.get_business_organizations_for_user()
 
     if not organizations:
         console.print("No organizations found.")
