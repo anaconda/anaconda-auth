@@ -178,6 +178,26 @@ def test_token_install_exists_already_decline(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
+def test_token_install_select_first_if_only_org(
+    org_name: str,
+    token_does_not_exist_in_service: None,
+    token_created_in_service: str,
+    orgs_for_user: list[OrganizationData],
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    result = invoke_cli(["token", "install"])
+    assert result.exit_code == 0, result.stdout
+    assert (
+        f"Only one organization found, automatically selecting: {org_name}"
+        in result.stdout
+    )
+
+    token_info = TokenInfo.load()
+    repo_token = token_info.get_repo_token(org_name=org_name)
+    assert repo_token == token_created_in_service.token
+
+
 def test_get_repo_token_info_no_token(
     org_name: str, token_does_not_exist_in_service: None
 ) -> None:

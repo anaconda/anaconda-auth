@@ -107,6 +107,13 @@ def _print_repo_token_table(
 def _select_org_name(client: RepoAPIClient) -> str:
     organizations = client.get_organizations_for_user()
 
+    if len(organizations) == 1:
+        org_name = organizations[0].name
+        console.print(
+            f"Only one organization found, automatically selecting: {org_name}"
+        )
+        return org_name
+
     name_map = {}
     choices = []
     for org in organizations:
