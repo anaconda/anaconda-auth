@@ -92,6 +92,29 @@ def orgs_for_user(requests_mock: RequestMocker, org_name: str) -> TokenCreateRes
 
 
 @pytest.fixture()
+def user_has_multiple_orgs(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "name": "first-org",
+                "title": "My First Organization",
+            },
+            {
+                "name": org_name,
+                "title": "My Cool Organization",
+            },
+        ],
+    )
+    return [
+        OrganizationData(name="first-org", title="My First Organizatoin"),
+        OrganizationData(name=org_name, title="My Cool Organization"),
+    ]
+
+
+@pytest.fixture()
 def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
@@ -212,6 +235,24 @@ def test_token_install_select_first_if_only_org(
         f"Only one organization found, automatically selecting: {org_name}"
         in result.stdout
     )
+
+    token_info = TokenInfo.load()
+    repo_token = token_info.get_repo_token(org_name=org_name)
+    assert repo_token == token_created_in_service.token
+
+
+def test_token_install_select_second_of_multiple_orgs(
+    org_name: str,
+    token_does_not_exist_in_service: None,
+    token_created_in_service: str,
+    user_has_multiple_orgs: list[OrganizationData],
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    # TODO: This uses the "j" key binding. I can't figure out how to send the right
+    #       escape code for down arrow.
+    result = invoke_cli(["token", "install"], input="j\n")
+    assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
     repo_token = token_info.get_repo_token(org_name=org_name)
