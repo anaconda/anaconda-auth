@@ -91,6 +91,15 @@ def orgs_for_user(requests_mock: RequestMocker, org_name: str) -> TokenCreateRes
     return [OrganizationData(name=org_name, title="My Cool Organization")]
 
 
+@pytest.fixture()
+def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[],
+    )
+    return []
+
+
 @pytest.fixture(autouse=True)
 def repodata_json_available_with_token(
     requests_mock: RequestMocker, token_created_in_service: TokenCreateResponse
@@ -176,6 +185,17 @@ def test_token_install_exists_already_decline(
     token_info = TokenInfo.load()
     with pytest.raises(TokenNotFoundError):
         _ = token_info.get_repo_token(org_name=org_name)
+
+
+def test_token_install_no_available_org(
+    user_has_no_orgs: list[OrganizationData],
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    result = invoke_cli(["token", "install"])
+    assert result.exit_code == 1, result.stdout
+    assert "No organizations found." in result.stdout
+    assert "Aborted." in result.stdout
 
 
 def test_token_install_select_first_if_only_org(

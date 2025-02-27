@@ -107,6 +107,10 @@ def _print_repo_token_table(
 def _select_org_name(client: RepoAPIClient) -> str:
     organizations = client.get_organizations_for_user()
 
+    if not organizations:
+        console.print("No organizations found.")
+        raise typer.Abort()
+
     if len(organizations) == 1:
         org_name = organizations[0].name
         console.print(
