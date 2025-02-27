@@ -34,6 +34,73 @@ def mock_do_auth_flow(mocker: MockerFixture) -> None:
     )
 
 
+@pytest.fixture()
+def org_name() -> str:
+    return "test-org-name"
+
+
+@pytest.fixture()
+def token_does_not_exist_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> None:
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
+    )
+
+
+@pytest.fixture()
+def token_exists_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenInfoResponse:
+    token_info = TokenInfoResponse(
+        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
+    )
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=token_info.model_dump(mode="json"),
+    )
+    return token_info
+
+
+@pytest.fixture()
+def token_created_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
+    test_token = "test-token"
+    payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=payload,
+    )
+    return TokenCreateResponse(**payload)
+
+
+@pytest.fixture()
+def orgs_for_user(requests_mock: RequestMocker, org_name: str) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(uuid4()),
+                "name": org_name,
+                "title": "My Cool Organization",
+            }
+        ],
+    )
+    return [OrganizationData(name=org_name, title="My Cool Organization")]
+
+
+@pytest.fixture(autouse=True)
+def repodata_json_available_with_token(
+    requests_mock: RequestMocker, token_created_in_service: TokenCreateResponse
+) -> None:
+    requests_mock.head(
+        f"https://repo.anaconda.cloud/t/{token_created_in_service.token}/repo/main/noarch/repodata.json",
+        status_code=200,
+    )
+
+
 def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
     mock = mocker.patch(
         "anaconda_auth._conda.repo_config.read_binstar_tokens",
@@ -67,78 +134,42 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
 
 
 def test_token_install_does_not_exist_yet(
-    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+    org_name: str,
+    token_does_not_exist_in_service: None,
+    token_created_in_service: str,
+    *,
+    invoke_cli: CLIInvoker,
 ) -> None:
-    org_name = "test-org-name"
-    test_token = "test-token"
-
-    requests_mock.get(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        status_code=404,
-    )
-    requests_mock.put(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
-    )
-    requests_mock.head(
-        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
-        status_code=200,
-    )
-
     result = invoke_cli(["token", "install", "--org", org_name])
     assert result.exit_code == 0
 
     token_info = TokenInfo.load()
     repo_token = token_info.get_repo_token(org_name=org_name)
-    assert repo_token == test_token
+    assert repo_token == token_created_in_service.token
 
 
 def test_token_install_exists_already_accept(
-    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+    org_name: str,
+    token_exists_in_service: None,
+    token_created_in_service: TokenCreateResponse,
+    *,
+    invoke_cli: CLIInvoker,
 ) -> None:
-    org_name = "test-org-name"
-    test_token = "test-token"
-
-    requests_mock.get(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json={"id": str(uuid4()), "expires_at": "2024-01-01T00:00:00"},
-    )
-    requests_mock.put(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
-    )
-    requests_mock.head(
-        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
-        status_code=200,
-    )
-
     result = invoke_cli(["token", "install", "--org", org_name], input="y")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
     repo_token = token_info.get_repo_token(org_name=org_name)
-    assert repo_token == test_token
+    assert repo_token == token_created_in_service.token
 
 
 def test_token_install_exists_already_decline(
-    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+    org_name: str,
+    token_exists_in_service: None,
+    token_created_in_service: str,
+    *,
+    invoke_cli: CLIInvoker,
 ) -> None:
-    org_name = "test-org-name"
-    test_token = "test-token"
-
-    requests_mock.get(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json={"id": str(uuid4()), "expires_at": "2024-01-01T00:00:00"},
-    )
-    requests_mock.put(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
-    )
-    requests_mock.head(
-        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
-        status_code=200,
-    )
-
     result = invoke_cli(["token", "install", "--org", org_name], input="n")
     assert result.exit_code == 1, result.stdout
 
@@ -147,66 +178,33 @@ def test_token_install_exists_already_decline(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
-def test_get_repo_token_info_no_token(requests_mock: RequestMocker) -> None:
-    org_name = "test-org-name"
-
-    requests_mock.get(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        status_code=404,
-    )
-
+def test_get_repo_token_info_no_token(
+    org_name: str, token_does_not_exist_in_service: None
+) -> None:
     client = RepoAPIClient()
     token_info = client.get_repo_token_info(org_name=org_name)
     assert token_info is None
 
 
-def test_get_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
-    org_name = "test-org-name"
-    expected_token_info = TokenInfoResponse(
-        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
-    )
-
-    requests_mock.get(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json=expected_token_info.model_dump(mode="json"),
-    )
-
+def test_get_repo_token_info_has_token(
+    org_name: str,
+    token_exists_in_service: TokenInfoResponse,
+) -> None:
     client = RepoAPIClient()
     token_info = client.get_repo_token_info(org_name=org_name)
-    assert token_info == expected_token_info
+    assert token_info == token_exists_in_service
 
 
-def test_create_repo_token_info_has_token(requests_mock: RequestMocker) -> None:
-    org_name = "test-org-name"
-    expected_response_data = {
-        "token": "test-token",
-        "expires_at": "2025-01-01T00:00:00",
-    }
-
-    requests_mock.put(
-        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
-        json=expected_response_data,
-    )
-
+def test_create_repo_token_info_has_token(
+    org_name: str,
+    token_created_in_service: TokenCreateResponse,
+) -> None:
     client = RepoAPIClient()
     token_info = client.create_repo_token(org_name=org_name)
-    assert token_info == TokenCreateResponse(**expected_response_data)
+    assert token_info == token_created_in_service
 
 
-def test_get_organizations_for_user(requests_mock: RequestMocker) -> None:
-    requests_mock.get(
-        "https://anaconda.com/api/organizations/my",
-        json=[
-            {
-                "id": "2902d4e4-7ad8-45dd-8d67-13bbed665409",
-                "name": "my-org",
-                "title": "My Cool Organization",
-            }
-        ],
-    )
-
+def test_get_organizations_for_user(orgs_for_user: list[OrganizationData]) -> None:
     client = RepoAPIClient()
     organizations = client.get_organizations_for_user()
-    assert organizations == [
-        OrganizationData(name="my-org", title="My Cool Organization")
-    ]
+    assert organizations == orgs_for_user
