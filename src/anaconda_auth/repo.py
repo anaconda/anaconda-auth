@@ -155,9 +155,9 @@ def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     if not org_name:
         org_name = _select_org_name(client)
 
-    token_info = client.get_repo_token_info(org_name=org_name)
+    existing_token_info = client.get_repo_token_info(org_name=org_name)
 
-    if token_info is not None:
+    if existing_token_info is not None:
         console.print(
             f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
         )
