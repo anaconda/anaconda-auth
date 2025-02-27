@@ -84,7 +84,9 @@ def token_created_in_service(
 
 
 @pytest.fixture()
-def orgs_for_user(requests_mock: RequestMocker, org_name: str) -> TokenCreateResponse:
+def user_has_one_org(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[
@@ -238,7 +240,7 @@ def test_token_install_select_first_if_only_org(
     org_name: str,
     token_does_not_exist_in_service: None,
     token_created_in_service: str,
-    orgs_for_user: list[OrganizationData],
+    user_has_one_org: list[OrganizationData],
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
@@ -314,7 +316,7 @@ def test_create_repo_token_info_has_token(
     assert token_info == token_created_in_service
 
 
-def test_get_organizations_for_user(orgs_for_user: list[OrganizationData]) -> None:
+def test_get_organizations_for_user(user_has_one_org: list[OrganizationData]) -> None:
     client = RepoAPIClient()
     organizations = client.get_organizations_for_user()
-    assert organizations == orgs_for_user
+    assert organizations == user_has_one_org
