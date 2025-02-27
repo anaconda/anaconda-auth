@@ -35,8 +35,19 @@ class OrganizationData(BaseModel):
 
 class RepoAPIClient(BaseClient):
     def __init__(self) -> None:
-        access_token = _do_auth_flow()
-        super().__init__(api_key=access_token)
+        super().__init__()
+        self._access_token: str | None = None
+        if self.auth.api_key is None:
+            self._ensure_access_token()
+
+    def _ensure_access_token(self) -> None:
+        """Some endpoints do not accept API keys, so this method ensures we perform
+        an interactive authentication and then cache the access token.
+        """
+        if self._access_token is not None:
+            return
+        self._access_token = _do_auth_flow()
+        self.auth.api_key = self._access_token
 
     def get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
         """Return the token information, if it exists.
@@ -48,7 +59,7 @@ class RepoAPIClient(BaseClient):
             The token information, including its id and expiration date, or
             None if a token doesn't exist.
         """
-
+        self._ensure_access_token()
         response = self.get(
             f"/api/organizations/{org_name}/ce/current-token",
         )
@@ -66,6 +77,7 @@ class RepoAPIClient(BaseClient):
         Returns:
             The token information, including its value and expiration date.
         """
+        self._ensure_access_token()
         response = self.put(
             f"/api/organizations/{org_name}/ce/current-token",
             json={"confirm": "yes"},
