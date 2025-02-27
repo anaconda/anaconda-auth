@@ -80,12 +80,6 @@ class RepoAPIClient(BaseClient):
         return [OrganizationData(**item) for item in data]
 
 
-def _set_repo_token(org_name: str, token: str) -> None:
-    token_info = TokenInfo.load(create=True)
-    token_info.set_repo_token(org_name, token)
-    token_info.save()
-
-
 def _print_repo_token_table(
     tokens: list[RepoToken], legacy_tokens: dict[str, str]
 ) -> None:
@@ -187,7 +181,10 @@ def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     except repo_config.CondaTokenError as e:
         raise typer.Abort(e)
 
-    _set_repo_token(org_name=org_name, token=response.token)
+    token_info = TokenInfo.load(create=True)
+    token_info.set_repo_token(org_name, response.token)
+    token_info.save()
+
     console.print("Success! Your token was validated and conda has been configured.")
 
 
