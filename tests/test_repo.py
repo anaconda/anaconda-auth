@@ -65,6 +65,33 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     assert test_repo_token in result.stdout
 
 
+def test_token_install_does_not_exist_yet(
+    requests_mock: RequestMocker, invoke_cli: CLIInvoker
+) -> None:
+    org_name = "test-org-name"
+    test_token = "test-token"
+
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
+    )
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json={"token": test_token, "expires_at": "2025-01-01T00:00:00"},
+    )
+    requests_mock.head(
+        f"https://repo.anaconda.cloud/t/{test_token}/repo/main/noarch/repodata.json",
+        status_code=200,
+    )
+
+    result = invoke_cli(["token", "install", "--org", org_name])
+    assert result.exit_code == 0
+
+    token_info = TokenInfo.load()
+    repo_token = token_info.get_repo_token(org_name=org_name)
+    assert repo_token == test_token
+
+
 def test_get_repo_token_info_no_token(requests_mock: RequestMocker) -> None:
     org_name = "test-org-name"
 
