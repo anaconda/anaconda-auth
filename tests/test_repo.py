@@ -25,6 +25,14 @@ def token_info():
     return token_info
 
 
+@pytest.fixture(autouse=True)
+def mock_do_auth_flow(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "anaconda_auth.repo._do_auth_flow",
+        return_value="test-access-token",
+    )
+
+
 def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
     mock = mocker.patch(
         "anaconda_auth._conda.repo_config.read_binstar_tokens",
@@ -55,14 +63,6 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     assert "Anaconda Repository Tokens" in result.stdout
     assert REPO_URL in result.stdout
     assert test_repo_token in result.stdout
-
-
-@pytest.fixture(autouse=True)
-def mock_do_auth_flow(mocker: MockerFixture) -> None:
-    mocker.patch(
-        "anaconda_auth.repo._do_auth_flow",
-        return_value="test-access-token",
-    )
 
 
 def test_get_repo_token_info_no_token(requests_mock: RequestMocker) -> None:
