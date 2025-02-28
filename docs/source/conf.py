@@ -71,6 +71,14 @@ html_theme_options = {
     "navbar_center": ["navbar-nav-override"],
     "footer_start": ["copyright"],
     "footer_end": [],
+    "icon_links": [
+        {
+            "name": "Github",
+            "url": "https://github.com/anaconda/anaconda-auth",
+            "icon": "fa-brands fa-github",
+            "type": "fontawesome",
+        }
+    ],
 }
 
 # Custom sidebar templates, maps document names to template names.
