@@ -170,7 +170,7 @@ def list_tokens() -> None:
     token_info = TokenInfo.load()
     repo_tokens = token_info.repo_tokens
 
-    if not tokens:
+    if not (tokens or repo_tokens):
         console.print("No repo tokens are installed. Run `anaconda token install`.")
         raise typer.Abort()
 
