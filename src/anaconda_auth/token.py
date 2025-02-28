@@ -211,7 +211,7 @@ class RepoToken(BaseModel):
 # for at the modern domain and not found, we will search for any of the legacy domains
 # and, if found, migrate the keyring storage from that domain to the new one.
 MIGRATIONS: Dict[str, List[str]] = {
-    "anaconda.cloud": ["id.anaconda.cloud"],
+    "anaconda.com": ["id.anaconda.cloud", "anaconda.cloud"]
 }
 TOKEN_INFO_VERSION = 2
 
