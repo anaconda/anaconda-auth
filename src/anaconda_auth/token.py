@@ -220,7 +220,7 @@ class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
-    version: Optional[int] = 1
+    version: Optional[int] = 2
 
     @classmethod
     def _decode(cls, keyring_data: str) -> dict:
