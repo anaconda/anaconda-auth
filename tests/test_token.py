@@ -159,7 +159,7 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     legacy_token.save()
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy-0")
-    assert payload
+    assert payload is not None
 
     decoded = TokenInfo._decode(payload)
     assert "version" not in decoded
@@ -176,7 +176,7 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     assert payload is None
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
-    assert payload
+    assert payload is not None
 
     decoded = TokenInfo._decode(payload)
     assert decoded["version"] == 1
