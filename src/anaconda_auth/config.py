@@ -39,6 +39,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
+    auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
     ssl_verify: bool = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
@@ -60,7 +61,13 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
 
     @property
     def auth_domain(self) -> str:
-        # TODO: remove hard-code
+        """The authentication domain base URL.
+
+        Defaults to the `auth` subdomain of the main domain.
+
+        """
+        if self.auth_domain_override:
+            return f"https://{self.auth_domain_override}"
         return f"https://auth.{self.domain}"
 
     @property
