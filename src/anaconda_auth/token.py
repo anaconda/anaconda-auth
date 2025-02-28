@@ -207,8 +207,11 @@ class RepoToken(BaseModel):
     org_name: Union[OrgName, None] = None
 
 
-MIGRATIONS: Dict[str, str] = {
-    "anaconda.cloud": "id.anaconda.cloud",
+# A mapping of modern domain to a list of legacy domains. If a token is searched
+# for at the modern domain and not found, we will search for any of the legacy domains
+# and, if found, migrate the keyring storage from that domain to the new one.
+MIGRATIONS: Dict[str, List[str]] = {
+    "anaconda.cloud": ["id.anaconda.cloud"],
 }
 
 
@@ -263,12 +266,13 @@ class TokenInfo(BaseModel):
             return TokenInfo(**decoded_dict)
 
         # Try again to see if there is a legacy token on disk
-        legacy_domain = MIGRATIONS.get(domain, domain)
-        existing_keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-        if existing_keyring_data is not None:
-            return cls._migrate(
-                existing_keyring_data, from_domain=legacy_domain, to_domain=domain
-            )
+        legacy_domains = MIGRATIONS.get(domain, [])
+        for legacy_domain in legacy_domains:
+            existing_keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+            if existing_keyring_data is not None:
+                return cls._migrate(
+                    existing_keyring_data, from_domain=legacy_domain, to_domain=domain
+                )
 
         if create:
             logger.debug("🔓 Token has been successfully created 🎉")
