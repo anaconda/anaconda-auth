@@ -228,3 +228,60 @@ def test_load_token_info_create_true_explicit_domain() -> None:
     expected_domain = "some-site.com"
     token_info = TokenInfo.load(domain=expected_domain, create=True)
     assert token_info.domain == expected_domain
+
+
+def test_set_repo_token() -> None:
+    token_info = TokenInfo()
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+
+
+def test_set_repo_token_same_org_overwritten() -> None:
+    token_info = TokenInfo()
+    assert len(token_info.repo_tokens) == 0
+
+    # Write the first token
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+    assert len(token_info.repo_tokens) == 1
+
+    # Token gets overwritten
+    token_info.set_repo_token("org-name", "another-test-token")
+    assert token_info.get_repo_token("org-name") == "another-test-token"
+    assert len(token_info.repo_tokens) == 1
+
+
+def test_set_repo_token_different_organization() -> None:
+    token_info = TokenInfo()
+    assert len(token_info.repo_tokens) == 0
+
+    # Write the first token
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+    assert len(token_info.repo_tokens) == 1
+
+    # Write another token for a different organization
+    token_info.set_repo_token("another-org-name", "another-test-token")
+    assert token_info.get_repo_token("another-org-name") == "another-test-token"
+    assert len(token_info.repo_tokens) == 2
+
+
+def test_delete_repo_token() -> None:
+    token_info = TokenInfo()
+    assert len(token_info.repo_tokens) == 0
+
+    # Write the first token
+    token_info.set_repo_token("org-name", "test-token")
+    assert token_info.get_repo_token("org-name") == "test-token"
+    assert len(token_info.repo_tokens) == 1
+
+    # Write another token for a different organization
+    token_info.set_repo_token("another-org-name", "another-test-token")
+    assert token_info.get_repo_token("another-org-name") == "another-test-token"
+    assert len(token_info.repo_tokens) == 2
+
+    # Delete the first token
+    token_info.delete_repo_token("org-name")
+    assert len(token_info.repo_tokens) == 1
+    with pytest.raises(TokenNotFoundError):
+        token_info.get_repo_token("org-name")

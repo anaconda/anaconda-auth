@@ -12,7 +12,7 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.4.0"
+  "anaconda-cli-base >=0.5.0"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
@@ -26,6 +26,7 @@ urls = {repository = "https://github.com/anaconda/anaconda-auth"}
 auth = "anaconda_auth.cli:app"
 # TODO: Deprecated plugin name
 cloud = "anaconda_cloud_auth.cli:app"
+token = "anaconda_auth.repo:app"
 
 [project.entry-points.conda]
 anaconda-auth = "anaconda_auth._conda.entrypoint"
@@ -39,6 +40,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-mock",
+  "requests-mock",
   "responses",
   "tox",
   "types-requests"
@@ -203,7 +205,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
-    responses
+    requests-mock
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend

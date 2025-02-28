@@ -333,6 +333,29 @@ class TokenInfo(BaseModel):
 
         return self.api_key
 
+    def set_repo_token(self, org_name: OrgName, token: TokenString) -> None:
+        """Set the repo token for a specific organization.
+
+        Args:
+            org_name: The organization name for which to search for a token.
+            token: The token value.
+
+        """
+
+        try:
+            self.get_repo_token(org_name=org_name)
+        except TokenNotFoundError:
+            # This is good, we don't need to do anything
+            pass
+        else:
+            # We need to remove the existing token for this org first
+            # TODO: We can drop this once we just use a dictionary instead
+            self.repo_tokens[:] = [
+                t for t in self.repo_tokens if t.org_name != org_name
+            ]
+
+        self.repo_tokens.append(RepoToken(org_name=org_name, token=token))
+
     def get_repo_token(self, org_name: OrgName) -> TokenString:
         """Return the installed repo token for a specific organization.
 
@@ -350,3 +373,16 @@ class TokenInfo(BaseModel):
             if token.org_name == org_name:
                 return token.token
         raise TokenNotFoundError(f"Could not find repo token for org {org_name}")
+
+    def delete_repo_token(self, org_name: OrgName) -> None:
+        """Delete the repo token for a specific organization.
+
+        Args:
+            org_name: The organization name for which to delete a token.
+
+        """
+        # TODO: Confirm whether we should raise an exception or not if token doesn't exist for specified organization
+
+        # We need to remove the existing token for this org first
+        # TODO: We can drop this once we just use a dictionary instead
+        self.repo_tokens[:] = [t for t in self.repo_tokens if t.org_name != org_name]
