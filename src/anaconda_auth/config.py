@@ -38,7 +38,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
-    domain: str = "anaconda.cloud"
+    domain: str = "anaconda.com"
     api_key: Optional[str] = None
     ssl_verify: bool = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
@@ -57,7 +57,6 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
                 # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
                 kwargs = {**set_fields, **kwargs}
         super().__init__(**kwargs)
-        print(f"{self.well_known_url=}")
 
     @property
     def auth_domain(self) -> str:
