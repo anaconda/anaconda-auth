@@ -213,6 +213,7 @@ class RepoToken(BaseModel):
 MIGRATIONS: Dict[str, List[str]] = {
     "anaconda.cloud": ["id.anaconda.cloud"],
 }
+TOKEN_INFO_VERSION = 2
 
 
 class TokenInfo(BaseModel):
@@ -220,7 +221,7 @@ class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
-    version: Optional[int] = 2
+    version: Optional[int] = TOKEN_INFO_VERSION
 
     @classmethod
     def _decode(cls, keyring_data: str) -> dict:
@@ -235,7 +236,7 @@ class TokenInfo(BaseModel):
         """Migrate the domain and save token under new domain."""
         decoded_dict = cls._decode(keyring_data)
         decoded_dict["domain"] = to_domain
-        decoded_dict["version"] = 1
+        decoded_dict["version"] = TOKEN_INFO_VERSION
         token_info = TokenInfo(**decoded_dict)
         token_info.save()
         keyring.delete_password(KEYRING_NAME, from_domain)

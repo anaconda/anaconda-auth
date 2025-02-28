@@ -13,6 +13,7 @@ from anaconda_auth.actions import get_api_key
 from anaconda_auth.actions import is_logged_in
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.token import TOKEN_INFO_VERSION
 from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
@@ -34,7 +35,7 @@ def test_login_to_api_key(mocker: MockerFixture) -> None:
         "username": None,
         "repo_tokens": [],
         "api_key": "api-key",
-        "version": 1,
+        "version": TOKEN_INFO_VERSION,
     }
 
 
