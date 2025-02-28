@@ -15,12 +15,11 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 
+from anaconda_auth.config import LOGIN_ERROR_URL
+from anaconda_auth.config import LOGIN_SUCCESS_URL
 from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
-
-LOGIN_SUCCESS_URL = "https://anaconda.cloud/local-login-success"
-LOGIN_ERROR_URL = "https://anaconda.cloud/local-login-error"
 
 
 class Result(BaseModel):

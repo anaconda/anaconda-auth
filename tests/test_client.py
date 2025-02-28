@@ -148,8 +148,9 @@ def test_client_min_api_version_header(
 def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
+    # TODO: Use a mock for the request
     client = BaseClient()
-    request = Request("GET", "api/auth/healthz")
+    request = Request("GET", "api/projects/healthz")
     prepped = client.prepare_request(request)
     assert "Authorization" not in prepped.headers
 

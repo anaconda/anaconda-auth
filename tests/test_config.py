@@ -16,10 +16,7 @@ def mock_openid_configuration():
         "token_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/token",
     }
     with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
-        rsps.get(
-            url=f"https://{config.domain}/api/auth/oauth2/.well-known/openid-configuration",
-            json=expected,
-        )
+        rsps.get(url=config.well_known_url, json=expected)
         yield rsps
 
 
@@ -48,3 +45,11 @@ def test_init_arg_over_env_variable(monkeypatch: MonkeyPatch, prefix: str) -> No
     monkeypatch.setenv(f"{prefix}_DOMAIN", "set-in-env")
     config = AnacondaAuthConfig(domain="set-in-init")
     assert config.domain == "set-in-init"
+
+
+def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "ANACONDA_AUTH_AUTH_DOMAIN_OVERRIDE", "another-auth.anaconda.com"
+    )
+    config = AnacondaAuthConfig()
+    assert config.auth_domain == "https://another-auth.anaconda.com"

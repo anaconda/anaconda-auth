@@ -1,10 +1,12 @@
 from pathlib import Path
 
+import keyring
 import pytest
 from keyring.errors import PasswordDeleteError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
+import anaconda_auth.token
 from anaconda_auth.actions import logout
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.token import TokenExpiredError
@@ -146,42 +148,62 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
     assert not AnacondaKeyring.viable
 
 
-def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
-    import keyring
+@pytest.fixture()
+def expected_api_key() -> str:
+    return "one key to rule them all"
 
-    import anaconda_auth.token
 
-    mocker.patch.dict(anaconda_auth.token.MIGRATIONS, {"modern": "legacy"})
+@pytest.fixture(params=[("legacy-0", None), ("legacy-1", 1)])
+def legacy_token_storage(request, expected_api_key, mocker: MockerFixture) -> str:
+    """This fixture prepares the legacy token storage for two legacy domains, and the
+    stored version associated with that domain. The assertions confirm the state of the
+    keyring for each state.
+    """
+    mocker.patch.dict(
+        anaconda_auth.token.MIGRATIONS, {"modern": ["legacy-1", "legacy-0"]}
+    )
+
+    legacy_domain, legacy_version = request.param
 
     # First make a token in the keyring with the legacy domain
     legacy_token = TokenInfo(
-        api_key="one key to rule them all", domain="legacy", version=None
+        api_key=expected_api_key, domain=legacy_domain, version=legacy_version
     )
-    assert legacy_token.version is None
+    assert legacy_token.version is legacy_version
     legacy_token.save()
 
-    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
-    assert payload
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, legacy_domain)
+    assert payload is not None
 
     decoded = TokenInfo._decode(payload)
-    assert "version" not in decoded
+    if legacy_version is None:
+        assert "version" not in decoded
+    else:
+        assert decoded["version"] == legacy_version
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
     assert payload is None
 
-    # Now when loaded the keyring username will switch from legacy to modern
+
+def test_anaconda_keyring_domain_migration(
+    expected_api_key: str, legacy_token_storage: None
+) -> None:
+    """Any of the legacy domains are migrated to the modern domain."""
     token = TokenInfo.load(domain="modern")
-    assert token.api_key == "one key to rule them all"
-    assert token.version == 1
+    assert token.api_key == expected_api_key
+    assert token.version == 2
 
-    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy-0")
+    assert payload is None
+
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy-1")
     assert payload is None
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
-    assert payload
+    assert payload is not None
 
     decoded = TokenInfo._decode(payload)
-    assert decoded["version"] == 1
+    assert decoded["version"] == 2
 
 
 def test_init_token_info_no_domain() -> None:
