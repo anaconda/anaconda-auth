@@ -111,7 +111,7 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
         )
 
 
-def configure_condarc():
+def configure_condarc() -> None:
     # TODO: Review the hard-coding of channel URL here
     # TODO: Make the plugin name a constant somewhere
     # TODO: Integrate the contents of this module with condarc.py

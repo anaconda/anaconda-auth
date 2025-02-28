@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
@@ -19,7 +20,7 @@ class CondaRC:
         of the condarc file found in the user's home directory.
         """
         self.condarc_path = condarc_path or Path("~/.condarc").expanduser()
-        self._loaded_yaml = {}
+        self._loaded_yaml: dict[str, Any] = {}
         self.load()
 
     def load(self, path: Path | None = None) -> None:
@@ -38,7 +39,7 @@ class CondaRC:
 
     def update_channel_settings(
         self, channel: str, auth_type: str, username: str | None = None
-    ):
+    ) -> None:
         """
         Update the condarc file's "channel_settings" section
         """
