@@ -151,14 +151,14 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
 def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     expected_api_key = "one key to rule them all"
 
-    mocker.patch.dict(anaconda_auth.token.MIGRATIONS, {"modern": "legacy"})
+    mocker.patch.dict(anaconda_auth.token.MIGRATIONS, {"modern": "legacy-0"})
 
     # First make a token in the keyring with the legacy domain
-    legacy_token = TokenInfo(api_key=expected_api_key, domain="legacy", version=None)
+    legacy_token = TokenInfo(api_key=expected_api_key, domain="legacy-0", version=None)
     assert legacy_token.version is None
     legacy_token.save()
 
-    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy-0")
     assert payload
 
     decoded = TokenInfo._decode(payload)
@@ -172,7 +172,7 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
     assert token.api_key == expected_api_key
     assert token.version == 1
 
-    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
+    payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy-0")
     assert payload is None
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "modern")
