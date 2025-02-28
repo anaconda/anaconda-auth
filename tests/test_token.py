@@ -1,10 +1,12 @@
 from pathlib import Path
 
+import keyring
 import pytest
 from keyring.errors import PasswordDeleteError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
+import anaconda_auth.token
 from anaconda_auth.actions import logout
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.token import TokenExpiredError
@@ -147,16 +149,12 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
 
 
 def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
-    import keyring
-
-    import anaconda_auth.token
+    expected_api_key = "one key to rule them all"
 
     mocker.patch.dict(anaconda_auth.token.MIGRATIONS, {"modern": "legacy"})
 
     # First make a token in the keyring with the legacy domain
-    legacy_token = TokenInfo(
-        api_key="one key to rule them all", domain="legacy", version=None
-    )
+    legacy_token = TokenInfo(api_key=expected_api_key, domain="legacy", version=None)
     assert legacy_token.version is None
     legacy_token.save()
 
@@ -171,7 +169,7 @@ def test_anaconda_keyring_domain_migration(mocker: MockerFixture) -> None:
 
     # Now when loaded the keyring username will switch from legacy to modern
     token = TokenInfo.load(domain="modern")
-    assert token.api_key == "one key to rule them all"
+    assert token.api_key == expected_api_key
     assert token.version == 1
 
     payload = keyring.get_password(anaconda_auth.token.KEYRING_NAME, "legacy")
