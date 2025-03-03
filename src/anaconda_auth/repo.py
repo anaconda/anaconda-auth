@@ -171,7 +171,9 @@ def list_tokens() -> None:
     repo_tokens = token_info.repo_tokens
 
     if not (tokens or repo_tokens):
-        console.print("No repo tokens are installed. Run `anaconda token install`.")
+        console.print(
+            "No repo tokens are installed. Run [cyan]anaconda token install[/cyan]."
+        )
         raise typer.Abort()
 
     _print_repo_token_table(tokens=repo_tokens, legacy_tokens=tokens)
