@@ -130,9 +130,8 @@ def configure_condarc() -> None:
 
     # We create a new object because we modified it since last backup
     condarc = CondaRC()
-    channel = Channel(channel_url)
     condarc.update_channel_settings(
-        channel.canonical_name, "anaconda-auth", username=None
+        "https://repo.anaconda.cloud/repo/*", "anaconda-auth", username=None
     )
     condarc.save()
 
