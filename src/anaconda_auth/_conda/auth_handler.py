@@ -20,6 +20,9 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
+# If the channel netloc matches the key, we look for a token stored under the value
+TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+
 
 class AnacondaAuthError(CondaError):
     """
@@ -42,9 +45,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
         parsed_url = urlparse(url)
-        domain = parsed_url.netloc.lower()
+        channel_domain = parsed_url.netloc.lower()
+        token_domain = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
         try:
-            token_info = TokenInfo.load(domain)
+            token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
