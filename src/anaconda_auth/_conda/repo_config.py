@@ -112,6 +112,9 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
 
 
 def configure_condarc() -> None:
+    condarc = CondaRC()
+    condarc.backup()
+
     # TODO: Review the hard-coding of channel URL here
     # TODO: Make the plugin name a constant somewhere
     # TODO: Integrate the contents of this module with condarc.py
@@ -125,8 +128,8 @@ def configure_condarc() -> None:
         # It's okay to ignore if we just can't remove a non-existent key
         pass
 
+    # We create a new object because we modified it since last backup
     condarc = CondaRC()
-    condarc.backup()
     channel = Channel(channel_url)
     condarc.update_channel_settings(
         channel.canonical_name, "anaconda-auth", username=None
