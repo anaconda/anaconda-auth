@@ -116,7 +116,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Raise a nice error message if the authentication token is invalid (not missing)."""
         if response.status_code == 403:
             raise AnacondaAuthError(
-                f"Token is invalid for {self.channel_name}. Please re-install token with "
+                f"Received authentication error (403) when accessing {self.channel_name}. "
+                "If your token is invalid or expired, please re-install with "
                 "`anaconda token install`."
             )
         return response
