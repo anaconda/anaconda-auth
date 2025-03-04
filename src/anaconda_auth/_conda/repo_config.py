@@ -13,6 +13,7 @@ import warnings
 from os.path import abspath
 from os.path import expanduser
 from os.path import join
+from typing import Any
 from urllib.parse import urljoin
 
 import conda
@@ -293,7 +294,9 @@ def _set_channel(
     run_command(Commands.CONFIG, *config_args)
 
 
-def _get_default_channels(
+def _get_from_condarc(
+    key: str,
+    default: Any = None,
     condarc_system: bool = False,
     condarc_env: bool = False,
     condarc_file: str | None = None,
@@ -303,7 +306,7 @@ def _get_default_channels(
     If the user does not have a "default_channels" section, an empty list is returned.
 
     """
-    config_args = ["--get", "default_channels", "--json"]
+    config_args = ["--get", key, "--json"]
 
     if condarc_system:
         config_args.append("--system")
@@ -322,7 +325,26 @@ def _get_default_channels(
     except json.JSONDecodeError:
         result = {}
 
-    return result.get("get", {}).get("default_channels", [])
+    return result.get("get", {}).get(key, default)
+
+
+def _get_default_channels(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> list[str]:
+    """Retrieve the existing default_channels from the user's `.condarc` file.
+
+    If the user does not have a "default_channels" section, an empty list is returned.
+
+    """
+    return _get_from_condarc(
+        "default_channels",
+        default=[],
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
 
 
 def _remove_default_channels(
