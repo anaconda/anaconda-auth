@@ -300,7 +300,7 @@ def _get_from_condarc(
     condarc_system: bool = False,
     condarc_env: bool = False,
     condarc_file: str | None = None,
-) -> list[str]:
+) -> Any:
     """Retrieve the existing default_channels from the user's `.condarc` file.
 
     If the user does not have a "default_channels" section, an empty list is returned.
