@@ -345,7 +345,7 @@ def test_get_repo_token_info_no_token(
     org_name: str, token_does_not_exist_in_service: None
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name=org_name)
+    token_info = client._get_repo_token_info(org_name=org_name)
     assert token_info is None
 
 
@@ -354,7 +354,7 @@ def test_get_repo_token_info_has_token(
     token_exists_in_service: TokenInfoResponse,
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name=org_name)
+    token_info = client._get_repo_token_info(org_name=org_name)
     assert token_info == token_exists_in_service
 
 
@@ -363,7 +363,7 @@ def test_create_repo_token_info_has_token(
     token_created_in_service: TokenCreateResponse,
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.create_repo_token(org_name=org_name)
+    token_info = client._create_repo_token(org_name=org_name)
     assert token_info == token_created_in_service
 
 
