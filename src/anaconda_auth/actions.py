@@ -170,10 +170,13 @@ def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
         headers["X-AAU-CLIENT"] = aau_token
 
     # Retry logic until we stabilize on new API
-    service_names = ["auth", "iam"]
-    for service_name in service_names:
+    urls = [
+        f"https://{config.auth_domain}/api/auth/api-keys",
+        f"https://{config.domain}/api/iam/api-keys",
+    ]
+    for url in urls:
         response = requests.post(
-            f"https://{config.domain}/api/{service_name}/api-keys",
+            url,
             json=dict(
                 scopes=["cloud:read", "cloud:write"],
                 tags=[f"anaconda-auth/v{__version__}"],
