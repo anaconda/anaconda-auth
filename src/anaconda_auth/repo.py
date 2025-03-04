@@ -254,6 +254,9 @@ def configure_conda(
     ),
 ) -> None:
     """Configure conda's default channels to access Anaconda's premium repository."""
+    from anaconda_auth._conda import repo_config
+
+    repo_config.configure_plugin()
     _set_default_channels(force=force)
 
 
