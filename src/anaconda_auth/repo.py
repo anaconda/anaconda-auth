@@ -158,13 +158,6 @@ def _select_org_name(client: RepoAPIClient) -> str:
     return name_map[org_title]
 
 
-def _set_default_channels(force: bool = False) -> None:
-    from anaconda_auth._conda import repo_config
-
-    console.print("Configuring your [cyan].condarc[/cyan] file")
-    repo_config.configure_default_channels(force=force)
-
-
 @app.callback(invoke_without_command=True, no_args_is_help=True)
 def main() -> None:
     """Manage your Anaconda repo tokens."""
@@ -237,7 +230,7 @@ def install_token(
     repo_config.configure_plugin()
 
     if set_default_channels:
-        _set_default_channels()
+        repo_config.configure_default_channels()
         msg += ", and conda has been configured"
 
     console.print(f"Success! {msg}.")
@@ -253,7 +246,7 @@ def configure_conda(
     from anaconda_auth._conda import repo_config
 
     repo_config.configure_plugin()
-    _set_default_channels(force=force)
+    repo_config.configure_default_channels(force=force)
 
 
 @app.command(name="uninstall")

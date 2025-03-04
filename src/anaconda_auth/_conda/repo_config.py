@@ -405,6 +405,8 @@ def configure_default_channels(
     4. Optionally add any of the archive channels:
        free, pro, mro, mro-archive
     """
+    console.print("Configuring your [cyan].condarc[/cyan] file")
+
     existing_default_channels = _get_default_channels()
 
     existing_default_channels_short_names = [
