@@ -385,7 +385,8 @@ def configure_default_channels(
     if not (force or _prompt_to_set_default_channels()):
         return
 
-    _remove_default_channels(condarc_system, condarc_env, condarc_file)
+    if _get_default_channels():
+        _remove_default_channels(condarc_system, condarc_env, condarc_file)
 
     if can_restore_free_channel():
         _unset_restore_free_channel(condarc_system, condarc_env, condarc_file)
