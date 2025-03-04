@@ -204,8 +204,8 @@ def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> 
 
     assert result.exit_code == 1
     assert (
-        "No repo tokens are installed. Run `anaconda token install`." in result.stdout
-    )
+        "No repo tokens are installed. Run anaconda token install." in result.stdout
+    ), result.stdout
     assert "Aborted." in result.stdout
 
 
