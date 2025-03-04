@@ -404,10 +404,21 @@ def configure_default_channels(
     4. Optionally add any of the archive channels:
        free, pro, mro, mro-archive
     """
+    existing_default_channels = _get_default_channels()
+
+    existing_default_channels_short_names = [
+        c.removeprefix(REPO_URL) for c in existing_default_channels
+    ]
+    if set(existing_default_channels_short_names) == set(
+        [MAIN_CHANNEL] + ACTIVE_CHANNELS
+    ):
+        console.print("Default channels already configured, nothing to do.")
+        return
+
     if not (force or _prompt_to_set_default_channels()):
         return
 
-    if _get_default_channels():
+    if existing_default_channels:
         _remove_default_channels(condarc_system, condarc_env, condarc_file)
 
     if can_restore_free_channel() and _get_from_condarc(
