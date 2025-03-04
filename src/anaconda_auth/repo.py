@@ -155,6 +155,17 @@ def _select_org_name(client: RepoAPIClient) -> str:
     return name_map[org_title]
 
 
+def _configure_condarc(force: bool = False) -> None:
+    from anaconda_auth._conda import repo_config
+
+    console.print("Configuring your [cyan].condarc[/cyan] file")
+    try:
+        repo_config.configure_default_channels(force=force)
+    except repo_config.CondaRCError as e:
+        console.print("Error configuring .condarc")
+        raise typer.Abort(e)
+
+
 @app.callback(invoke_without_command=True, no_args_is_help=True)
 def main() -> None:
     """Manage your Anaconda repo tokens."""
@@ -229,17 +240,6 @@ def install_token(
         msg += ", and conda has been configured"
 
     console.print(f"Success! {msg}.")
-
-
-def _configure_condarc(force: bool = False) -> None:
-    from anaconda_auth._conda import repo_config
-
-    console.print("Configuring your [cyan].condarc[/cyan] file")
-    try:
-        repo_config.configure_default_channels(force=force)
-    except repo_config.CondaRCError as e:
-        console.print("Error configuring .condarc")
-        raise typer.Abort(e)
 
 
 @app.command(name="config")
