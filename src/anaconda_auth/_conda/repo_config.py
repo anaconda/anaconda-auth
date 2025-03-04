@@ -380,11 +380,13 @@ def _prompt_to_set_default_channels() -> bool:
         console.print("Existing default channels found:")
         for c in existing_default_channels:
             console.print(f"- {c}")
-        ask = "Would you like to override the existing default_channels setting?"
+        console.print(
+            "This action will override the existing default_channels setting."
+        )
     else:
-        ask = "Would you like to set your default channels?"
+        console.print("Prepared to set default channels in .condarc.")
 
-    return Confirm.ask(ask, default=False)
+    return Confirm.ask("Proceed?", default=False)
 
 
 def configure_default_channels(

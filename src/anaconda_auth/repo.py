@@ -215,10 +215,7 @@ def install_token(
         console.print(
             "Reissuing a new token will revoke and deactivate any existing token access. This action can't be undone."
         )
-        should_continue = Confirm.ask(
-            "Would you like to issue a new token?",
-            default=False,
-        )
+        should_continue = Confirm.ask("Proceed?", default=False)
         if not should_continue:
             raise typer.Abort()
 
