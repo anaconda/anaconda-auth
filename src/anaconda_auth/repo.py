@@ -162,11 +162,7 @@ def _set_default_channels(force: bool = False) -> None:
     from anaconda_auth._conda import repo_config
 
     console.print("Configuring your [cyan].condarc[/cyan] file")
-    try:
-        repo_config.configure_default_channels(force=force)
-    except repo_config.CondaRCError as e:
-        console.print("Error configuring .condarc")
-        raise typer.Abort(e)
+    repo_config.configure_default_channels(force=force)
 
 
 @app.callback(invoke_without_command=True, no_args_is_help=True)

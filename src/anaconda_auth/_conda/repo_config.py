@@ -31,7 +31,6 @@ from packaging import version
 from rich.prompt import Confirm
 
 from anaconda_auth._conda.condarc import CondaRC
-from anaconda_auth._conda.condarc import CondaRCError as CondaRCError
 from anaconda_cli_base import console
 
 CONDA_VERSION = version.parse(conda.__version__)
