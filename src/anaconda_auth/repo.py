@@ -207,9 +207,12 @@ def install_token(
         console.print(
             f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
         )
+        console.print(
+            "Reissuing a new token will revoke and deactivate any existing token access. This action can't be undone."
+        )
         should_continue = Confirm.ask(
             "Would you like to issue a new token?",
-            default=True,
+            default=False,
         )
         if not should_continue:
             raise typer.Abort()
