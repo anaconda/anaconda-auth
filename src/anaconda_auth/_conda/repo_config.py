@@ -118,16 +118,15 @@ def configure_condarc() -> None:
     # TODO: Review the hard-coding of channel URL here
     # TODO: Make the plugin name a constant somewhere
     # TODO: Integrate the contents of this module with condarc.py
-    channel_url = "https://repo.anaconda.cloud/repo/main"
-    run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
+    # channel_url = "https://repo.anaconda.cloud/repo/main"
+    # run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
 
-    # Delete defaults from channels list
-    try:
-        run_command(Commands.CONFIG, "--remove", "channels", "defaults")
-    except CondaKeyError:
-        # It's okay to ignore if we just can't remove a non-existent key
-        pass
-
+    # # Delete defaults from channels list
+    # try:
+    #     run_command(Commands.CONFIG, "--remove", "channels", "defaults")
+    # except CondaKeyError:
+    #     # It's okay to ignore if we just can't remove a non-existent key
+    #     pass
     # We create a new object because we modified it since last backup
     condarc = CondaRC()
     condarc.update_channel_settings(
