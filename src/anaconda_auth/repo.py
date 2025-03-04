@@ -180,7 +180,10 @@ def list_tokens() -> None:
 
 
 @app.command(name="install")
-def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
+def install_token(
+    org_name: str = typer.Option("", "-o", "--org", help="Organization name (slug)."),
+    auto_config: bool = typer.Option(True, help="Automatically configure `.condarc`."),
+) -> None:
     """Create and install a new repository token."""
     client = RepoAPIClient()
 
@@ -217,14 +220,18 @@ def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     token_info.set_repo_token(org_name, response.token)
     token_info.save()
 
-    console.print("Configuring your [cyan].condarc[/cyan] file")
-    try:
-        repo_config.configure_condarc()
-    except repo_config.CondaRCError as e:
-        console.print("Error configuring .condarc")
-        raise typer.Abort(e)
+    msg = "Your token has been installed and validated"
 
-    console.print("Success! Your token was validated and conda has been configured.")
+    if auto_config:
+        console.print("Configuring your [cyan].condarc[/cyan] file")
+        try:
+            repo_config.configure_condarc()
+        except repo_config.CondaRCError as e:
+            console.print("Error configuring .condarc")
+            raise typer.Abort(e)
+        msg += ", and conda has been configured"
+
+    console.print(f"Success! {msg}.")
 
 
 @app.command(name="uninstall")
