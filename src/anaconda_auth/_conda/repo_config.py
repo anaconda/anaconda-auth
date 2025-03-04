@@ -116,51 +116,19 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
         )
 
 
-def configure_condarc(should_set_default_channels: bool = False) -> None:
-    """Configure the user's .condarc file.
+def configure_plugin(should_set_default_channels: bool = False) -> None:
+    """Configure the user's .condarc file with the anaconda-auth plugin.
 
     We install the auth-handler plugin by writing the "channel_settings" key and associate
-    all premium repo channels with this auth handler. Additionally, we prompt the user for
-    whether they would like to set their default channels.
-
-    Args:
-        should_set_default_channels: If True, the user will not be prompted and the default
-            channels will be set automatically.
+    all premium repo channels with this auth handler.
 
     """
     condarc = CondaRC()
     condarc.backup()
-
-    # TODO: Review the hard-coding of channel URL here
-    # TODO: Make the plugin name a constant somewhere
-    # TODO: Integrate the contents of this module with condarc.py
-    # channel_url = "https://repo.anaconda.cloud/repo/main"
-    # run_command(Commands.CONFIG, "--prepend", "channels", channel_url)
-
-    # # Delete defaults from channels list
-    # try:
-    #     run_command(Commands.CONFIG, "--remove", "channels", "defaults")
-    # except CondaKeyError:
-    #     # It's okay to ignore if we just can't remove a non-existent key
-    #     pass
-    # We create a new object because we modified it since last backup
-    condarc = CondaRC()
     condarc.update_channel_settings(
         "https://repo.anaconda.cloud/repo/*", "anaconda-auth", username=None
     )
     condarc.save()
-
-    existing_default_channels = _get_default_channels()
-    if existing_default_channels:
-        console.print("Existing default channels found:")
-        for c in existing_default_channels:
-            console.print(f"- {c}")
-        ask = "Would you like to override the existing default_channels setting?"
-    else:
-        ask = "Would you like to set your default channels?"
-
-    if should_set_default_channels or Confirm.ask(ask, default=False):
-        configure_default_channels()
 
 
 def enable_extra_safety_checks(
@@ -383,11 +351,26 @@ def _remove_default_channels(
         pass
 
 
+def _prompt_to_set_default_channels() -> None:
+    """Prompt the user for whether they would like to set their default channels."""
+    existing_default_channels = _get_default_channels()
+    if existing_default_channels:
+        console.print("Existing default channels found:")
+        for c in existing_default_channels:
+            console.print(f"- {c}")
+        ask = "Would you like to override the existing default_channels setting?"
+    else:
+        ask = "Would you like to set your default channels?"
+
+    return Confirm.ask(ask, default=False)
+
+
 def configure_default_channels(
     condarc_system: bool = False,
     condarc_env: bool = False,
     condarc_file: str | None = None,
     include_archive_channels: list[str] | None = None,
+    force: bool = False,
 ) -> None:
     """Configure the default_channels to utilize only Commercial Edition.
 
@@ -399,6 +382,9 @@ def configure_default_channels(
     4. Optionally add any of the archive channels:
        free, pro, mro, mro-archive
     """
+    if not (force or _prompt_to_set_default_channels()):
+        return
+
     _remove_default_channels(condarc_system, condarc_env, condarc_file)
 
     if can_restore_free_channel():

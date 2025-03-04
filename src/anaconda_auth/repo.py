@@ -222,16 +222,34 @@ def install_token(
 
     msg = "Your token has been installed and validated"
 
+    repo_config.configure_plugin()
+
     if auto_config:
-        console.print("Configuring your [cyan].condarc[/cyan] file")
-        try:
-            repo_config.configure_condarc()
-        except repo_config.CondaRCError as e:
-            console.print("Error configuring .condarc")
-            raise typer.Abort(e)
+        _configure_condarc()
         msg += ", and conda has been configured"
 
     console.print(f"Success! {msg}.")
+
+
+def _configure_condarc(force: bool = False) -> None:
+    from anaconda_auth._conda import repo_config
+
+    console.print("Configuring your [cyan].condarc[/cyan] file")
+    try:
+        repo_config.configure_default_channels(force=force)
+    except repo_config.CondaRCError as e:
+        console.print("Error configuring .condarc")
+        raise typer.Abort(e)
+
+
+@app.command(name="config")
+def configure_conda(
+    force: bool = typer.Option(
+        False, help="Force configuration of default channels without prompt."
+    ),
+) -> None:
+    """Configure conda's default channels to access Anaconda's premium repository."""
+    _configure_condarc(force=force)
 
 
 @app.command(name="uninstall")
