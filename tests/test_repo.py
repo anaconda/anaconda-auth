@@ -234,7 +234,10 @@ def test_token_install_does_not_exist_yet(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", option_flag, org_name])
+    result = invoke_cli(
+        ["token", "install", option_flag, org_name],
+        input="y\n",
+    )
     assert result.exit_code == 0
 
     token_info = TokenInfo.load()
