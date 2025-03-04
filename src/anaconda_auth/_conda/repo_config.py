@@ -4,6 +4,9 @@ Configure Conda to use Anaconda Commercial Edition.
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import os
 import sys
 import warnings
@@ -24,9 +27,11 @@ from conda.gateways.anaconda_client import set_binstar_token
 from conda.gateways.connection.session import CondaSession
 from conda.models.channel import Channel
 from packaging import version
+from rich.prompt import Confirm
 
 from anaconda_auth._conda.condarc import CondaRC
 from anaconda_auth._conda.condarc import CondaRCError as CondaRCError
+from anaconda_cli_base import console
 
 CONDA_VERSION = version.parse(conda.__version__)
 
@@ -111,7 +116,18 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
         )
 
 
-def configure_condarc() -> None:
+def configure_condarc(should_set_default_channels: bool = False) -> None:
+    """Configure the user's .condarc file.
+
+    We install the auth-handler plugin by writing the "channel_settings" key and associate
+    all premium repo channels with this auth handler. Additionally, we prompt the user for
+    whether they would like to set their default channels.
+
+    Args:
+        should_set_default_channels: If True, the user will not be prompted and the default
+            channels will be set automatically.
+
+    """
     condarc = CondaRC()
     condarc.backup()
 
@@ -133,6 +149,18 @@ def configure_condarc() -> None:
         "https://repo.anaconda.cloud/repo/*", "anaconda-auth", username=None
     )
     condarc.save()
+
+    existing_default_channels = _get_default_channels()
+    if existing_default_channels:
+        console.print("Existing default channels found:")
+        for c in existing_default_channels:
+            console.print(f"- {c}")
+        ask = "Would you like to override the existing default_channels setting?"
+    else:
+        ask = "Would you like to set your default channels?"
+
+    if should_set_default_channels or Confirm.ask(ask, default=False):
+        configure_default_channels()
 
 
 def enable_extra_safety_checks(
@@ -295,6 +323,38 @@ def _set_channel(
         config_args.append(f"--file={condarc_file}")
 
     run_command(Commands.CONFIG, *config_args)
+
+
+def _get_default_channels(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> list[str]:
+    """Retrieve the existing default_channels from the user's `.condarc` file.
+
+    If the user does not have a "default_channels" section, an empty list is returned.
+
+    """
+    config_args = ["--get", "default_channels", "--json"]
+
+    if condarc_system:
+        config_args.append("--system")
+    elif condarc_env:
+        config_args.append("--env")
+    elif condarc_file:
+        config_args.append(f"--file={condarc_file}")
+
+    # Capture the JSON output from stdout
+    string_io = io.StringIO()
+    with contextlib.redirect_stdout(string_io):
+        run_command(Commands.CONFIG, *config_args)
+
+    try:
+        result = json.loads(string_io.getvalue())
+    except json.JSONDecodeError:
+        result = {}
+
+    return result.get("get", {}).get("default_channels", [])
 
 
 def _remove_default_channels(
