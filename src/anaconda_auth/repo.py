@@ -43,8 +43,6 @@ class RepoAPIClient(BaseClient):
     def __init__(self) -> None:
         super().__init__()
         self._access_token: str | None = None
-        if self.auth.api_key is None:  # type: ignore
-            self._ensure_access_token()
 
     def _ensure_access_token(self) -> None:
         """Some endpoints do not accept API keys, so this method ensures we perform
@@ -55,7 +53,7 @@ class RepoAPIClient(BaseClient):
         self._access_token = _do_auth_flow()
         self.auth.api_key = self._access_token  # type: ignore
 
-    def get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
+    def _get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
         """Return the token information, if it exists.
 
         Args:
@@ -74,7 +72,7 @@ class RepoAPIClient(BaseClient):
         response.raise_for_status()
         return TokenInfoResponse(**response.json())
 
-    def create_repo_token(self, org_name: str) -> TokenCreateResponse:
+    def _create_repo_token(self, org_name: str) -> TokenCreateResponse:
         """Create a new repo token.
 
         Args:
@@ -89,6 +87,28 @@ class RepoAPIClient(BaseClient):
             json={"confirm": "yes"},
         )
         return TokenCreateResponse(**response.json())
+
+    def issue_new_token(self, org_name: str) -> str:
+        """Issue a new repository token from anaconda.com."""
+        existing_token_info = self._get_repo_token_info(org_name=org_name)
+
+        if existing_token_info is not None:
+            console.print(
+                f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
+            )
+            console.print(
+                "Reissuing a new token will revoke and deactivate any existing token access. This action can't be undone."
+            )
+            should_continue = Confirm.ask("Proceed?", default=False)
+            if not should_continue:
+                raise typer.Abort()
+
+        response = self._create_repo_token(org_name=org_name)
+
+        console.print(
+            f"Your conda token is: [cyan]{response.token}[/cyan], which expires [cyan]{response.expires_at}[/cyan]"
+        )
+        return response.token
 
     def get_organizations_for_user(self) -> list[OrganizationData]:
         """Get a list of all organizations the user belongs to."""
@@ -118,8 +138,11 @@ def _print_repo_token_table(
     table.add_column("Channel URL")
     table.add_column("Token")
 
+    from anaconda_auth._conda.repo_config import REPO_URL
+
     for repo_token in tokens:
-        table.add_row(repo_token.org_name, None, repo_token.token)
+        channel_url = f"{REPO_URL}{repo_token.org_name}/*"
+        table.add_row(repo_token.org_name, channel_url, repo_token.token)
 
     for url, token in legacy_tokens.items():
         table.add_row(None, url, token)
@@ -170,52 +193,67 @@ def list_tokens() -> None:
     token_info = TokenInfo.load()
     repo_tokens = token_info.repo_tokens
 
-    if not tokens:
-        console.print("No repo tokens are installed. Run `anaconda token install`.")
+    if not (tokens or repo_tokens):
+        console.print(
+            "No repo tokens are installed. Run [cyan]anaconda token install[/cyan]."
+        )
         raise typer.Abort()
 
     _print_repo_token_table(tokens=repo_tokens, legacy_tokens=tokens)
 
 
 @app.command(name="install")
-def install_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
+def install_token(
+    token: str = typer.Argument(
+        "", help="Optionally, provide the token received via email or web interface."
+    ),
+    org_name: str = typer.Option("", "-o", "--org", help="Organization name (slug)."),
+    set_default_channels: bool = typer.Option(
+        True, help="Automatically configure default channels."
+    ),
+) -> None:
     """Create and install a new repository token."""
     client = RepoAPIClient()
 
     if not org_name:
         org_name = _select_org_name(client)
 
-    existing_token_info = client.get_repo_token_info(org_name=org_name)
-
-    if existing_token_info is not None:
-        console.print(
-            f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
-        )
-        should_continue = Confirm.ask(
-            "Would you like to issue a new token?",
-            default=True,
-        )
-        if not should_continue:
-            raise typer.Abort()
-
-    response = client.create_repo_token(org_name=org_name)
-
-    console.print(
-        f"Your conda token is: [cyan]{response.token}[/cyan], which expires [cyan]{response.expires_at}[/cyan]"
-    )
+    if not token:
+        token = client.issue_new_token(org_name=org_name)
 
     from anaconda_auth._conda import repo_config
 
     try:
-        repo_config.validate_token(response.token, no_ssl_verify=False)
+        repo_config.validate_token(token, no_ssl_verify=False)
     except repo_config.CondaTokenError as e:
         raise typer.Abort(e)
 
     token_info = TokenInfo.load(create=True)
-    token_info.set_repo_token(org_name, response.token)
+    token_info.set_repo_token(org_name, token)
     token_info.save()
 
-    console.print("Success! Your token was validated and conda has been configured.")
+    msg = "Your token has been installed and validated"
+
+    repo_config.configure_plugin()
+
+    if set_default_channels:
+        repo_config.configure_default_channels()
+        msg += ", and conda has been configured"
+
+    console.print(f"Success! {msg}.")
+
+
+@app.command(name="config")
+def configure_conda(
+    force: bool = typer.Option(
+        False, help="Force configuration of default channels without prompt."
+    ),
+) -> None:
+    """Configure conda's default channels to access Anaconda's premium repository."""
+    from anaconda_auth._conda import repo_config
+
+    repo_config.configure_plugin()
+    repo_config.configure_default_channels(force=force)
 
 
 @app.command(name="uninstall")

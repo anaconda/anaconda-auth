@@ -20,6 +20,9 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
+# If the channel netloc matches the key, we look for a token stored under the value
+TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+
 
 class AnacondaAuthError(CondaError):
     """
@@ -42,9 +45,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
         parsed_url = urlparse(url)
-        domain = parsed_url.netloc.lower()
+        channel_domain = parsed_url.netloc.lower()
+        token_domain = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
         try:
-            token_info = TokenInfo.load(domain)
+            token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
@@ -112,13 +116,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Raise a nice error message if the authentication token is invalid (not missing)."""
         if response.status_code == 403:
             raise AnacondaAuthError(
-                f"Token is invalid for {self.channel_name}. Please re-install token with "
+                f"Received authentication error (403) when accessing {self.channel_name}. "
+                "If your token is invalid or expired, please re-install with "
                 "`anaconda token install`."
             )
         return response
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        request.headers["Authorization"] = f"token {self._load_token(request.url)}"
         request.register_hook("response", self.handle_invalid_token)
+        token = self._load_token(request.url)
+        request.headers["Authorization"] = f"token {token}"
         return request
