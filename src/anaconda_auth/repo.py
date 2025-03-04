@@ -118,8 +118,11 @@ def _print_repo_token_table(
     table.add_column("Channel URL")
     table.add_column("Token")
 
+    from anaconda_auth._conda.repo_config import REPO_URL
+
     for repo_token in tokens:
-        table.add_row(repo_token.org_name, None, repo_token.token)
+        channel_url = f"{REPO_URL}{repo_token.org_name}/*"
+        table.add_row(repo_token.org_name, channel_url, repo_token.token)
 
     for url, token in legacy_tokens.items():
         table.add_row(None, url, token)
