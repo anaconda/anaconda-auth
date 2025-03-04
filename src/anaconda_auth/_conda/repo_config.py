@@ -126,7 +126,7 @@ def configure_plugin(should_set_default_channels: bool = False) -> None:
     condarc = CondaRC()
     condarc.backup()
     condarc.update_channel_settings(
-        "https://repo.anaconda.cloud/repo/*", "anaconda-auth", username=None
+        "https://repo.anaconda.cloud/*", "anaconda-auth", username=None
     )
     condarc.save()
 
