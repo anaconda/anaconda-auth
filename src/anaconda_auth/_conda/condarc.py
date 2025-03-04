@@ -23,6 +23,10 @@ class CondaRC:
         self._loaded_yaml: dict[str, Any] = {}
         self.load()
 
+    @property
+    def _backup_condarc_path(self) -> Path:
+        return self.condarc_path.with_suffix(".bak")
+
     def load(self, path: Path | None = None) -> None:
         path = path or self.condarc_path
         try:
@@ -67,11 +71,11 @@ class CondaRC:
         self._loaded_yaml["channel_settings"] = filter_settings
 
     def restore(self) -> None:
-        self.load(self.condarc_path.with_suffix(".bak"))
+        self.load(self._backup_condarc_path)
         self.save()
 
     def backup(self) -> None:
-        self.save(self.condarc_path.with_suffix(".bak"))
+        self.save(self._backup_condarc_path)
 
     def save(self, path: Path | None = None) -> None:
         """Save the condarc file"""
