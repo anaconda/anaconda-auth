@@ -67,13 +67,13 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
 
         """
         if self.auth_domain_override:
-            return f"https://{self.auth_domain_override}"
-        return f"https://auth.{self.domain}"
+            return self.auth_domain_override
+        return f"auth.{self.domain}"
 
     @property
     def well_known_url(self) -> str:
         """The URL from which to load the OpenID configuration."""
-        return urljoin(self.auth_domain, self.openid_config_path)
+        return urljoin(f"https://{self.auth_domain}", self.openid_config_path)
 
     @property
     def oidc(self) -> "OpenIDConfiguration":
