@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 from uuid import uuid4
 
+import jwt
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
@@ -33,6 +34,11 @@ def business_org_id() -> UUID:
 @pytest.fixture(autouse=True)
 def token_info():
     token_info = TokenInfo.load(create=True)
+    # The important part is that the key is not expired. If this still exists in
+    # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
+    token_info.api_key = jwt.encode(
+        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+    )
     token_info.save()
     return token_info
 
@@ -139,7 +145,9 @@ def user_has_multiple_orgs(
 
 
 @pytest.fixture()
-def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
+def user_has_no_orgs(
+    requests_mock: RequestMocker, user_has_no_subscriptions: None
+) -> list[OrganizationData]:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[],
@@ -152,7 +160,7 @@ def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
 )
 def user_has_business_subscription(
     request, requests_mock: RequestMocker, org_name: str, business_org_id: UUID
-) -> TokenCreateResponse:
+) -> None:
     requests_mock.get(
         "https://anaconda.com/api/account",
         json={
@@ -169,7 +177,7 @@ def user_has_business_subscription(
 @pytest.fixture()
 def user_has_starter_subscription(
     request, requests_mock: RequestMocker, business_org_id: UUID
-) -> TokenCreateResponse:
+) -> None:
     requests_mock.get(
         "https://anaconda.com/api/account",
         json={
@@ -181,6 +189,11 @@ def user_has_starter_subscription(
             ]
         },
     )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
 
 
 @pytest.fixture(autouse=True)
@@ -254,7 +267,7 @@ def test_token_install_exists_already_accept(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", option_flag, org_name], input="y")
+    result = invoke_cli(["token", "install", option_flag, org_name], input="y\ny\n")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
@@ -286,7 +299,7 @@ def test_token_install_no_available_org(
 ) -> None:
     result = invoke_cli(["token", "install"])
     assert result.exit_code == 1, result.stdout
-    assert "No organizations found." in result.stdout
+    assert "No organizations found." in result.stdout, result.stdout
     assert "Aborted." in result.stdout
 
 
@@ -372,7 +385,7 @@ def test_create_repo_token_info_has_token(
 
 def test_get_organizations_for_user(user_has_one_org: list[OrganizationData]) -> None:
     client = RepoAPIClient()
-    organizations = client._get_organizations_for_user()
+    organizations = client.get_organizations_for_user()
     assert organizations == user_has_one_org
 
 
