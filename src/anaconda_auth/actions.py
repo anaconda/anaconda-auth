@@ -169,16 +169,24 @@ def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
     if aau_token is not None:
         headers["X-AAU-CLIENT"] = aau_token
 
-    response = requests.post(
+    # Retry logic until we stabilize on new API
+    urls = [
+        f"https://{config.auth_domain}/api/auth/api-keys",
         f"https://{config.domain}/api/iam/api-keys",
-        json=dict(
-            scopes=["cloud:read", "cloud:write"],
-            tags=[f"anaconda-auth/v{__version__}"],
-        ),
-        headers=headers,
-        verify=ssl_verify,
-    )
-    if response.status_code != 201:
+    ]
+    for url in urls:
+        response = requests.post(
+            url,
+            json=dict(
+                scopes=["cloud:read", "cloud:write"],
+                tags=[f"anaconda-auth/v{__version__}"],
+            ),
+            headers=headers,
+            verify=ssl_verify,
+        )
+        if response.status_code == 201:
+            break
+    else:
         console.print("Error retrieving an API key")
         raise AuthenticationError
     return response.json()["api_key"]
