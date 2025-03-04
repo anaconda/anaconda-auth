@@ -6,6 +6,8 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
 
+from anaconda_cli_base import console
+
 yaml = YAML()
 
 
@@ -71,10 +73,12 @@ class CondaRC:
         self._loaded_yaml["channel_settings"] = filter_settings
 
     def restore(self) -> None:
+        console.print(f"Restoring config from {self._backup_condarc_path}")
         self.load(self._backup_condarc_path)
         self.save()
 
     def backup(self) -> None:
+        console.print(f"Backing up config to {self._backup_condarc_path}")
         self.save(self._backup_condarc_path)
 
     def save(self, path: Path | None = None) -> None:
