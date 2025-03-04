@@ -372,7 +372,7 @@ def test_create_repo_token_info_has_token(
 
 def test_get_organizations_for_user(user_has_one_org: list[OrganizationData]) -> None:
     client = RepoAPIClient()
-    organizations = client.get_organizations_for_user()
+    organizations = client._get_organizations_for_user()
     assert organizations == user_has_one_org
 
 
