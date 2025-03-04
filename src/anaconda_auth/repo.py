@@ -43,8 +43,6 @@ class RepoAPIClient(BaseClient):
     def __init__(self) -> None:
         super().__init__()
         self._access_token: str | None = None
-        if self.auth.api_key is None:  # type: ignore
-            self._ensure_access_token()
 
     def _ensure_access_token(self) -> None:
         """Some endpoints do not accept API keys, so this method ensures we perform
