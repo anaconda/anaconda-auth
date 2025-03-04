@@ -351,7 +351,7 @@ def _remove_default_channels(
         pass
 
 
-def _prompt_to_set_default_channels() -> None:
+def _prompt_to_set_default_channels() -> bool:
     """Prompt the user for whether they would like to set their default channels."""
     existing_default_channels = _get_default_channels()
     if existing_default_channels:
