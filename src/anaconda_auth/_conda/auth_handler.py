@@ -67,7 +67,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # Return the first one, assuming this is not an org-specific channel
         try:
             return token_info.repo_tokens[0].token
-        except KeyError:
+        except IndexError:
             pass
 
         return None
