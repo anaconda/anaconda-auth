@@ -1,5 +1,6 @@
 import sys
 from textwrap import dedent
+from typing import Optional
 
 import typer
 from requests.exceptions import HTTPError
@@ -98,13 +99,46 @@ app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth com
 
 
 @app.callback(invoke_without_command=True)
-def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
+def main(
+    version: bool = typer.Option(False, "-V", "--version"),
+    name: Optional[str] = typer.Option(
+        None,
+        "-n",
+        "--name",
+        hidden=True,
+    ),
+    organization: Optional[str] = typer.Option(
+        None,
+        "-o",
+        "--org",
+        "--organization",
+        hidden=True,
+    ),
+    info: Optional[bool] = typer.Option(
+        None,
+        "-i",
+        "--info",
+        "--current-info",
+        hidden=True,
+    ),
+) -> None:
     if version:
         console.print(
             f"anaconda-auth, version [cyan]{__version__}[/cyan]",
             style="bold green",
         )
         raise typer.Exit()
+
+    if name or organization or info:
+        # If any of the anaconda-client options are passed, try to delegate to
+        # binstar_main if it exists. Otherwise, we just exit gracefully.
+
+        try:
+            from binstar_client.scripts.cli import main as binstar_main
+        except (ImportError, ModuleNotFoundError):
+            return
+
+        binstar_main(sys.argv[1:], allow_plugin_main=False)
 
 
 @app.command("login")

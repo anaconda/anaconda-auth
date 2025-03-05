@@ -1,3 +1,4 @@
+import sys
 from typing import Generator
 
 import pytest
@@ -107,3 +108,40 @@ def test_http_error_general(
 
     assert "404 Client Error" in result.stdout
     assert result.exit_code == 1
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        ("-n", "someuser"),
+        ("--name", "someuser"),
+        ("-o", "someorg"),
+        ("--org", "someorg"),
+        ("--organization", "someorg"),
+        ("-i",),
+        ("--info",),
+        ("--current-info",),
+    ],
+)
+def test_fallback_to_anaconda_client(
+    options: tuple[str],
+    invoke_cli: CLIInvoker,
+    monkeypatch: MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """We fallback to anaconda-client for token management if any of its options are passed."""
+    binstar_main = mocker.patch("binstar_client.scripts.cli.main")
+
+    # Construct the CLI arguments
+    args = ["auth", *options]
+
+    # We need to override sys.argv since these get set by pytest
+    monkeypatch.setattr(sys, "argv", ["some-anaconda-bin", *args])
+
+    # Run the equivalent of `anaconda auth <options...>`
+    result = invoke_cli(args)
+    assert result.exit_code == 0
+
+    # Calls are delegated to anaconda-client
+    binstar_main.assert_called_once()
+    binstar_main.assert_called_once_with(args, allow_plugin_main=False)
