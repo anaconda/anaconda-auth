@@ -1,4 +1,5 @@
 import sys
+import warnings
 from textwrap import dedent
 from typing import Optional
 
@@ -218,6 +219,14 @@ def main(
             from binstar_client.scripts.cli import main as binstar_main
         except (ImportError, ModuleNotFoundError):
             return
+
+        console.print(
+            "[yellow]DeprecationWarning[/yellow]: Please use [cyan]anaconda org auth[/cyan] instead for explicit management of anaconda.org auth tokens\n"
+        )
+        warnings.warn(
+            "Please use `anaconda org auth` instead for explicit management of anaconda.org auth tokens",
+            DeprecationWarning,
+        )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
 
