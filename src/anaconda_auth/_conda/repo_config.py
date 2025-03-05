@@ -500,6 +500,7 @@ def token_set(
     include_archive_channels: list[str] | None = None,
     no_ssl_verify: bool = False,
     enable_signature_verification: bool = False,
+    force: bool = False,
 ) -> None:
     """Set the Commercial Edition token and configure default_channels.
 
@@ -522,5 +523,5 @@ def token_set(
     if enable_signature_verification:
         enable_extra_safety_checks(system, env, file)
 
-    configure_default_channels(system, env, file, include_archive_channels)
+    configure_default_channels(system, env, file, include_archive_channels, force=force)
     clean_index()

@@ -16,7 +16,7 @@ def test_token_set_no_verify_ssl(remove_token_no_repo_url_mock, secret_token, ca
 def test_token_set_no_verify_ssl_mock_server(
     remove_token, secret_token, capsys, repo_url
 ):
-    cli(["set", "--no-ssl-verify", secret_token])
+    cli(["set", "--no-ssl-verify", "--force-config-condarc", secret_token])
     ret = cli(["list"])
     assert ret == 0
     captured = capsys.readouterr()
