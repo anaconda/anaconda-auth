@@ -103,6 +103,10 @@ module = "anaconda_anon_usage.*"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
+module = "binstar_client.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
 module = "semver.*"
 
 [[tool.mypy.overrides]]
