@@ -114,6 +114,68 @@ def main(
         "--organization",
         hidden=True,
     ),
+    strength: Optional[str] = typer.Option(
+        None,
+        "--strength",
+        hidden=True,
+    ),
+    strong: Optional[bool] = typer.Option(
+        None,
+        "--strong",
+        hidden=True,
+    ),
+    weak: Optional[bool] = typer.Option(
+        None,
+        "--strong",
+        "-w",
+        "--weak",
+        hidden=True,
+    ),
+    url: Optional[str] = typer.Option(
+        None,
+        "--url",
+        hidden=True,
+    ),
+    max_age: Optional[str] = typer.Option(
+        None,
+        "--max-age",
+        hidden=True,
+    ),
+    scopes: Optional[str] = typer.Option(
+        None,
+        "-s",
+        "--scopes",
+        hidden=True,
+    ),
+    out: Optional[str] = typer.Option(
+        None,
+        "--out",
+        hidden=True,
+    ),
+    list_scopes: Optional[bool] = typer.Option(
+        None,
+        "-x",
+        "--list-scopes",
+        hidden=True,
+    ),
+    list_tokens: Optional[bool] = typer.Option(
+        None,
+        "-l",
+        "--list",
+        hidden=True,
+    ),
+    remove: Optional[str] = typer.Option(
+        None,
+        "-r",
+        "--remove",
+        hidden=True,
+    ),
+    create: Optional[bool] = typer.Option(
+        None,
+        "-c",
+        "--create",
+        hidden=True,
+    ),
     info: Optional[bool] = typer.Option(
         None,
         "-i",
@@ -129,7 +191,26 @@ def main(
         )
         raise typer.Exit()
 
-    if name or organization or info:
+    has_options = any(
+        value is not None
+        for value in (
+            name,
+            organization,
+            strength,
+            strong,
+            weak,
+            url,
+            max_age,
+            scopes,
+            out,
+            list_scopes,
+            list_tokens,
+            remove,
+            create,
+            info,
+        )
+    )
+    if has_options:
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 

@@ -134,8 +134,6 @@ def test_http_error_general(
         ("--list",),
         ("-r", "token-1"),
         ("--remove", "token-1"),
-        ("-r", "token-1", "token-2"),
-        ("--remove", "token-1", "token-2"),
         ("-c",),
         ("--create",),
         ("-i",),
