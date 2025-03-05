@@ -45,7 +45,7 @@ def set_ssl_verify_true():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(autouse=True, scope="function")
 def remove_token(repo_url):
     token_remove()
     yield
