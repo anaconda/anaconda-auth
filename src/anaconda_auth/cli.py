@@ -1,5 +1,7 @@
 import sys
+import warnings
 from textwrap import dedent
+from typing import Optional
 
 import typer
 from requests.exceptions import HTTPError
@@ -98,13 +100,135 @@ app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth com
 
 
 @app.callback(invoke_without_command=True)
-def main(version: bool = typer.Option(False, "-V", "--version")) -> None:
+def main(
+    version: bool = typer.Option(False, "-V", "--version"),
+    name: Optional[str] = typer.Option(
+        None,
+        "-n",
+        "--name",
+        hidden=True,
+    ),
+    organization: Optional[str] = typer.Option(
+        None,
+        "-o",
+        "--org",
+        "--organization",
+        hidden=True,
+    ),
+    strength: Optional[str] = typer.Option(
+        None,
+        "--strength",
+        hidden=True,
+    ),
+    strong: Optional[bool] = typer.Option(
+        None,
+        "--strong",
+        hidden=True,
+    ),
+    weak: Optional[bool] = typer.Option(
+        None,
+        "--strong",
+        "-w",
+        "--weak",
+        hidden=True,
+    ),
+    url: Optional[str] = typer.Option(
+        None,
+        "--url",
+        hidden=True,
+    ),
+    max_age: Optional[str] = typer.Option(
+        None,
+        "--max-age",
+        hidden=True,
+    ),
+    scopes: Optional[str] = typer.Option(
+        None,
+        "-s",
+        "--scopes",
+        hidden=True,
+    ),
+    out: Optional[str] = typer.Option(
+        None,
+        "--out",
+        hidden=True,
+    ),
+    list_scopes: Optional[bool] = typer.Option(
+        None,
+        "-x",
+        "--list-scopes",
+        hidden=True,
+    ),
+    list_tokens: Optional[bool] = typer.Option(
+        None,
+        "-l",
+        "--list",
+        hidden=True,
+    ),
+    remove: Optional[str] = typer.Option(
+        None,
+        "-r",
+        "--remove",
+        hidden=True,
+    ),
+    create: Optional[bool] = typer.Option(
+        None,
+        "-c",
+        "--create",
+        hidden=True,
+    ),
+    info: Optional[bool] = typer.Option(
+        None,
+        "-i",
+        "--info",
+        "--current-info",
+        hidden=True,
+    ),
+) -> None:
     if version:
         console.print(
             f"anaconda-auth, version [cyan]{__version__}[/cyan]",
             style="bold green",
         )
         raise typer.Exit()
+
+    has_options = any(
+        value is not None
+        for value in (
+            name,
+            organization,
+            strength,
+            strong,
+            weak,
+            url,
+            max_age,
+            scopes,
+            out,
+            list_scopes,
+            list_tokens,
+            remove,
+            create,
+            info,
+        )
+    )
+    if has_options:
+        # If any of the anaconda-client options are passed, try to delegate to
+        # binstar_main if it exists. Otherwise, we just exit gracefully.
+
+        try:
+            from binstar_client.scripts.cli import main as binstar_main
+        except (ImportError, ModuleNotFoundError):
+            return
+
+        console.print(
+            "[yellow]DeprecationWarning[/yellow]: Please use [cyan]anaconda org auth[/cyan] instead for explicit management of anaconda.org auth tokens\n"
+        )
+        warnings.warn(
+            "Please use `anaconda org auth` instead for explicit management of anaconda.org auth tokens",
+            DeprecationWarning,
+        )
+
+        binstar_main(sys.argv[1:], allow_plugin_main=False)
 
 
 @app.command("login")
