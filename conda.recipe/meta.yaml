@@ -32,6 +32,7 @@ outputs:
         {% endfor %}
       run_constrained:
         - {{ pin_subpackage("anaconda-cloud-auth", exact=True) }}
+        - conda-token >=0.6.0
     test:
       imports:
         - anaconda_auth
