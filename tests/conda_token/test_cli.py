@@ -10,7 +10,7 @@ from anaconda_auth._conda.repo_config import CondaVersionWarning
 def test_token_set_no_verify_ssl(remove_token_no_repo_url_mock, secret_token, capsys):
     # real InsecureRequestWarning against real server
     with pytest.warns(urllib3.exceptions.InsecureRequestWarning):
-        cli(["set", "--no-ssl-verify", secret_token])
+        cli(["set", "--no-ssl-verify", secret_token, "--force-config-condarc"])
 
 
 def test_token_set_no_verify_ssl_mock_server(
