@@ -74,7 +74,7 @@ def set_dummy_token(repo_url):
 def set_secret_token():
     token_remove()
     secret_token = os.environ.get("CE_TOKEN", "")
-    token_set(secret_token)
+    token_set(secret_token, force=True)
     yield
     token_remove()
 
