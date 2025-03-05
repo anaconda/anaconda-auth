@@ -18,6 +18,22 @@ def pytest_configure(config):
     warnings.filterwarnings("always")
 
 
+@pytest.fixture(scope="session")
+def test_server_url() -> str:
+    """Run a test server, and return its URL."""
+    from . import testing_server
+
+    return testing_server.run_server()
+
+
+@pytest.fixture
+def repo_url(test_server_url: str) -> str:
+    repo_url = test_server_url + "/repo/"
+    with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
+        with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
+            yield repo_url
+
+
 @pytest.fixture(scope="session", autouse=True)
 def reset_channels_alias():
     clean_index()
@@ -124,18 +140,3 @@ def channeldata_url(repo_url):
 @pytest.fixture
 def repodata_url(repo_url):
     return repo_url + "main/osx-64/repodata.json"
-
-
-@pytest.fixture
-def repo_url(test_server_url):
-    repo_url = test_server_url + "/repo/"
-    with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
-        with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
-            yield repo_url
-
-
-@pytest.fixture(scope="session")
-def test_server_url():
-    from . import testing_server
-
-    return testing_server.run_server()
