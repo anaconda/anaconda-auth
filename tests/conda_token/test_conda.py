@@ -86,6 +86,7 @@ def test_conda_search_rope_signed(set_secret_token_with_signing):
     ), rope
 
 
+@pytest.mark.integration
 def test_conda_search_rope(set_secret_token):
     if CONDA_VERSION < parse("4.4"):
         stdout, _, _ = run_command(
@@ -101,6 +102,7 @@ def test_conda_search_rope(set_secret_token):
     assert rope["url"].startswith("https://repo.anaconda.cloud/repo/main/noarch")
 
 
+@pytest.mark.integration
 def test_conda_install_rope(set_secret_token, uninstall_rope):
     install_args = (Commands.INSTALL, "rope", "-y")
     # is libmamba-solver using its own network code, not adding the token here?
@@ -126,6 +128,7 @@ def test_conda_install_rope(set_secret_token, uninstall_rope):
         assert rope["base_url"] == "https://repo.anaconda.cloud/repo/main"
 
 
+@pytest.mark.integration
 def test_conda_install_with_conda_forge(set_secret_token, uninstall_rope):
     run_command(
         Commands.INSTALL,
