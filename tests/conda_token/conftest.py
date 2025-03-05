@@ -95,7 +95,7 @@ def set_dummy_token(repo_url):
 @pytest.fixture(scope="function")
 def set_secret_token():
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     token_set(secret_token, force=True)
     yield
     token_remove()
@@ -104,7 +104,7 @@ def set_secret_token():
 @pytest.fixture(scope="function")
 def set_secret_token_mock_server(repo_url):
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     token_set(secret_token, force=True)
     yield
     token_remove()
@@ -113,7 +113,7 @@ def set_secret_token_mock_server(repo_url):
 @pytest.fixture(scope="function")
 def set_secret_token_with_signing():
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     token_set(secret_token, enable_signature_verification=True, force=True)
     yield
     token_remove()
@@ -121,7 +121,7 @@ def set_secret_token_with_signing():
 
 @pytest.fixture(scope="function")
 def secret_token():
-    token = os.environ.get("CE_TOKEN", "")
+    token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     yield token
 
 
