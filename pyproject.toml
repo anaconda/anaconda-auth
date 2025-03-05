@@ -221,6 +221,7 @@ deps =
     semver3: semver>=3,<4
 conda_deps =
     anaconda-anon-usage
+    anaconda-client
     # Optionally install conda to test plugins
     conda: conda
 conda_channels =
