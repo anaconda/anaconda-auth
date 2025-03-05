@@ -50,4 +50,4 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
         "ANACONDA_AUTH_AUTH_DOMAIN_OVERRIDE", "another-auth.anaconda.com"
     )
     config = AnacondaAuthConfig()
-    assert config.auth_domain == "https://another-auth.anaconda.com"
+    assert config.auth_domain == "another-auth.anaconda.com"

@@ -421,8 +421,7 @@ def configure_default_channels(
     if not (force or _prompt_to_set_default_channels()):
         return
 
-    if existing_default_channels:
-        _remove_default_channels(condarc_system, condarc_env, condarc_file)
+    _remove_default_channels(condarc_system, condarc_env, condarc_file)
 
     if can_restore_free_channel() and _get_from_condarc(
         "restore_free_channel",
@@ -500,6 +499,7 @@ def token_set(
     include_archive_channels: list[str] | None = None,
     no_ssl_verify: bool = False,
     enable_signature_verification: bool = False,
+    force: bool = False,
 ) -> None:
     """Set the Commercial Edition token and configure default_channels.
 
@@ -522,5 +522,5 @@ def token_set(
     if enable_signature_verification:
         enable_extra_safety_checks(system, env, file)
 
-    configure_default_channels(system, env, file, include_archive_channels)
+    configure_default_channels(system, env, file, include_archive_channels, force=force)
     clean_index()

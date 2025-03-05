@@ -46,6 +46,7 @@ def token_set(args: Namespace) -> int:
         args.include_archive_channels,
         args.no_ssl_verify,
         args.enable_signature_verification,
+        force=args.force_config_condarc,
     )
     print("Success! Your token was validated and Conda has been configured.")
     return 0
@@ -131,6 +132,11 @@ def cli(argv: list[str] | None = None) -> int:
         "--enable-signature-verification",
         action="store_true",
         help="Enable Conda package signature verification. Default is off.",
+    )
+    subparser_set.add_argument(
+        "--force-config-condarc",
+        action="store_true",
+        help="Force configuration of .condarc",
     )
     condarc_path_args(subparser_set)
     subparser_set.set_defaults(func=token_set)

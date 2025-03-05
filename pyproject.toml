@@ -185,6 +185,9 @@ envlist =
     mypy
     report
 isolated_build = True
+requires =
+    tox-conda
+    tox-gh-actions
 
 [gh-actions]
 python =

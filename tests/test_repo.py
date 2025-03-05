@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 from uuid import uuid4
 
+import jwt
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
@@ -33,6 +34,11 @@ def business_org_id() -> UUID:
 @pytest.fixture(autouse=True)
 def token_info():
     token_info = TokenInfo.load(create=True)
+    # The important part is that the key is not expired. If this still exists in
+    # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
+    token_info.api_key = jwt.encode(
+        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+    )
     token_info.save()
     return token_info
 
@@ -139,7 +145,9 @@ def user_has_multiple_orgs(
 
 
 @pytest.fixture()
-def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
+def user_has_no_orgs(
+    requests_mock: RequestMocker, user_has_no_subscriptions: None
+) -> list[OrganizationData]:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[],
@@ -152,7 +160,7 @@ def user_has_no_orgs(requests_mock: RequestMocker) -> list[OrganizationData]:
 )
 def user_has_business_subscription(
     request, requests_mock: RequestMocker, org_name: str, business_org_id: UUID
-) -> TokenCreateResponse:
+) -> None:
     requests_mock.get(
         "https://anaconda.com/api/account",
         json={
@@ -169,7 +177,7 @@ def user_has_business_subscription(
 @pytest.fixture()
 def user_has_starter_subscription(
     request, requests_mock: RequestMocker, business_org_id: UUID
-) -> TokenCreateResponse:
+) -> None:
     requests_mock.get(
         "https://anaconda.com/api/account",
         json={
@@ -181,6 +189,11 @@ def user_has_starter_subscription(
             ]
         },
     )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
 
 
 @pytest.fixture(autouse=True)
@@ -204,8 +217,8 @@ def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> 
 
     assert result.exit_code == 1
     assert (
-        "No repo tokens are installed. Run `anaconda token install`." in result.stdout
-    )
+        "No repo tokens are installed. Run anaconda token install." in result.stdout
+    ), result.stdout
     assert "Aborted." in result.stdout
 
 
@@ -234,7 +247,10 @@ def test_token_install_does_not_exist_yet(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", option_flag, org_name])
+    result = invoke_cli(
+        ["token", "install", option_flag, org_name],
+        input="y\n",
+    )
     assert result.exit_code == 0
 
     token_info = TokenInfo.load()
@@ -251,7 +267,7 @@ def test_token_install_exists_already_accept(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install", option_flag, org_name], input="y")
+    result = invoke_cli(["token", "install", option_flag, org_name], input="y\ny\n")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
@@ -283,7 +299,7 @@ def test_token_install_no_available_org(
 ) -> None:
     result = invoke_cli(["token", "install"])
     assert result.exit_code == 1, result.stdout
-    assert "No organizations found." in result.stdout
+    assert "No organizations found." in result.stdout, result.stdout
     assert "Aborted." in result.stdout
 
 
@@ -345,7 +361,7 @@ def test_get_repo_token_info_no_token(
     org_name: str, token_does_not_exist_in_service: None
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name=org_name)
+    token_info = client._get_repo_token_info(org_name=org_name)
     assert token_info is None
 
 
@@ -354,7 +370,7 @@ def test_get_repo_token_info_has_token(
     token_exists_in_service: TokenInfoResponse,
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.get_repo_token_info(org_name=org_name)
+    token_info = client._get_repo_token_info(org_name=org_name)
     assert token_info == token_exists_in_service
 
 
@@ -363,7 +379,7 @@ def test_create_repo_token_info_has_token(
     token_created_in_service: TokenCreateResponse,
 ) -> None:
     client = RepoAPIClient()
-    token_info = client.create_repo_token(org_name=org_name)
+    token_info = client._create_repo_token(org_name=org_name)
     assert token_info == token_created_in_service
 
 
