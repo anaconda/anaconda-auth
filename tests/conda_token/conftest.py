@@ -53,7 +53,7 @@ def remove_token(repo_url):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def remove_token_end_of_session(repo_url):
+def remove_token_end_of_session():
     yield
     token_remove()
 
