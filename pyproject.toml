@@ -19,8 +19,7 @@ dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
 name = "anaconda-auth"
 readme = "README.md"
-requires-python = ">=3.8"
-urls = {repository = "https://github.com/anaconda/anaconda-auth"}
+requires-python = ">=3.9"
 
 [project.entry-points."anaconda_cli.subcommand"]
 auth = "anaconda_auth.cli:app"
@@ -53,6 +52,12 @@ publish = [
 
 [project.scripts]
 conda-token = "anaconda_auth._conda.conda_token:cli"
+
+[project.urls]
+documentation = "https://anaconda.github.io/anaconda-auth"
+homepage = "https://anaconda.com"
+issues = "https://github.com/anaconda/anaconda-auth/issues"
+repository = "https://github.com/anaconda/anaconda-auth"
 
 [tool.coverage]
 paths.source = [
@@ -181,7 +186,6 @@ known-first-party = ["anaconda_*"]
 legacy_tox_ini = """
 [tox]
 envlist =
-    py38
     py39
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
     py311
@@ -195,7 +199,6 @@ requires =
 
 [gh-actions]
 python =
-    3.8: py38, mypy
     3.9: py39, mypy
     3.10: py310, mypy
     3.11: py311, mypy
