@@ -155,7 +155,7 @@ def test_get_api_key(mocked_request: MockedRequest) -> None:
 
     data = mocked_request.called_with_kwargs["json"]
     assert data == {
-        "scopes": ["cloud:read", "cloud:write"],
+        "scopes": ["cloud:read", "cloud:write", "repo:read"],
         "tags": [f"anaconda-auth/v{__version__}"],
     }
 
