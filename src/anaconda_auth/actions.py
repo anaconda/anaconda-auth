@@ -178,7 +178,7 @@ def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
         response = requests.post(
             url,
             json=dict(
-                scopes=["cloud:read", "cloud:write"],
+                scopes=["cloud:read", "cloud:write", "repo:read"],
                 tags=[f"anaconda-auth/v{__version__}"],
             ),
             headers=headers,
