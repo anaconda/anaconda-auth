@@ -20,7 +20,6 @@ license = {text = "BSD-3-Clause"}
 name = "anaconda-auth"
 readme = "README.md"
 requires-python = ">=3.9"
-urls = {repository = "https://github.com/anaconda/anaconda-auth"}
 
 [project.entry-points."anaconda_cli.subcommand"]
 auth = "anaconda_auth.cli:app"
@@ -53,6 +52,12 @@ publish = [
 
 [project.scripts]
 conda-token = "anaconda_auth._conda.conda_token:cli"
+
+[project.urls]
+documentation = "https://anaconda.github.io/anaconda-auth"
+homepage = "https://anaconda.com"
+issues = "https://github.com/anaconda/anaconda-auth/issues"
+repository = "https://github.com/anaconda/anaconda-auth"
 
 [tool.coverage]
 paths.source = [
