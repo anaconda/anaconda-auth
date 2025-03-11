@@ -413,3 +413,22 @@ def test_get_business_organizations_for_user_only_starter(
     client = RepoAPIClient()
     organizations = client.get_business_organizations_for_user()
     assert organizations == []
+
+
+def test_issue_new_token_prints_success_message(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture
+) -> None:
+    client = RepoAPIClient()
+    mocker.patch.object(client, "_get_repo_token_info", return_value=None)
+
+    mock_response = mocker.MagicMock()
+    mock_response.expires_at = "2025-12-31"
+    mocker.patch.object(client, "_create_repo_token", return_value=mock_response)
+    client.issue_new_token(org_name=org_name)
+    res = capsys.readouterr()
+    expected_msg = "Your conda has been installed and expires 2025-12-31. To view your token(s), you can use anaconda token list\n"
+
+    assert expected_msg in res.out
+
