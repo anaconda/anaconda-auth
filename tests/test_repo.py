@@ -31,8 +31,8 @@ def business_org_id() -> UUID:
     return uuid4()
 
 
-@pytest.fixture(autouse=True)
-def token_info():
+@pytest.fixture()
+def valid_api_key():
     token_info = TokenInfo.load(create=True)
     # The important part is that the key is not expired. If this still exists in
     # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
@@ -43,11 +43,29 @@ def token_info():
     return token_info
 
 
+@pytest.fixture(params=[True, False])
+def no_tokens_installed(
+    request, mocker: MockerFixture, valid_api_key: TokenInfo
+) -> None:
+    if request.param:
+        # Remove the API key
+        valid_api_key.delete()
+    else:
+        # Models the situation where we have a valid API key but it has no attached repo tokens.
+        pass
+
+    # No legacy tokens either
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.read_binstar_tokens",
+        return_value={},
+    )
+
+
 @pytest.fixture()
-def token_is_installed(org_name: str, token_info: TokenInfo) -> TokenInfo:
-    token_info.set_repo_token(org_name=org_name, token="test-token")
-    token_info.save()
-    return token_info
+def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
+    valid_api_key.set_repo_token(org_name=org_name, token="test-token")
+    valid_api_key.save()
+    return valid_api_key
 
 
 @pytest.fixture(autouse=True)
@@ -206,14 +224,10 @@ def repodata_json_available_with_token(
     )
 
 
-def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
-    mock = mocker.patch(
-        "anaconda_auth._conda.repo_config.read_binstar_tokens",
-        return_value={},
-    )
+def test_token_list_no_tokens(
+    invoke_cli: CLIInvoker, no_tokens_installed: None
+) -> None:
     result = invoke_cli(["token", "list"])
-
-    mock.assert_called_once()
 
     assert result.exit_code == 1
     assert (
@@ -279,6 +293,7 @@ def test_token_install_exists_already_accept(
 def test_token_install_exists_already_decline(
     option_flag: str,
     org_name: str,
+    valid_api_key: TokenInfo,
     token_exists_in_service: None,
     token_created_in_service: str,
     *,
@@ -413,3 +428,34 @@ def test_get_business_organizations_for_user_only_starter(
     client = RepoAPIClient()
     organizations = client.get_business_organizations_for_user()
     assert organizations == []
+
+
+def test_issue_new_token_prints_success_message_via_client(
+    org_name: str, mocker: MockerFixture, capsys: pytest.CaptureFixture
+) -> None:
+    client = RepoAPIClient()
+    mocker.patch.object(client, "_get_repo_token_info", return_value=None)
+
+    mock_response = mocker.MagicMock()
+    mock_response.expires_at = datetime(2025, 12, 31)
+    mocker.patch.object(client, "_create_repo_token", return_value=mock_response)
+    client.issue_new_token(org_name=org_name)
+    res = capsys.readouterr()
+    expected_msg = "Your conda has been installed and expires 2025-12-31 00:00:00. To view your token(s), you can use anaconda token list\n"
+
+    assert expected_msg in res.out
+
+
+def test_issue_new_token_prints_success_message_via_cli(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
+
+    expected_msg = "Your conda has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
+    assert result.exit_code == 0, result.stdout
+    assert expected_msg in result.stdout

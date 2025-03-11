@@ -106,7 +106,7 @@ class RepoAPIClient(BaseClient):
         response = self._create_repo_token(org_name=org_name)
 
         console.print(
-            f"Your conda token is: [cyan]{response.token}[/cyan], which expires [cyan]{response.expires_at}[/cyan]"
+            f"Your conda has been installed and expires [cyan]{response.expires_at}[/cyan]. To view your token(s), you can use [cyan]anaconda token list[/cyan]"
         )
         return response.token
 
@@ -190,7 +190,7 @@ def list_tokens() -> None:
 
     tokens = token_list()
 
-    token_info = TokenInfo.load()
+    token_info = TokenInfo.load(create=True)
     repo_tokens = token_info.repo_tokens
 
     if not (tokens or repo_tokens):
