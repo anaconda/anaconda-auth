@@ -43,9 +43,16 @@ def valid_api_key():
     return token_info
 
 
-@pytest.fixture()
-def no_tokens_installed(mocker: MockerFixture, valid_api_key: TokenInfo) -> None:
-    valid_api_key.delete()
+@pytest.fixture(params=[True, False])
+def no_tokens_installed(
+    request, mocker: MockerFixture, valid_api_key: TokenInfo
+) -> None:
+    if request.param:
+        # Remove the API key
+        valid_api_key.delete()
+    else:
+        # Models the situation where we have a valid API key but it has no attached repo tokens.
+        pass
 
     # No legacy tokens either
     mocker.patch(
