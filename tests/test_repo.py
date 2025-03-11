@@ -31,8 +31,8 @@ def business_org_id() -> UUID:
     return uuid4()
 
 
-@pytest.fixture(autouse=True)
-def token_info():
+@pytest.fixture()
+def valid_api_key():
     token_info = TokenInfo.load(create=True)
     # The important part is that the key is not expired. If this still exists in
     # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
@@ -44,8 +44,8 @@ def token_info():
 
 
 @pytest.fixture()
-def no_tokens_installed(mocker: MockerFixture, token_info: TokenInfo) -> None:
-    token_info.delete()
+def no_tokens_installed(mocker: MockerFixture, valid_api_key: TokenInfo) -> None:
+    valid_api_key.delete()
 
     # No legacy tokens either
     mocker.patch(
@@ -55,10 +55,10 @@ def no_tokens_installed(mocker: MockerFixture, token_info: TokenInfo) -> None:
 
 
 @pytest.fixture()
-def token_is_installed(org_name: str, token_info: TokenInfo) -> TokenInfo:
-    token_info.set_repo_token(org_name=org_name, token="test-token")
-    token_info.save()
-    return token_info
+def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
+    valid_api_key.set_repo_token(org_name=org_name, token="test-token")
+    valid_api_key.save()
+    return valid_api_key
 
 
 @pytest.fixture(autouse=True)
@@ -286,6 +286,7 @@ def test_token_install_exists_already_accept(
 def test_token_install_exists_already_decline(
     option_flag: str,
     org_name: str,
+    valid_api_key: TokenInfo,
     token_exists_in_service: None,
     token_created_in_service: str,
     *,
