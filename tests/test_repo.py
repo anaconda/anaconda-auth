@@ -44,6 +44,17 @@ def token_info():
 
 
 @pytest.fixture()
+def no_tokens_installed(mocker: MockerFixture, token_info: TokenInfo) -> None:
+    token_info.delete()
+
+    # No legacy tokens either
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.read_binstar_tokens",
+        return_value={},
+    )
+
+
+@pytest.fixture()
 def token_is_installed(org_name: str, token_info: TokenInfo) -> TokenInfo:
     token_info.set_repo_token(org_name=org_name, token="test-token")
     token_info.save()
@@ -206,14 +217,10 @@ def repodata_json_available_with_token(
     )
 
 
-def test_token_list_no_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
-    mock = mocker.patch(
-        "anaconda_auth._conda.repo_config.read_binstar_tokens",
-        return_value={},
-    )
+def test_token_list_no_tokens(
+    invoke_cli: CLIInvoker, no_tokens_installed: None
+) -> None:
     result = invoke_cli(["token", "list"])
-
-    mock.assert_called_once()
 
     assert result.exit_code == 1
     assert (
