@@ -415,20 +415,32 @@ def test_get_business_organizations_for_user_only_starter(
     assert organizations == []
 
 
-def test_issue_new_token_prints_success_message(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture
+def test_issue_new_token_prints_success_message_via_client(
+    org_name: str, mocker: MockerFixture, capsys: pytest.CaptureFixture
 ) -> None:
     client = RepoAPIClient()
     mocker.patch.object(client, "_get_repo_token_info", return_value=None)
 
     mock_response = mocker.MagicMock()
-    mock_response.expires_at = "2025-12-31"
+    mock_response.expires_at = datetime(2025, 12, 31)
     mocker.patch.object(client, "_create_repo_token", return_value=mock_response)
     client.issue_new_token(org_name=org_name)
     res = capsys.readouterr()
-    expected_msg = "Your conda has been installed and expires 2025-12-31. To view your token(s), you can use anaconda token list\n"
+    expected_msg = "Your conda has been installed and expires 2025-12-31 00:00:00. To view your token(s), you can use anaconda token list\n"
 
     assert expected_msg in res.out
 
+
+def test_issue_new_token_prints_success_message_via_cli(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
+
+    expected_msg = "Your conda has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
+    assert result.exit_code == 0, result.stdout
+    assert expected_msg in result.stdout
