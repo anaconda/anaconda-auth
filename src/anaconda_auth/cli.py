@@ -274,7 +274,7 @@ def auth_key() -> None:
         return
 
     token_info = load_token_info()
-    if not token_info:
+    if token_info is None:
         raise TokenNotFoundError
 
     if not token_info.expired:
