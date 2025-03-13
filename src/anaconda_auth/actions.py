@@ -226,11 +226,14 @@ def logout(config: Optional[AnacondaAuthConfig] = None) -> None:
         pass
 
 
-def is_logged_in() -> bool:
+def load_token_info() -> Optional[TokenInfo]:
     config = AnacondaAuthConfig()
     try:
         token_info = TokenInfo.load(domain=config.domain)
     except TokenNotFoundError:
         token_info = None
+    return token_info
 
-    return token_info is not None
+
+def is_logged_in() -> bool:
+    return load_token_info() is not None

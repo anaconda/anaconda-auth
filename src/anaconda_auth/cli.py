@@ -12,6 +12,7 @@ from rich.syntax import Syntax
 from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
+from anaconda_auth.actions import load_token_info
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
@@ -272,7 +273,7 @@ def auth_key() -> None:
         print(config.api_key)
         return
 
-    token_info = TokenInfo.load(domain=config.domain)
+    token_info = load_token_info()
     if not token_info.expired:
         print(token_info.api_key)
         return
