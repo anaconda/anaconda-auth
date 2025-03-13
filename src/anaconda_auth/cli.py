@@ -274,6 +274,9 @@ def auth_key() -> None:
         return
 
     token_info = load_token_info()
+    if not token_info:
+        raise TokenNotFoundError
+
     if not token_info.expired:
         print(token_info.api_key)
         return
