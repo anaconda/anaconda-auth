@@ -219,8 +219,24 @@ def logout(config: Optional[AnacondaAuthConfig] = None) -> None:
     """Log out of anaconda.com."""
     if config is None:
         config = AnacondaAuthConfig()
+
     try:
         token_info = TokenInfo.load(domain=config.domain)
+        token_info.delete()
+    except TokenNotFoundError:
+        pass
+
+    if config.domain != "anaconda.com":
+        # Since anaconda.com is the default, don't do anything special if
+        # User explicitly overrode the configured domain.
+        return
+
+    # If the request was for anaconda.com (the default), also remove
+    # anaconda.cloud if it exists. This is just an edge case for the
+    # likely rare scenario where a user has a stored token for both
+    # domains.
+    try:
+        token_info = TokenInfo.load(domain="anaconda.cloud")
         token_info.delete()
     except TokenNotFoundError:
         pass

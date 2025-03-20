@@ -126,7 +126,6 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         extra="ignore",
         ignored_types=(cached_property,),
     )
-    domain: str = "anaconda.cloud"
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
 
     def __init__(self, raise_deprecation_warning: bool = True, **kwargs: Any):
