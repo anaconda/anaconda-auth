@@ -303,3 +303,26 @@ def test_token_reload_after_migration_via_anaconda_cloud_config(
     config = AnacondaCloudConfig()
     loaded_token = TokenInfo.load(domain=config.domain)
     assert loaded_token.api_key == "TEST_KEY"
+
+
+@pytest.mark.parametrize(
+    "saved_domains",
+    [
+        ["anaconda.cloud"],
+        ["anaconda.com"],
+        ["anaconda.cloud", "anaconda.com"],
+    ],
+)
+def test_logout_removes_anaconda_cloud_tokens(saved_domains: str) -> None:
+    # Given: The token is saved in keyring in either domain, or both
+    for saved_domain in saved_domains:
+        original_token = TokenInfo(api_key="TEST_KEY", domain=saved_domain)
+        original_token.save()
+
+    # When: I logout
+    logout()
+
+    # Then: neither of the domains contain a token
+    for domain in ["anaconda.com", "anaconda.cloud"]:
+        with pytest.raises(TokenNotFoundError):
+            TokenInfo.load(domain)
