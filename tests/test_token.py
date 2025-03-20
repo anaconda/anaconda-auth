@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 import anaconda_auth.token
 from anaconda_auth.actions import logout
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.token import TokenExpiredError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
@@ -285,3 +286,20 @@ def test_delete_repo_token() -> None:
     assert len(token_info.repo_tokens) == 1
     with pytest.raises(TokenNotFoundError):
         token_info.get_repo_token("org-name")
+
+
+@pytest.mark.parametrize("saved_domain", ["anaconda.cloud", "anaconda.com"])
+def test_token_reload_after_migration_via_anaconda_cloud_config(
+    saved_domain: str,
+) -> None:
+    # Save the token (i.e. after login) to new and legacy domain in keyring
+    original_token = TokenInfo(api_key="TEST_KEY", domain=saved_domain)
+    original_token.save()
+
+    # Now, load it via the explicit use of the AnacondaCloudConfig object with no
+    # domain override. This is what the Assistant is doing. Since the token should
+    # be migrated to anaconda.com when loading it if it is anaconda.cloud, this will
+    # work when the AnacondaCloudConfig.domain default is anaconda.com.
+    config = AnacondaCloudConfig()
+    loaded_token = TokenInfo.load(domain=config.domain)
+    assert loaded_token.api_key == "TEST_KEY"
