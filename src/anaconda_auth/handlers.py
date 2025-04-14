@@ -48,6 +48,7 @@ class AuthCodeRedirectServer(HTTPServer):
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
+        print(f"{self.host_name=}, {self.oidc_path=}")
         self.config = config or AnacondaAuthConfig()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
@@ -65,13 +66,13 @@ class AuthCodeRedirectServer(HTTPServer):
     def finish_request(self, request: TRequest, client_address: str) -> None:
         """Finish one request by instantiating RequestHandlerClass."""
         AuthCodeRedirectRequestHandler(
-            self.oidc_path,
-            self.host_name,
-            self.config.login_success_url,
-            self.config.login_error_url,
             request,
             client_address,
             server=self,
+            oidc_path=self.oidc_path,
+            host_name=self.host_name,
+            login_succes_url=self.config.login_success_url,
+            login_error_url=self.config.login_error_url,
         )
 
 
@@ -82,11 +83,11 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(
         self,
+        *args: Any,
         oidc_path: str,
         host_name: str,
         login_success_url: str,
         login_error_url: str,
-        *args: Any,
         **kwargs: Any,
     ):
         # these are set before __init__ because __init__ calls the do_GET method
