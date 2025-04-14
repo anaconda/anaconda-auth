@@ -43,7 +43,7 @@ def test_server_response_success(server: AuthCodeRedirectServer) -> None:
     assert server.result.state == "some-state"
 
     assert response.status_code == 200
-    assert response.url == "https://anaconda.cloud/local-login-success"
+    assert response.url == "https://anaconda.com/app/local-login-success"
 
 
 @pytest.mark.parametrize(
@@ -61,7 +61,7 @@ def test_server_response_error(
         f"http://localhost:{SERVER_PORT}/auth/oidc?state=some-state?{query_params}"
     )
     assert response.status_code == 200
-    assert response.url == "https://anaconda.cloud/local-login-error"
+    assert response.url == "https://anaconda.com/app/local-login-error"
 
 
 def test_server_response_not_found(server: AuthCodeRedirectServer) -> None:
