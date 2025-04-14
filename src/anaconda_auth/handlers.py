@@ -44,7 +44,7 @@ class AuthCodeRedirectServer(HTTPServer):
         server_address: Tuple[str, int],
         config: Optional[AnacondaAuthConfig] = None,
     ):
-        super().__init__(server_address, AuthCodeRedirectRequestHandler)
+        super().__init__(server_address, AuthCodeRedirectRequestHandler)  # type: ignore[arg-type]
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
