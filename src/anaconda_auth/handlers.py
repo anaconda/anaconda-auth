@@ -6,6 +6,7 @@ from socket import socket
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -15,8 +16,7 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 
-from anaconda_auth.config import LOGIN_ERROR_URL
-from anaconda_auth.config import LOGIN_SUCCESS_URL
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
@@ -38,11 +38,17 @@ class AuthCodeRedirectServer(HTTPServer):
 
     _open_servers: Set["AuthCodeRedirectServer"] = set()
 
-    def __init__(self, oidc_path: str, server_address: Tuple[str, int]):
+    def __init__(
+        self,
+        oidc_path: str,
+        server_address: Tuple[str, int],
+        config: Optional[AnacondaAuthConfig] = None,
+    ):
         super().__init__(server_address, AuthCodeRedirectRequestHandler)
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
+        self.config = config or AnacondaAuthConfig()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
         self._open_servers.add(self)
@@ -61,6 +67,8 @@ class AuthCodeRedirectServer(HTTPServer):
         AuthCodeRedirectRequestHandler(
             self.oidc_path,
             self.host_name,
+            self.config.login_success_url,
+            self.config.login_error_url,
             request,
             client_address,
             server=self,
@@ -76,12 +84,16 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
         self,
         oidc_path: str,
         host_name: str,
+        login_success_url: str,
+        login_error_url: str,
         *args: Any,
         **kwargs: Any,
     ):
         # these are set before __init__ because __init__ calls the do_GET method
         self.oidc_path = oidc_path
         self.host_name = host_name
+        self.login_success_url = login_success_url
+        self.login_error_url = login_error_url
 
         super().__init__(*args, **kwargs)
 
@@ -90,14 +102,14 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_auth(self, query_params: Dict[str, List[str]]) -> None:
         if "code" in query_params and "state" in query_params:
-            location = LOGIN_SUCCESS_URL
+            location = self.login_success_url
             self.server.result = Result(
                 auth_code=query_params["code"][0],
                 state=query_params["state"][0],
                 scopes=query_params.get("scope", []),
             )
         else:
-            location = LOGIN_ERROR_URL
+            location = self.login_error_url
 
         self.send_response(HTTPStatus.TEMPORARY_REDIRECT)
         self.send_header("Location", location)
