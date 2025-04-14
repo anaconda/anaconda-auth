@@ -131,7 +131,10 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
             self._handle_auth(query_params)
 
 
-def capture_auth_code(redirect_uri: str, state: str) -> str:
+def capture_auth_code(
+    redirect_uri: str, state: str, config: Optional[AnacondaAuthConfig] = None
+) -> str:
+    config = config or AnacondaAuthConfig()
     parsed_url = urlparse(redirect_uri)
 
     host_name, port = parsed_url.netloc.split(":")
@@ -140,7 +143,9 @@ def capture_auth_code(redirect_uri: str, state: str) -> str:
 
     logger.debug(f"Listening on: {redirect_uri}")
 
-    with AuthCodeRedirectServer(oidc_path, (host_name, server_port)) as web_server:
+    with AuthCodeRedirectServer(
+        oidc_path, (host_name, server_port), config=config
+    ) as web_server:
         web_server.handle_request()
 
     result = web_server.result
