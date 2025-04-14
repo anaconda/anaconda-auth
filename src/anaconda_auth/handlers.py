@@ -70,7 +70,7 @@ class AuthCodeRedirectServer(HTTPServer):
             server=self,
             oidc_path=self.oidc_path,
             host_name=self.host_name,
-            login_succes_url=self.config.login_success_url,
+            login_success_url=self.config.login_success_url,
             login_error_url=self.config.login_error_url,
         )
 
