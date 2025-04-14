@@ -48,7 +48,6 @@ class AuthCodeRedirectServer(HTTPServer):
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
-        print(f"{self.host_name=}, {self.oidc_path=}")
         self.config = config or AnacondaAuthConfig()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
