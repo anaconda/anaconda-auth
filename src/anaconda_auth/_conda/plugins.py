@@ -22,7 +22,7 @@ def conda_auth_handlers() -> Iterable[plugins.CondaAuthHandler]:
 
     ```yaml
     channel_settings:
-      - channel: https://repo.anaconda.cloud/repo/main
+      - channel: https://repo.anaconda.cloud/*
         auth: anaconda-auth
     ```
 

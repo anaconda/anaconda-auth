@@ -15,9 +15,6 @@ from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
 from anaconda_cli_base.console import console
 
-LOGIN_SUCCESS_URL = "https://anaconda.cloud/local-login-success"
-LOGIN_ERROR_URL = "https://anaconda.cloud/local-login-error"
-
 
 def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     fields_str = ", ".join(sorted(f'"{s}"' for s in set_fields.keys()))
@@ -47,6 +44,8 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
     openid_config_path: str = "/.well-known/openid-configuration"
     oidc_request_headers: Dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
+    login_success_path: str = "/app/local-login-success"
+    login_error_path: str = "/app/local-login-error"
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
@@ -74,6 +73,16 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     def well_known_url(self) -> str:
         """The URL from which to load the OpenID configuration."""
         return urljoin(f"https://{self.auth_domain}", self.openid_config_path)
+
+    @property
+    def login_success_url(self) -> str:
+        """The location to redirect after auth flow, if successful."""
+        return urljoin(f"https://{self.domain}", self.login_success_path)
+
+    @property
+    def login_error_url(self) -> str:
+        """The location to redirect after auth flow, if there is an error."""
+        return urljoin(f"https://{self.domain}", self.login_error_path)
 
     @property
     def oidc(self) -> "OpenIDConfiguration":

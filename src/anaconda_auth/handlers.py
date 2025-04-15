@@ -6,6 +6,7 @@ from socket import socket
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -15,8 +16,7 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 
-from anaconda_auth.config import LOGIN_ERROR_URL
-from anaconda_auth.config import LOGIN_SUCCESS_URL
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
@@ -38,11 +38,17 @@ class AuthCodeRedirectServer(HTTPServer):
 
     _open_servers: Set["AuthCodeRedirectServer"] = set()
 
-    def __init__(self, oidc_path: str, server_address: Tuple[str, int]):
-        super().__init__(server_address, AuthCodeRedirectRequestHandler)
+    def __init__(
+        self,
+        oidc_path: str,
+        server_address: Tuple[str, int],
+        config: Optional[AnacondaAuthConfig] = None,
+    ):
+        super().__init__(server_address, AuthCodeRedirectRequestHandler)  # type: ignore[arg-type]
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
+        self.config = config or AnacondaAuthConfig()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
         self._open_servers.add(self)
@@ -59,11 +65,13 @@ class AuthCodeRedirectServer(HTTPServer):
     def finish_request(self, request: TRequest, client_address: str) -> None:
         """Finish one request by instantiating RequestHandlerClass."""
         AuthCodeRedirectRequestHandler(
-            self.oidc_path,
-            self.host_name,
             request,
             client_address,
             server=self,
+            oidc_path=self.oidc_path,
+            host_name=self.host_name,
+            login_success_url=self.config.login_success_url,
+            login_error_url=self.config.login_error_url,
         )
 
 
@@ -74,14 +82,18 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
     def __init__(
         self,
+        *args: Any,
         oidc_path: str,
         host_name: str,
-        *args: Any,
+        login_success_url: str,
+        login_error_url: str,
         **kwargs: Any,
     ):
         # these are set before __init__ because __init__ calls the do_GET method
         self.oidc_path = oidc_path
         self.host_name = host_name
+        self.login_success_url = login_success_url
+        self.login_error_url = login_error_url
 
         super().__init__(*args, **kwargs)
 
@@ -90,14 +102,14 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_auth(self, query_params: Dict[str, List[str]]) -> None:
         if "code" in query_params and "state" in query_params:
-            location = LOGIN_SUCCESS_URL
+            location = self.login_success_url
             self.server.result = Result(
                 auth_code=query_params["code"][0],
                 state=query_params["state"][0],
                 scopes=query_params.get("scope", []),
             )
         else:
-            location = LOGIN_ERROR_URL
+            location = self.login_error_url
 
         self.send_response(HTTPStatus.TEMPORARY_REDIRECT)
         self.send_header("Location", location)
@@ -119,7 +131,10 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
             self._handle_auth(query_params)
 
 
-def capture_auth_code(redirect_uri: str, state: str) -> str:
+def capture_auth_code(
+    redirect_uri: str, state: str, config: Optional[AnacondaAuthConfig] = None
+) -> str:
+    config = config or AnacondaAuthConfig()
     parsed_url = urlparse(redirect_uri)
 
     host_name, port = parsed_url.netloc.split(":")
@@ -128,7 +143,9 @@ def capture_auth_code(redirect_uri: str, state: str) -> str:
 
     logger.debug(f"Listening on: {redirect_uri}")
 
-    with AuthCodeRedirectServer(oidc_path, (host_name, server_port)) as web_server:
+    with AuthCodeRedirectServer(
+        oidc_path, (host_name, server_port), config=config
+    ) as web_server:
         web_server.handle_request()
 
     result = web_server.result

@@ -104,17 +104,15 @@ def request_access_token(
 
 def _do_auth_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    if config is None:
-        config = AnacondaAuthConfig()
+    config = config or AnacondaAuthConfig()
 
-    redirect_uri = config.redirect_uri
     state = str(uuid.uuid4())
     code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
 
     _send_auth_code_request(code_challenge, state, config)
 
     # Listen for the response
-    auth_code = capture_auth_code(redirect_uri, state)
+    auth_code = capture_auth_code(config.redirect_uri, state=state, config=config)
     logger.debug("Authentication successful! Getting JWT token.")
 
     # Do auth code exchange

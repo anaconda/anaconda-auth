@@ -56,7 +56,7 @@ The following parameters in the `plugin.auth` section control the login actions 
 
 | Parameter | Env variable | Description | Default value |
 |-|-|-|-|
-| `domain` | `ANACONDA_AUTH_DOMAIN` | Authentication and API request domain | `"anaconda.cloud"` |
+| `domain` | `ANACONDA_AUTH_DOMAIN` | Authentication and API request domain | `"anaconda.com"` |
 | `ssl_verify` | `ANACONDA_AUTH_SSL_VERIFY` | SSL verification for all requests | `True` |
 | `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token; can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
 | `api_key` | `ANACONDA_AUTH_API_KEY` | API key; if `None`, defaults to keyring storage | `None` |
@@ -147,7 +147,7 @@ print(response.json())
 
 BaseClient accepts the following optional arguments.
 
-* `domain`: Domain to use for requests, defaults to `anaconda.cloud`
+* `domain`: Domain to use for requests, defaults to `anaconda.com`
 * `ssl_verify`: Enable SSL verification, defaults to `True`
 * `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
 * `user_agent`: Defaults to `anaconda-auth/<package-version>`
@@ -198,7 +198,7 @@ AuthenticationMissingError: Login is required to complete this action.
 Continue with interactive login? [y/n]: n
 
 To configure your credentials you can run
-  anaconda login --at cloud
+  anaconda login --at anaconda.com
 
 or set your API key using the ANACONDA_AUTH_API_KEY env var
 
@@ -233,7 +233,7 @@ For this example subcommand, the user may provide incorrect inputs that are pass
 
 ```text
 > anaconda plugin do-something 'input-data'
-HTTPError: 422 Client Error: Unprocessable Entity for url: https://anaconda.cloud/api/something
+HTTPError: 422 Client Error: Unprocessable Entity for url: https://anaconda.com/api/something
 
 To see a more detailed error message run the command again as
   anaconda --verbose plugin do-something

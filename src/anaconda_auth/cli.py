@@ -32,7 +32,7 @@ def _continue_with_login() -> int:
             console.print(
                 dedent("""
                 To configure your credentials you can run
-                  [green]anaconda login --at cloud[/green]
+                  [green]anaconda login --at anaconda.com[/green]
 
                 or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
