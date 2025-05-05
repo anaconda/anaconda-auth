@@ -366,10 +366,18 @@ def _remove_default_channels(
     elif condarc_file:
         config_args.append(f"--file={condarc_file}")
 
-    try:
-        run_command(Commands.CONFIG, *config_args)
-    except CondaKeyError:
-        pass
+    # We suppress a CondaKeyError below to prevent logging an internal conda error
+    # to the terminal.
+    err_io = io.StringIO()
+    with contextlib.redirect_stderr(err_io):
+        try:
+            run_command(Commands.CONFIG, *config_args)
+        except CondaKeyError:
+            pass
+
+    err_string = err_io.getvalue()
+    if "CondaKeyError" not in err_string.strip():
+        print(err_string, file=sys.stderr)
 
 
 def _prompt_to_set_default_channels() -> bool:
