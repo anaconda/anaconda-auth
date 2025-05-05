@@ -47,6 +47,15 @@ def test_default_channels():
         assert _read_test_condarc(rc) == final_condarc
 
 
+def test_default_channels_no_exception(capsys):
+    """Ensure that no CondaKeyError is raised if the .condarc does not have default_channels defined."""
+    with make_temp_condarc() as rc:
+        configure_default_channels(condarc_file=rc, force=True)
+
+    res = capsys.readouterr()
+    assert "CondaKeyError: 'default_channels'" not in res.err
+
+
 def test_replace_default_channels():
     original_condarc = dedent(
         """\
