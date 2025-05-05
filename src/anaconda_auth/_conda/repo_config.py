@@ -316,10 +316,8 @@ def _get_from_condarc(
 
     # Capture the JSON output from stdout
     string_io = io.StringIO()
-    err_io = io.StringIO()
     with contextlib.redirect_stdout(string_io):
-        with contextlib.redirect_stderr(err_io):
-            run_command(Commands.CONFIG, *config_args)
+        run_command(Commands.CONFIG, *config_args)
 
     try:
         result = json.loads(string_io.getvalue())
