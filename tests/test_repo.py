@@ -441,7 +441,7 @@ def test_issue_new_token_prints_success_message_via_client(
     mocker.patch.object(client, "_create_repo_token", return_value=mock_response)
     client.issue_new_token(org_name=org_name)
     res = capsys.readouterr()
-    expected_msg = "Your conda has been installed and expires 2025-12-31 00:00:00. To view your token(s), you can use anaconda token list\n"
+    expected_msg = "Your conda token has been installed and expires 2025-12-31 00:00:00. To view your token(s), you can use anaconda token list\n"
 
     assert expected_msg in res.out
 
@@ -456,6 +456,6 @@ def test_issue_new_token_prints_success_message_via_cli(
 ) -> None:
     result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
 
-    expected_msg = "Your conda has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
+    expected_msg = "Your conda token has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
     assert result.exit_code == 0, result.stdout
     assert expected_msg in result.stdout
