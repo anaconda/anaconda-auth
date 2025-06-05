@@ -158,8 +158,10 @@ def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
     token_info.save()
 
 
-def get_api_key(access_token: str, ssl_verify: bool = True) -> str:
-    config = AnacondaAuthConfig()
+def get_api_key(
+    access_token: str, ssl_verify: bool = True, config: Optional[AnacondaAuthConfig] = None
+) -> str:
+    config = config or AnacondaAuthConfig()
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
