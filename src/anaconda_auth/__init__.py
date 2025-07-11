@@ -5,6 +5,7 @@ except ImportError:  # pragma: nocover
 
 from anaconda_auth.actions import login  # noqa: E402
 from anaconda_auth.actions import logout  # noqa: E402
+from anaconda_auth.actions import load_token_info  # noqa: E402
 from anaconda_auth.client import client_factory  # noqa: E402
 
-__all__ = ["__version__", "login", "logout", "client_factory"]
+__all__ = ["__version__", "login", "logout", "load_token_info", "client_factory"]
