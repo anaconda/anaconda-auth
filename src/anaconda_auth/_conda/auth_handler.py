@@ -21,7 +21,10 @@ from anaconda_auth.token import TokenInfo
 URI_PREFIX = "/repo/"
 
 # If the channel netloc matches the key, we look for a token stored under the value
-TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+TOKEN_DOMAIN_MAP = {
+    "repo.anaconda.cloud": "anaconda.com",
+    "repo.anaconda.com": "anaconda.com",
+}
 
 
 class AnacondaAuthError(CondaError):
