@@ -2,9 +2,9 @@ from conda.base.context import context
 from conda.gateways.connection import session
 from conda.gateways.connection.session import CondaSession
 from conda.gateways.connection.session import cache
-from conda.gateways.connection.session import fnmatch
 from conda.gateways.connection.session import get_channel_name_from_url
 from conda.gateways.connection.session import urlparse
+from conda.gatewaysconnection.session import fnmatch
 
 DEFAULT_CHANNEL_SETTINGS = [
     {
