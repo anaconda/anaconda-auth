@@ -156,10 +156,13 @@ def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
     api_key = get_api_key(access_token, config.ssl_verify)
     token_info = TokenInfo(api_key=api_key, domain=config.domain)
     token_info.save()
+    console.print(f"You have successfully logged into [cyan]{config.domain}[/cyan]")
 
 
 def get_api_key(
-    access_token: str, ssl_verify: bool = True, config: Optional[AnacondaAuthConfig] = None
+    access_token: str,
+    ssl_verify: bool = True,
+    config: Optional[AnacondaAuthConfig] = None,
 ) -> str:
     config = config or AnacondaAuthConfig()
 
