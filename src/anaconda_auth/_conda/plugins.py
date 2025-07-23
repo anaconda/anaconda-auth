@@ -11,7 +11,7 @@ from conda import plugins
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 
-__all__ = ["conda_auth_handlers"]
+__all__ = ["conda_auth_handlers", "conda_post_commands"]
 
 
 @plugins.hookimpl
@@ -30,4 +30,24 @@ def conda_auth_handlers() -> Iterable[plugins.CondaAuthHandler]:
     yield plugins.CondaAuthHandler(
         name="anaconda-auth",
         handler=AnacondaAuthHandler,
+    )
+
+
+def display_messages(command: str) -> None:
+    from anaconda_auth._conda.auth_handler import MESSAGES
+    from anaconda_cli_base.console import console
+
+    if MESSAGES:
+        console.print("")
+
+    for message in MESSAGES:
+        console.print(message)
+
+
+@plugins.hookimpl
+def conda_post_commands() -> Iterable[plugins.CondaPostCommand]:
+    yield plugins.CondaPostCommand(
+        "anaconda-post-command-messager",
+        action=display_messages,
+        run_for={"search", "install"},
     )

@@ -26,6 +26,8 @@ TOKEN_DOMAIN_MAP = {
     "repo.anaconda.com": "anaconda.com",
 }
 
+MESSAGES: set[str] = set()
+
 
 class AnacondaAuthError(CondaError):
     """
@@ -55,6 +57,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
+
+        if "repo.anaconda.com" in url:
+            return token_info.api_key
 
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
@@ -109,11 +114,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         elif token := self._load_token_via_conda_token(url):
             return token
-        else:
+        elif "repo.anaconda.com" not in url:
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
             )
+
+        MESSAGES.add(
+            "Check out how awesome conda is with [green]Anaconda[/green]! Just type: [cyan]`anaconda login`[/cyan]"
+        )
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
@@ -129,5 +138,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Inject the token as an Authorization header on each request."""
         request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
-        request.headers["Authorization"] = f"token {token}"
+        if token is not None:
+            request.headers["Authorization"] = f"token {token}"
         return request
