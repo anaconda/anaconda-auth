@@ -139,5 +139,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
         if token is not None:
-            request.headers["Authorization"] = f"token {token}"
+            if len(token) < 100:
+                request.headers["Authorization"] = f"token {token}"
+            else:
+                request.headers["Authorization"] = f"Bearer {token}"
         return request
