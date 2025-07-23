@@ -6,3 +6,11 @@ try:
     from anaconda_auth._conda.plugins import *  # noqa: F403
 except ImportError:
     pass
+
+
+try:
+    from anaconda_auth._conda.patches import apply
+
+    apply()
+except Exception:
+    pass
