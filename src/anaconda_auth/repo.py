@@ -234,7 +234,8 @@ def install_token(
 
     msg = "Your token has been installed and validated"
 
-    repo_config.configure_plugin()
+    # Conda plugin is now self-configuring
+    # repo_config.configure_plugin()
 
     if set_default_channels:
         repo_config.configure_default_channels()
@@ -252,7 +253,8 @@ def configure_conda(
     """Configure conda's default channels to access Anaconda's premium repository."""
     from anaconda_auth._conda import repo_config
 
-    repo_config.configure_plugin()
+    # Conda plugin is now self-configuring
+    # repo_config.configure_plugin()
     repo_config.configure_default_channels(force=force)
 
 

@@ -122,6 +122,9 @@ def configure_plugin(should_set_default_channels: bool = False) -> None:
     We install the auth-handler plugin by writing the "channel_settings" key and associate
     all premium repo channels with this auth handler.
 
+    NOTE: This is no longer necessary since this pacskage now configures itself
+    automatically with conda.
+
     """
     condarc = CondaRC()
     condarc.backup()

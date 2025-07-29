@@ -8,10 +8,14 @@ conditionally import it in case conda is not installed in the user's environment
 from typing import Iterable
 
 from conda import plugins
+from frozendict import frozendict
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 
-__all__ = ["conda_auth_handlers", "conda_post_commands"]
+__all__ = ["conda_auth_handlers", "conda_pre_commands", "conda_post_commands"]
+
+
+DEFAULT_CHANNEL_AUTH = ("https://repo.anaconda.com/", "https://repo.anaconda.cloud/")
 
 
 @plugins.hookimpl
@@ -42,6 +46,39 @@ def display_messages(command: str) -> None:
 
     for message in MESSAGES:
         console.print(message)
+
+
+def merge_auth_configs(command):
+    """Implements default auth settings for Anaconda channels, respecting overrides.
+    If the .condarc file already has an "auth" entry for a given channel, it is left
+    unchanged; but all other channels in the list DEFAULT_CHANNEL_AUTH are pointed
+    to this plugin for authentication.
+    """
+    from conda.base.context import context
+    result = []
+    wildcards = set(DEFAULT_CHANNEL_AUTH)
+    for orec in context.channel_settings:
+        channel = orec.get("channel")
+        for c in DEFAULT_CHANNEL_AUTH:
+            if channel.startswith(c):
+                if channel == c + '*':
+                    wildcards.discard(c)
+                if "auth" not in orec:
+                    orec = frozendict([*orec.items(), ("auth", "anaconda-auth")])
+                break
+        result.append(orec)
+    for channel in wildcards:
+        result.append(frozendict([("channel", channel + '*'), ("auth", "anaconda-auth")]))
+    context.channel_settings = tuple(result)
+
+
+@plugins.hookimpl
+def conda_pre_commands():
+    yield plugins.CondaPreCommand(
+        name="anaconda-auth",
+        action=merge_auth_configs,
+        run_for={"config", "install", "create", "uninstall", "env_create", "search"},
+    )
 
 
 @plugins.hookimpl
