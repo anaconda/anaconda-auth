@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Any
 from typing import Optional
 from urllib.parse import urlparse
+import os
 
 from conda import CondaError
 from conda.plugins.types import ChannelAuthBase

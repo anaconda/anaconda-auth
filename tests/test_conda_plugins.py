@@ -45,6 +45,22 @@ def mocked_token_info(mocker):
         ),
     )
 
+@pytest.fixture()
+def mocked_token_info_with_api_key(mocker):
+    mocker.patch(
+        "anaconda_auth.token.TokenInfo.load",
+        return_value=TokenInfo(
+            domain="repo.anaconda.cloud",
+            api_key="my-test-api-key",
+            repo_tokens=[
+                {
+                    "org_name": "my-first-org",
+                    "token": "my-first-test-token-in-token-info",
+                },
+                {"org_name": "my-org", "token": "my-test-token-in-token-info"},
+            ],
+        ),
+    )
 
 @pytest.fixture()
 def handler():
@@ -62,12 +78,20 @@ def test_get_token_via_conda_token(handler):
 
 
 @pytest.mark.usefixtures("mocked_token_info")
-def test_get_token_via_keyring(handler):
+def test_get_repo_token_via_keyring(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
     assert token == "my-test-token-in-token-info"
 
+
+@pytest.mark.usefixtures("mocked_token_info_with_api_key")
+def test_get_api_token_via_keyring(handler, monkeypatch):
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "True")
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    )
+    assert token == "my-test-api-key"
 
 @pytest.mark.usefixtures("mocked_token_info")
 def test_get_token_for_main_finds_first_token(handler):
