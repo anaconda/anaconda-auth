@@ -58,6 +58,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
             path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
 
+        # Set ANACONDA_AUTH_USE_UNIFIED_API_KEY to "True" to use the unified API key for testing.
+        if os.getenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "False") == "True" and isinstance(token_info.api_key, str):
+            return token_info.api_key
+
         # First we attempt to return an organization-specific token
         try:
             return token_info.get_repo_token(maybe_org)
