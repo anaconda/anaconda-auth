@@ -1,6 +1,7 @@
 import pytest
 from requests import Response
 from requests.hooks import dispatch_hook
+from requests import PreparedRequest
 
 from anaconda_auth.token import TokenInfo
 
@@ -92,6 +93,28 @@ def test_get_api_token_via_keyring(handler, monkeypatch):
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
     assert token == "my-test-api-key"
+
+@pytest.mark.usefixtures("mocked_token_info")
+def test_auth_handler_call_sets_authorization_header_repo_token(handler, monkeypatch):
+    request = PreparedRequest()
+    request.url = "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    request.headers = {}
+
+    modified_request = handler(request)
+
+    assert modified_request.headers["Authorization"] == "token my-test-token-in-token-info"
+
+@pytest.mark.usefixtures("mocked_token_info_with_api_key")
+def test_auth_handler_call_sets_authorization_header_api_key(handler, monkeypatch):
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "True")
+
+    request = PreparedRequest()
+    request.url = "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    request.headers = {}
+
+    modified_request = handler(request)
+
+    assert modified_request.headers["Authorization"] == "token my-test-api-key"
 
 @pytest.mark.usefixtures("mocked_token_info")
 def test_get_token_for_main_finds_first_token(handler):
