@@ -4,11 +4,11 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+import os
 from functools import lru_cache
 from typing import Any
 from typing import Optional
 from urllib.parse import urlparse
-import os
 
 from conda import CondaError
 from conda.plugins.types import ChannelAuthBase
