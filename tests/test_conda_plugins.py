@@ -87,7 +87,7 @@ def test_get_repo_token_via_keyring(handler):
 
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
-def test_get_api_token_via_keyring(handler, monkeypatch):
+def test_get_unified_api_token_via_keyring(handler, monkeypatch):
     monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "True")
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
@@ -105,7 +105,7 @@ def test_auth_handler_call_sets_authorization_header_repo_token(handler, monkeyp
     assert modified_request.headers["Authorization"] == "Bearer my-test-token-in-token-info"
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
-def test_auth_handler_call_sets_authorization_header_api_key(handler, monkeypatch):
+def test_auth_handler_call_sets_authorization_header_unified_api_token(handler, monkeypatch):
     monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "True")
 
     request = PreparedRequest()

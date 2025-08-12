@@ -4,7 +4,6 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
-import os
 from functools import lru_cache
 from typing import Any
 from typing import Optional
@@ -18,6 +17,7 @@ from requests import Response
 from anaconda_auth._conda import repo_config
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
+from anaconda_auth.config import AnacondaAuthConfig
 
 URI_PREFIX = "/repo/"
 
@@ -48,6 +48,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
         token_domain = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
+        config = AnacondaAuthConfig()
+
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
@@ -59,8 +61,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
             path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
 
-        # Set ANACONDA_AUTH_USE_UNIFIED_API_KEY to "True" to use the unified API key for testing.
-        if os.getenv("ANACONDA_AUTH_USE_UNIFIED_API_KEY", "False") == "True" and isinstance(token_info.api_key, str):
+        # Check configuration to use unified api key,
+        #   otherwise continue and attempt to utilize repo token
+        if config.use_unified_api_key and isinstance(token_info.api_key, str):
             return token_info.api_key
 
         # First we attempt to return an organization-specific token

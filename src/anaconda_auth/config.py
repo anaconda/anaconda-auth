@@ -46,6 +46,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     oidc_request_headers: Dict[str, str] = {"User-Agent": f"anaconda-auth/{version}"}
     login_success_path: str = "/app/local-login-success"
     login_error_path: str = "/app/local-login-error"
+    use_unified_api_key: bool = False
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
