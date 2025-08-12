@@ -131,5 +131,5 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Inject the token as an Authorization header on each request."""
         request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
-        request.headers["Authorization"] = f"token {token}"
+        request.headers["Authorization"] = f"Bearer {token}"
         return request
