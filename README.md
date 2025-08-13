@@ -60,6 +60,7 @@ The following parameters in the `plugin.auth` section control the login actions 
 | `ssl_verify` | `ANACONDA_AUTH_SSL_VERIFY` | SSL verification for all requests | `True` |
 | `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token; can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
 | `api_key` | `ANACONDA_AUTH_API_KEY` | API key; if `None`, defaults to keyring storage | `None` |
+| `extra_headers` | `ANACONDA_AUTH_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
 | `use_unified_api_key` | `ANACONDA_AUTH_USE_UNIFIED_API_KEY` | Configures anaconda-auth to use unified api key in "Authorization" header instead default repo token | `False` |
 
 ### Example
