@@ -102,7 +102,7 @@ def test_auth_handler_call_sets_authorization_header_repo_token(handler, monkeyp
 
     modified_request = handler(request)
 
-    assert modified_request.headers["Authorization"] == "Bearer my-test-token-in-token-info"
+    assert modified_request.headers["Authorization"] == "token my-test-token-in-token-info"
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
 def test_auth_handler_call_sets_authorization_header_unified_api_token(handler, monkeypatch):
@@ -159,7 +159,7 @@ def test_inject_header_during_request(session, url, monkeypatch):
 
     # Make sure the token got injected
     session.get(url)
-    assert request.headers.get("Authorization") == "Bearer my-test-token-in-token-info"
+    assert request.headers.get("Authorization") == "token my-test-token-in-token-info"
 
 
 @pytest.mark.usefixtures("mocked_token_info")
