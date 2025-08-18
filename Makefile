@@ -15,7 +15,7 @@ type-check:  ## Run static type checks
 	$(CONDA_RUN) mypy
 
 test:  ## Run all the unit tests
-	$(CONDA_RUN) pytest
+	$(CONDA_RUN) pytest $(ARGS)
 
 test-integration:  ## Run all the unit tests
 	$(CONDA_RUN) pytest --integration
