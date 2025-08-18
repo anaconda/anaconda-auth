@@ -19,6 +19,7 @@ from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
+from anaconda_auth.utils import get_hostname
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
@@ -85,6 +86,7 @@ class BaseClient(requests.Session):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: bool = None,
     ):
         super().__init__()
 
@@ -100,12 +102,15 @@ class BaseClient(requests.Session):
             kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
             kwargs["extra_headers"] = extra_headers
+        if hash_hostname is not None:
+            kwargs["hash_hostname"] = hash_hostname
 
         self.config = AnacondaAuthConfig(**kwargs)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
+        self.headers["Hostname"] = get_hostname(hash=self.config.hash_hostname)
         self.api_version = api_version or self._api_version
         if self.api_version:
             self.headers["Api-Version"] = self.api_version
