@@ -86,7 +86,7 @@ class BaseClient(requests.Session):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
-        hash_hostname: bool = None,
+        hash_hostname: Optional[bool] = None,
     ):
         super().__init__()
 
