@@ -5,6 +5,7 @@ import base64
 import logging
 
 from hashlib import blake2b
+from socket import gethostname
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,19 @@ def get_hostname(hash: bool = False, pepper: Optional[str] = None) -> str:
     Returns:
         The hostname.
     """
-    from socket import gethostname
+    try:
+        hostname = gethostname()
+        if not hostname:
+            logger.info("socket.gethostname returned an empty value")
+    except Exception as e:
+        logger.info(f"socket.gethostname raised an exception: {e}")
+        hostname = ""
 
-    hostname = gethostname()
-    if not hostname:
-        logger.info("socket.gethostname returned an empty value")
     if hostname.endswith(".local"):
         hostname = hostname.rsplit(".", 1)[0]
     if hash:
         hostname = hash_string("hostname", hostname, pepper)
+
     return hostname
 
 
