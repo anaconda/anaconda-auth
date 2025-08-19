@@ -17,6 +17,7 @@ from requests import Response
 from anaconda_auth._conda import repo_config
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
+from anaconda_auth.config import AnacondaAuthConfig
 
 URI_PREFIX = "/repo/"
 
@@ -47,6 +48,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
         token_domain = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
+        config = AnacondaAuthConfig()
+
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
@@ -57,6 +60,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if path.startswith(URI_PREFIX):
             path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
+
+        # Check configuration to use unified api key,
+        #   otherwise continue and attempt to utilize repo token
+        api_key = token_info.api_key
+        if config.use_unified_api_key and isinstance(api_key, str) and len(api_key):
+            return api_key
 
         # First we attempt to return an organization-specific token
         try:
@@ -126,5 +135,11 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Inject the token as an Authorization header on each request."""
         request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
-        request.headers["Authorization"] = f"token {token}"
+
+        config = AnacondaAuthConfig()
+        if config.use_unified_api_key:
+            request.headers["Authorization"] = f"Bearer {token}"
+        else:
+            request.headers["Authorization"] = f"token {token}"
+
         return request
