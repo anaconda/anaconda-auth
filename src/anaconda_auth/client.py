@@ -110,7 +110,7 @@ class BaseClient(requests.Session):
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
-        self.headers["Hostname"] = get_hostname(hash=self.config.hash_hostname)
+        self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
         self.api_version = api_version or self._api_version
         if self.api_version:
             self.headers["Api-Version"] = self.api_version

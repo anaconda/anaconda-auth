@@ -363,4 +363,4 @@ def test_hostname_header(mocker: MockerFixture, hash: bool, hostname: str, expec
 
     client = BaseClient(hash_hostname=hash)
 
-    assert client.headers.get("Hostname") == expected_result
+    assert client.headers.get("X-Client-Hostname") == expected_result
