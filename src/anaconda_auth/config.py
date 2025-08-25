@@ -47,6 +47,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     login_success_path: str = "/app/local-login-success"
     login_error_path: str = "/app/local-login-error"
     use_unified_api_key: bool = False
+    hash_hostname: bool = True
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
