@@ -15,9 +15,9 @@ from requests import PreparedRequest
 from requests import Response
 
 from anaconda_auth._conda import repo_config
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
-from anaconda_auth.config import AnacondaAuthConfig
 
 URI_PREFIX = "/repo/"
 
@@ -64,7 +64,11 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # Check configuration to use unified api key,
         #   otherwise continue and attempt to utilize repo token
         api_key = token_info.api_key
-        if config.use_unified_api_key and isinstance(api_key, str) and len(api_key):
+        if (
+            config.use_unified_repo_api_key
+            and isinstance(api_key, str)
+            and len(api_key)
+        ):
             return api_key
 
         # First we attempt to return an organization-specific token
@@ -137,7 +141,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         token = self._load_token(request.url)
 
         config = AnacondaAuthConfig()
-        if config.use_unified_api_key:
+        if config.use_unified_repo_api_key:
             request.headers["Authorization"] = f"Bearer {token}"
         else:
             request.headers["Authorization"] = f"token {token}"
