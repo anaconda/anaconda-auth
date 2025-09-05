@@ -62,17 +62,6 @@ def _login_required(
     return response
 
 
-class BearerAuth(AuthBase):
-    def __init__(
-        self, domain: Optional[str] = None, api_key: Optional[str] = None
-    ) -> None:
-        self.api_key = api_key
-        if domain is None:
-            domain = AnacondaAuthConfig().domain
-
-        self._token_info = TokenInfo(domain=domain)
-
-
 def login_required(
     response: Response, *args: Any, **kwargs: Any
 ) -> Union[PreparedRequest, Response]:
