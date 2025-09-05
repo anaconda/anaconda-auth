@@ -190,6 +190,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: Optional[bool] = None,
         **session_kwargs: Any,
     ):
         super().__init__(**session_kwargs)
@@ -200,6 +201,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             api_version=api_version,
             ssl_verify=ssl_verify,
             extra_headers=extra_headers,
+            hash_hostname=hash_hostname,
         )
         self.hooks["response"].append(cast(HookCallableType, login_required))
 
@@ -271,6 +273,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: Optional[bool] = None,
     ):
         super().__init__()
         self._initialize(
@@ -280,6 +283,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             api_version=api_version,
             ssl_verify=ssl_verify,
             extra_headers=extra_headers,
+            hash_hostname=hash_hostname,
         )
         self.hooks["response"].append(cast(HookCallableType, async_login_required))
 
