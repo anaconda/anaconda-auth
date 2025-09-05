@@ -3,22 +3,23 @@ from functools import cached_property
 from panel.auth import OAuthLoginHandler
 from panel.config import config
 
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 
 
-class AnacondaCloudLoginHandler(OAuthLoginHandler):
-    """Anaconda.cloud OAuth2 Authentication
+class AnacondaLoginHandler(OAuthLoginHandler):
+    """Anaconda OAuth2 Authentication
 
     To utilize this handler you must have a Client ID (key)
-    and secret. The OAuth client at Anaconda.cloud must be
-    configured for
+    and secret. The OAuth client at Anaconda must be configured for:
 
-    Set scopes: offline_access, openid, email, profile
-    Set redirect url to http://localhost:5006
-    Set grant type: Authorization Code
-    Set response types: ID Token, Token, Code
-    Set access token type: JWT
-    Set Authentication Method: HTTP Body"""
+        * Set scopes: offline_access, openid, email, profile
+        * Set redirect url to http://localhost:5006
+        * Set grant type: Authorization Code
+        * Set response types: ID Token, Token, Code
+        * Set access token type: JWT
+        * Set Authentication Method: HTTP Body
+
+    """
 
     _access_token_header: str = "Bearer {}"
 
@@ -28,9 +29,8 @@ class AnacondaCloudLoginHandler(OAuthLoginHandler):
     _OAUTH_REDIRECT_URL: str = "http://localhost:5006"
 
     @cached_property
-    def _config(self) -> AnacondaCloudConfig:
-        c = AnacondaCloudConfig()
-        return c
+    def _config(self) -> AnacondaAuthConfig:
+        return AnacondaAuthConfig()
 
     @property
     def _OAUTH_AUTHORIZE_URL(self) -> str:

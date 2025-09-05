@@ -8,6 +8,7 @@ PUBLIC_IMPORTS = [
     "login",
     "logout",
     "client_factory",
+    "actions._do_auth_flow",
     "actions.get_api_key",
     "actions.is_logged_in",
     "actions.login",
@@ -19,7 +20,8 @@ PUBLIC_IMPORTS = [
     "client.TokenInfoAuth",
     "client.client_factory",
     "client.login_required",
-    "config.AnacondaCloudConfig",
+    # TODO: figure out what to do with this import
+    # "config.AnacondaCloudConfig",
     "exceptions.AuthenticationError",
     "exceptions.InvalidTokenError",
     "exceptions.TokenNotFoundError",

@@ -12,25 +12,27 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.4.0",
-  "niquests >=3.11.0"
+  "niquests >=3.11.0",
+  "anaconda-cli-base >=0.5.2"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
 name = "anaconda-auth"
 readme = "README.md"
-requires-python = ">=3.8"
-urls = {repository = "https://github.com/anaconda/anaconda-auth"}
+requires-python = ">=3.9"
 
 [project.entry-points."anaconda_cli.subcommand"]
-cloud = "anaconda_auth.cli:app"
+auth = "anaconda_auth.cli:app"
+# TODO: Deprecated plugin name
+cloud = "anaconda_cloud_auth.cli:app"
+token = "anaconda_auth.repo:app"
 
 [project.entry-points.conda]
-anaconda-cloud-auth = "anaconda_auth._conda.entrypoint"
+anaconda-auth = "anaconda_auth._conda.entrypoint"
 
 [project.entry-points."panel.auth"]
-anaconda_cloud = "anaconda_auth.panel:AnacondaCloudLoginHandler"
+anaconda_auth = "anaconda_auth.panel:AnacondaLoginHandler"
 
 [project.optional-dependencies]
 dev = [
@@ -38,6 +40,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-mock",
+  "requests-mock",
   "responses",
   "tox",
   "types-requests"
@@ -50,6 +53,12 @@ publish = [
 
 [project.scripts]
 conda-token = "anaconda_auth._conda.conda_token:cli"
+
+[project.urls]
+documentation = "https://anaconda.github.io/anaconda-auth"
+homepage = "https://anaconda.com"
+issues = "https://github.com/anaconda/anaconda-auth/issues"
+repository = "https://github.com/anaconda/anaconda-auth"
 
 [tool.coverage]
 paths.source = [
@@ -97,6 +106,10 @@ module = "*._version"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "anaconda_anon_usage.*"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "binstar_client.*"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -174,7 +187,6 @@ known-first-party = ["anaconda_*"]
 legacy_tox_ini = """
 [tox]
 envlist =
-    py38
     py39
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
     py311
@@ -182,10 +194,12 @@ envlist =
     mypy
     report
 isolated_build = True
+requires =
+    tox-conda
+    tox-gh-actions
 
 [gh-actions]
 python =
-    3.8: py38, mypy
     3.9: py39, mypy
     3.10: py310, mypy
     3.11: py311, mypy
@@ -195,14 +209,15 @@ python =
 passenv =
     TEST_API_KEY
     CE_TOKEN
-    ANACONDA_CLOUD_DOMAIN
-    ANACONDA_CLOUD_CLIENT_ID
+    ANACONDA_AUTH_DOMAIN
+    ANACONDA_AUTH_CLIENT_ID
+    ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY
 deps =
     mypy
     pytest
     pytest-cov
     pytest-mock
-    responses
+    requests-mock
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
@@ -215,6 +230,7 @@ deps =
     semver3: semver>=3,<4
 conda_deps =
     anaconda-anon-usage
+    anaconda-client
     # Optionally install conda to test plugins
     conda: conda
 conda_channels =

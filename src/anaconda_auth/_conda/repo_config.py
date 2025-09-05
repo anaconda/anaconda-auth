@@ -4,20 +4,23 @@ Configure Conda to use Anaconda Commercial Edition.
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import os
 import sys
 import warnings
 from os.path import abspath
 from os.path import expanduser
 from os.path import join
+from typing import Any
 from urllib.parse import urljoin
 
 import conda
 import conda.gateways.logging  # noqa: F401
 from conda.base.context import context
 from conda.base.context import reset_context
-from conda.cli.python_api import Commands
-from conda.cli.python_api import run_command
+from conda.cli import main as run_command
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
 from conda.gateways.anaconda_client import remove_binstar_token
@@ -25,6 +28,10 @@ from conda.gateways.anaconda_client import set_binstar_token
 from conda.gateways.connection.session import CondaSession
 from conda.models.channel import Channel
 from packaging import version
+from rich.prompt import Confirm
+
+from anaconda_auth._conda.condarc import CondaRC
+from anaconda_cli_base import console
 
 CONDA_VERSION = version.parse(conda.__version__)
 
@@ -36,6 +43,13 @@ ARCHIVE_CHANNELS = ["free", "mro-archive", "pro"]
 user_rc_path = abspath(expanduser("~/.condarc"))
 escaped_user_rc_path = user_rc_path.replace("%", "%%")
 escaped_sys_rc_path = abspath(join(sys.prefix, ".condarc")).replace("%", "%%")
+
+
+class Commands:
+    """Names for conda commands used."""
+
+    CONFIG = "config"
+    CLEAN = "clean"
 
 
 class CondaTokenError(RuntimeError):
@@ -62,7 +76,7 @@ def clean_index() -> None:
     changing the condarc to ensure that the downloaded
     repodata is correct.
     """
-    run_command(Commands.CLEAN, "-i")
+    run_command(Commands.CLEAN, "-i", "-y", "-q")
 
 
 def validate_token(token: str, no_ssl_verify: bool = False) -> None:
@@ -88,6 +102,9 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
 
     session = CondaSession()
 
+    # Ensure the index cache is cleaned first
+    clean_index()
+
     channel = Channel(urljoin(REPO_URL, "main/noarch/repodata.json"))
     channel.token = token
     token_url = str(channel.url(with_credentials=True))
@@ -97,6 +114,21 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
         raise CondaTokenError(
             "The token could not be validated. Please check that you have typed it correctly."
         )
+
+
+def configure_plugin(should_set_default_channels: bool = False) -> None:
+    """Configure the user's .condarc file with the anaconda-auth plugin.
+
+    We install the auth-handler plugin by writing the "channel_settings" key and associate
+    all premium repo channels with this auth handler.
+
+    """
+    condarc = CondaRC()
+    condarc.backup()
+    condarc.update_channel_settings(
+        "https://repo.anaconda.cloud/*", "anaconda-auth", username=None
+    )
+    condarc.save()
 
 
 def enable_extra_safety_checks(
@@ -261,6 +293,59 @@ def _set_channel(
     run_command(Commands.CONFIG, *config_args)
 
 
+def _get_from_condarc(
+    key: str,
+    default: Any = None,
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> Any:
+    """Retrieve the existing default_channels from the user's `.condarc` file.
+
+    If the user does not have a "default_channels" section, an empty list is returned.
+
+    """
+    config_args = ["--get", key, "--json"]
+
+    if condarc_system:
+        config_args.append("--system")
+    elif condarc_env:
+        config_args.append("--env")
+    elif condarc_file:
+        config_args.append(f"--file={condarc_file}")
+
+    # Capture the JSON output from stdout
+    string_io = io.StringIO()
+    with contextlib.redirect_stdout(string_io):
+        run_command(Commands.CONFIG, *config_args)
+
+    try:
+        result = json.loads(string_io.getvalue())
+    except json.JSONDecodeError:
+        result = {}
+
+    return result.get("get", {}).get(key, default)
+
+
+def _get_default_channels(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> list[str]:
+    """Retrieve the existing default_channels from the user's `.condarc` file.
+
+    If the user does not have a "default_channels" section, an empty list is returned.
+
+    """
+    return _get_from_condarc(
+        "default_channels",
+        default=[],
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+
+
 def _remove_default_channels(
     condarc_system: bool = False,
     condarc_env: bool = False,
@@ -281,10 +366,34 @@ def _remove_default_channels(
     elif condarc_file:
         config_args.append(f"--file={condarc_file}")
 
-    try:
-        run_command(Commands.CONFIG, *config_args)
-    except CondaKeyError:
-        pass
+    # We suppress a CondaKeyError below to prevent logging an internal conda error
+    # to the terminal.
+    err_io = io.StringIO()
+    with contextlib.redirect_stderr(err_io):
+        try:
+            run_command(Commands.CONFIG, *config_args)
+        except CondaKeyError:
+            pass
+
+    err_string = err_io.getvalue()
+    if "CondaKeyError" not in err_string.strip():
+        print(err_string, file=sys.stderr)
+
+
+def _prompt_to_set_default_channels() -> bool:
+    """Prompt the user for whether they would like to set their default channels."""
+    existing_default_channels = _get_default_channels()
+    if existing_default_channels:
+        console.print("Existing default channels found:")
+        for c in existing_default_channels:
+            console.print(f"- {c}")
+        console.print(
+            "This action will override the existing default_channels setting."
+        )
+    else:
+        console.print("Prepared to set default channels in .condarc.")
+
+    return Confirm.ask("Proceed?", default=False)
 
 
 def configure_default_channels(
@@ -292,6 +401,7 @@ def configure_default_channels(
     condarc_env: bool = False,
     condarc_file: str | None = None,
     include_archive_channels: list[str] | None = None,
+    force: bool = False,
 ) -> None:
     """Configure the default_channels to utilize only Commercial Edition.
 
@@ -303,9 +413,30 @@ def configure_default_channels(
     4. Optionally add any of the archive channels:
        free, pro, mro, mro-archive
     """
+    console.print("Configuring your [cyan].condarc[/cyan] file")
+
+    existing_default_channels = _get_default_channels()
+
+    existing_default_channels_short_names = [
+        c.removeprefix(REPO_URL) for c in existing_default_channels
+    ]
+    if set(existing_default_channels_short_names) == set(
+        [MAIN_CHANNEL] + ACTIVE_CHANNELS
+    ):
+        console.print("Default channels already configured, nothing to do.")
+        return
+
+    if not (force or _prompt_to_set_default_channels()):
+        return
+
     _remove_default_channels(condarc_system, condarc_env, condarc_file)
 
-    if can_restore_free_channel():
+    if can_restore_free_channel() and _get_from_condarc(
+        "restore_free_channel",
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    ):
         _unset_restore_free_channel(condarc_system, condarc_env, condarc_file)
 
     _set_channel(
@@ -376,6 +507,7 @@ def token_set(
     include_archive_channels: list[str] | None = None,
     no_ssl_verify: bool = False,
     enable_signature_verification: bool = False,
+    force: bool = False,
 ) -> None:
     """Set the Commercial Edition token and configure default_channels.
 
@@ -398,5 +530,5 @@ def token_set(
     if enable_signature_verification:
         enable_extra_safety_checks(system, env, file)
 
-    configure_default_channels(system, env, file, include_archive_channels)
+    configure_default_channels(system, env, file, include_archive_channels, force=force)
     clean_index()

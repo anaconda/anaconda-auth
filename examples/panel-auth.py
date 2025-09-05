@@ -1,9 +1,9 @@
-"""An example Panel application with Anaconda.cloud auth
+"""An example Panel application with Anaconda auth
 
 Panel provides capability to enable authorization for deployed applications.
-The anaconda-cloud-auth package provides the anaconda_cloud auth plugin.
+The anaconda-auth package provides the anaconda_auth plugin.
 
-In order to use the anaconda_cloud auth plugin you will need an OAuth client
+In order to use the anaconda_auth plugin you will need an OAuth client
 ID (key) and secret. The client must be configured as follows
 
     Set scopes: offline_access, openid, email, profile
@@ -14,19 +14,19 @@ ID (key) and secret. The client must be configured as follows
     Set Authentication Method: HTTP Body
 
 In this example the applications is only accessible after successfully creating
-and logging into an Anaconda.cloud account. The access_token from the browser
+and logging into an Anaconda account. The access_token from the browser
 is available in pn.state.access_token and can be used as an API key in requests
-to Anaconda.cloud endpoints. In this example the access_token is passed to the
+to Anaconda endpoints. In this example the access_token is passed to the
 BaseClient in order to display user information. Note that the access_token
 may only be valid for 15 minutes and while Panel will refresh pn.state.access_token
 you may have to re-create your client object or request a long-lived API token
 in your app.
 
-To run the app with the anaconda_cloud auth provider you will need to set several
+To run the app with the anaconda_auth provider you will need to set several
 environment variables or command-line arguments. See https://panel.holoviz.org/how_to/authentication/configuration.html
 for the full Panel auth documentation.
 
-PANEL_OAUTH_PROVIDER=anaconda_cloud or --oauth-provider anaconda_cloud
+PANEL_OAUTH_PROVIDER=anaconda_auth or --oauth-provider anaconda_auth
 PANEL_OAUTH_KEY=<key>               or --oauth-key=<key>
 PANEL_OAUTH_SECRET=<secret>         or --oauth-secret=<key>
 PANEL_COOKIE_SECRET=<cookie-name>   or --cookie-secret=<value>
@@ -40,22 +40,22 @@ from textwrap import dedent
 
 import panel as pn
 
-from anaconda_cloud_auth.client import BaseClient
+from anaconda_auth.client import BaseClient
 
 if pn.state.user == "guest":
     text = dedent(
         """
         # Anaconda Application.
 
-        This app is powered by Anaconda.cloud services.
-        By clicking login you are agreeing to [Anaconda.cloud terms of service](https://www.anaconda.com/terms-of-use)
+        This app is powered by Anaconda services.
+        By clicking login you are agreeing to [Anaconda terms of service](https://www.anaconda.com/terms-of-use)
         as well as any terms or restrictions of this specific application.
 
-        An Anaconda.cloud-powered application is a [Panel](https://panel.holoviz.org) application that utilizes
-        the `AnacondaCloudLoginHandler` to allow end-users to login using their own Anaconda.cloud account and
-        optionally allow them to interact with Anaconda.cloud services.
+        An Anaconda-powered application is a [Panel](https://panel.holoviz.org) application that utilizes
+        the `AnacondaLoginHandler` to allow end-users to login using their own Anaconda account and
+        optionally allow them to interact with Anaconda services.
 
-        All application developers must register their app at Anaconda.cloud to receive an OAuth client key and secret.
+        All application developers must register their app at Anaconda to receive an OAuth client key and secret.
         """
     )
 

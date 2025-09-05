@@ -22,7 +22,7 @@ HERE = os.path.dirname(__file__)
 @pytest.mark.integration
 @pytest.mark.usefixtures("disable_dot_env")
 def test_login_required_error(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     client = BaseClient()
 
@@ -54,7 +54,7 @@ def test_outdated_api_key(outdated_api_key: str) -> None:
 def test_expired_token_ignored(
     outdated_token_info: TokenInfo, monkeypatch: MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     outdated_token_info.save()
 
@@ -139,10 +139,11 @@ def test_client_min_api_version_header(
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
+    # TODO: Use a mock for the request
     client = BaseClient()
-    request = Request("GET", "api/auth/healthz")
+    request = Request("GET", "api/projects/healthz")
     prepped = client.prepare_request(request)
     assert "Authorization" not in prepped.headers
 
@@ -156,9 +157,9 @@ def test_token_included(
     monkeypatch: MonkeyPatch,
     outdated_token_info: TokenInfo,
 ) -> None:
-    monkeypatch.setenv("ANACONDA_CLOUD_DOMAIN", "mocked-domain")
+    monkeypatch.setenv("ANACONDA_AUTH_DOMAIN", "mocked-domain")
     mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
-    monkeypatch.delenv("ANACONDA_CLOUD_API_KEY", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     outdated_token_info.save()
 
@@ -172,7 +173,7 @@ def test_api_key_env_variable_over_keyring(
     outdated_token_info: TokenInfo, monkeypatch: MonkeyPatch
 ) -> None:
     outdated_token_info.save()
-    monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "set-in-env")
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
     client = BaseClient()
     assert client.config.api_key == "set-in-env"
@@ -185,7 +186,7 @@ def test_api_key_init_arg_over_variable(
     outdated_token_info: TokenInfo, monkeypatch: MonkeyPatch
 ) -> None:
     outdated_token_info.save()
-    monkeypatch.setenv("ANACONDA_CLOUD_API_KEY", "set-in-env")
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
     client = BaseClient(api_key="set-in-init")
     assert client.config.api_key == "set-in-init"
@@ -311,7 +312,7 @@ def test_extra_headers_bad_json() -> None:
 
 def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
     extra_headers = '{"X-Extra": "from-env"}'
-    monkeypatch.setenv("ANACONDA_CLOUD_EXTRA_HEADERS", extra_headers)
+    monkeypatch.setenv("ANACONDA_AUTH_EXTRA_HEADERS", extra_headers)
 
     client = BaseClient(api_key="set-in-init")
 
@@ -322,7 +323,9 @@ def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.integration
 @pytest.mark.usefixtures("save_api_key_to_token")
 def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
 
     client = BaseClient(ssl_verify=True)
     with pytest.raises(SSLError):
@@ -332,8 +335,27 @@ def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.integration
 @pytest.mark.usefixtures("save_api_key_to_token")
 def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setenv("REQUESTS_CA_BUNDLE", os.path.join(HERE, "mock-cert.pem"))
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
 
     client = BaseClient(ssl_verify=False)
     res = client.get("api/account")
     assert res.ok
+
+
+@pytest.mark.parametrize(
+    "hash,hostname,expected_result",
+    [
+        (False, "test-hostname", "test-hostname"),
+        (True, "test-hostname", "gQ3w7KzEFT543NdWZR-TVg"),
+    ],
+)
+def test_hostname_header(
+    mocker: MockerFixture, hash: bool, hostname: str, expected_result: str
+) -> None:
+    mocker.patch("anaconda_auth.utils.gethostname", return_value=hostname)
+
+    client = BaseClient(hash_hostname=hash)
+
+    assert client.headers.get("X-Client-Hostname") == expected_result

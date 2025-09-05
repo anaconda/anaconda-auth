@@ -12,7 +12,8 @@ from anaconda_auth import login
 from anaconda_auth.actions import get_api_key
 from anaconda_auth.actions import is_logged_in
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.token import TOKEN_INFO_VERSION
 from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
@@ -26,7 +27,7 @@ def test_login_to_api_key(mocker: MockerFixture) -> None:
 
     login()
 
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
     keyring_token = TokenInfo.load(config.domain)
 
     assert keyring_token.model_dump() == {
@@ -34,7 +35,7 @@ def test_login_to_api_key(mocker: MockerFixture) -> None:
         "username": None,
         "repo_tokens": [],
         "api_key": "api-key",
-        "version": 1,
+        "version": TOKEN_INFO_VERSION,
     }
 
 
@@ -67,7 +68,7 @@ def test_get_auth_info(integration_test_client: BaseClient, is_not_none: Any) ->
 
 @pytest.fixture
 def mocked_do_login(mocker: MockerFixture) -> MagicMock:
-    def _mocked_login(config: AnacondaCloudConfig, basic: bool) -> None:
+    def _mocked_login(config: AnacondaAuthConfig, basic: bool) -> None:
         TokenInfo(domain=config.domain, api_key="from-login").save()
 
     mocker.patch("anaconda_auth.actions._do_login", _mocked_login)
@@ -78,7 +79,7 @@ def mocked_do_login(mocker: MockerFixture) -> MagicMock:
 
 
 def test_login_no_existing_token(mocked_do_login: MagicMock) -> None:
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
     login(config=config)
 
     assert TokenInfo.load(config.domain).api_key == "from-login"
@@ -88,7 +89,7 @@ def test_login_no_existing_token(mocked_do_login: MagicMock) -> None:
 def test_login_has_valid_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
 
     mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
     TokenInfo(domain=config.domain, api_key="pre-existing").save()
@@ -102,7 +103,7 @@ def test_login_has_valid_token(
 def test_force_login_with_valid_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
 
     mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
     TokenInfo(domain=config.domain, api_key="pre-existing").save()
@@ -116,7 +117,7 @@ def test_force_login_with_valid_token(
 def test_login_has_expired_token(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
-    config = AnacondaCloudConfig()
+    config = AnacondaAuthConfig()
 
     mocker.patch("anaconda_auth.token.TokenInfo.expired", True)
     TokenInfo(domain=config.domain, api_key="pre-existing-expired").save()
@@ -154,10 +155,29 @@ def test_get_api_key(mocked_request: MockedRequest) -> None:
 
     data = mocked_request.called_with_kwargs["json"]
     assert data == {
-        "scopes": ["cloud:read", "cloud:write"],
-        "tags": [f"anaconda-cloud-auth/v{__version__}"],
+        "scopes": ["cloud:read", "cloud:write", "repo:read"],
+        "tags": [f"anaconda-auth/v{__version__}"],
     }
 
+@pytest.mark.usefixtures("without_aau_token")
+def test_get_api_key_with_custom_config(mocked_request: MockedRequest) -> None:
+    """When we get an API key, we assign appropriate generic scopes and tags."""
+
+    config = AnacondaAuthConfig(auth_domain_override="auth.example.domain")
+
+    key = get_api_key("some_access_token", config=config)
+    assert key == "some-jwt"
+    assert mocked_request.called_with_args == ("https://auth.example.domain/api/auth/api-keys",)
+
+    headers = mocked_request.called_with_kwargs["headers"]
+    assert headers["Authorization"].startswith("Bearer")
+    assert "X-AAU-CLIENT" not in headers
+
+    data = mocked_request.called_with_kwargs["json"]
+    assert data == {
+        "scopes": ["cloud:read", "cloud:write", "repo:read"],
+        "tags": [f"anaconda-auth/v{__version__}"],
+    }
 
 @pytest.mark.usefixtures("with_aau_token")
 def test_get_api_key_with_aau_token(mocked_request: MockedRequest) -> None:

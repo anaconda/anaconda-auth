@@ -19,10 +19,11 @@ from niquests.auth import BearerTokenAuth
 from niquests.structures import CaseInsensitiveDict
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
+from anaconda_auth.utils import get_hostname
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
@@ -59,6 +60,17 @@ def _login_required(
                 )
 
     return response
+
+
+class BearerAuth(AuthBase):
+    def __init__(
+        self, domain: Optional[str] = None, api_key: Optional[str] = None
+    ) -> None:
+        self.api_key = api_key
+        if domain is None:
+            domain = AnacondaAuthConfig().domain
+
+        self._token_info = TokenInfo(domain=domain)
 
 
 def login_required(
@@ -104,6 +116,7 @@ class AnacondaClientMixin:
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: Optional[bool] = None,
     ) -> None:
         config_kwargs: Dict[str, Any] = {}
         if domain is not None:
@@ -114,11 +127,14 @@ class AnacondaClientMixin:
             config_kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
             config_kwargs["extra_headers"] = extra_headers
+        if hash_hostname is not None:
+            config_kwargs["hash_hostname"] = hash_hostname
 
-        self.config = AnacondaCloudConfig(**config_kwargs)
+        self.config = AnacondaAuthConfig(**config_kwargs)
 
         self.base_url = f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
+        self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
         self.verify = self.config.ssl_verify
         self.api_version = api_version or self._api_version
         if self.api_version:

@@ -42,12 +42,18 @@ def test_default_channels():
           - https://repo.anaconda.cloud/repo/msys2
         """
     )
-    if can_restore_free_channel():
-        final_condarc = "restore_free_channel: false\n" + final_condarc
-
     with make_temp_condarc() as rc:
-        configure_default_channels(condarc_file=rc)
+        configure_default_channels(condarc_file=rc, force=True)
         assert _read_test_condarc(rc) == final_condarc
+
+
+def test_default_channels_no_exception(capsys):
+    """Ensure that no CondaKeyError is raised if the .condarc does not have default_channels defined."""
+    with make_temp_condarc() as rc:
+        configure_default_channels(condarc_file=rc, force=True)
+
+    res = capsys.readouterr()
+    assert "CondaKeyError: 'default_channels'" not in res.err
 
 
 def test_replace_default_channels():
@@ -67,11 +73,8 @@ def test_replace_default_channels():
           - https://repo.anaconda.cloud/repo/msys2
         """
     )
-    if can_restore_free_channel():
-        final_condarc = "restore_free_channel: false\n" + final_condarc
-
     with make_temp_condarc(original_condarc) as rc:
-        configure_default_channels(condarc_file=rc)
+        configure_default_channels(condarc_file=rc, force=True)
         assert _read_test_condarc(rc) == final_condarc
 
 
@@ -95,12 +98,11 @@ def test_default_channels_with_inactive():
           - https://repo.anaconda.cloud/repo/mro-archive
         """
     )
-    if can_restore_free_channel():
-        final_condarc = "restore_free_channel: false\n" + final_condarc
-
     with make_temp_condarc(original_condarc) as rc:
         configure_default_channels(
-            condarc_file=rc, include_archive_channels=["free", "pro", "mro-archive"]
+            condarc_file=rc,
+            include_archive_channels=["free", "pro", "mro-archive"],
+            force=True,
         )
         assert _read_test_condarc(rc) == final_condarc
 
@@ -117,12 +119,11 @@ def test_replace_default_channels_with_inactive():
           - https://repo.anaconda.cloud/repo/mro-archive
         """
     )
-    if can_restore_free_channel():
-        final_condarc = "restore_free_channel: false\n" + final_condarc
-
     with make_temp_condarc() as rc:
         configure_default_channels(
-            condarc_file=rc, include_archive_channels=["free", "pro", "mro-archive"]
+            condarc_file=rc,
+            include_archive_channels=["free", "pro", "mro-archive"],
+            force=True,
         )
         assert _read_test_condarc(rc) == final_condarc
 
@@ -132,7 +133,6 @@ def test_default_channels_with_conda_forge():
         original_condarc = dedent(
             """\
             ssl_verify: true
-            restore_free_channel: true
 
             default_channels:
               - https://repo.anaconda.com/pkgs/main
@@ -145,11 +145,10 @@ def test_default_channels_with_conda_forge():
         )
 
         with make_temp_condarc(original_condarc) as rc:
-            configure_default_channels(condarc_file=rc)
+            configure_default_channels(condarc_file=rc, force=True)
             assert _read_test_condarc(rc) == dedent(
                 """\
                 ssl_verify: true
-                restore_free_channel: false
 
                 channels:
                   - defaults
@@ -178,7 +177,7 @@ def test_default_channels_with_conda_forge():
         )
 
         with make_temp_condarc(original_condarc) as rc:
-            configure_default_channels(condarc_file=rc)
+            configure_default_channels(condarc_file=rc, force=True)
             assert _read_test_condarc(rc) == dedent(
                 """\
                 ssl_verify: true

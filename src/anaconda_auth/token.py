@@ -20,8 +20,9 @@ from keyring.backend import properties
 from keyring.errors import PasswordDeleteError
 from keyring.errors import PasswordSetError
 from pydantic import BaseModel
+from pydantic import Field
 
-from anaconda_auth.config import AnacondaCloudConfig
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 
@@ -37,6 +38,7 @@ except AttributeError:
 
 logger = logging.getLogger(__name__)
 
+# TODO: Rename to "Anaconda" and then migrate existing
 KEYRING_NAME = "Anaconda Cloud"
 
 
@@ -92,7 +94,7 @@ class NavigatorFallback(KeyringBackend):
             from anaconda_auth.actions import get_api_key
             from anaconda_auth.actions import refresh_access_token
 
-            config = AnacondaCloudConfig(domain=auth_domain)
+            config = AnacondaAuthConfig(domain=auth_domain)
             if not token.valid:
                 try:
                     access_token = refresh_access_token(
@@ -136,11 +138,12 @@ class NavigatorFallback(KeyringBackend):
 
 
 class AnacondaKeyring(KeyringBackend):
+    name = "token AnacondaKeyring" # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
     keyring_path = Path("~/.anaconda/keyring").expanduser()
 
     @classproperty
     def priority(cls) -> float:
-        config = AnacondaCloudConfig()
+        config = AnacondaAuthConfig()
         if config.preferred_token_storage == "system":
             return 0.2
         elif config.preferred_token_storage == "anaconda-keyring":
@@ -205,17 +208,21 @@ class RepoToken(BaseModel):
     org_name: Union[OrgName, None] = None
 
 
-MIGRATIONS: Dict[str, str] = {
-    "anaconda.cloud": "id.anaconda.cloud",
+# A mapping of modern domain to a list of legacy domains. If a token is searched
+# for at the modern domain and not found, we will search for any of the legacy domains
+# and, if found, migrate the keyring storage from that domain to the new one.
+MIGRATIONS: Dict[str, List[str]] = {
+    "anaconda.com": ["id.anaconda.cloud", "anaconda.cloud"]
 }
+TOKEN_INFO_VERSION = 2
 
 
 class TokenInfo(BaseModel):
-    domain: str
+    domain: str = Field(default_factory=lambda: AnacondaAuthConfig().domain)
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
-    version: Optional[int] = 1
+    version: Optional[int] = TOKEN_INFO_VERSION
 
     @classmethod
     def _decode(cls, keyring_data: str) -> dict:
@@ -224,30 +231,56 @@ class TokenInfo(BaseModel):
         return decoded_dict
 
     @classmethod
-    def load(cls, domain: str) -> "TokenInfo":
-        """Load the token information from the system keyring."""
+    def _migrate(
+        cls, keyring_data: str, from_domain: str, to_domain: str
+    ) -> "TokenInfo":
+        """Migrate the domain and save token under new domain."""
+        decoded_dict = cls._decode(keyring_data)
+        decoded_dict["domain"] = to_domain
+        decoded_dict["version"] = TOKEN_INFO_VERSION
+        token_info = TokenInfo(**decoded_dict)
+        token_info.save()
+        keyring.delete_password(KEYRING_NAME, from_domain)
+        logger.debug(
+            f"🔓 Token has been migrated from legacy domain '{from_domain}' to '{to_domain}' 🎉"
+        )
+        return token_info
+
+    @classmethod
+    def load(cls, domain: Optional[str] = None, *, create: bool = False) -> "TokenInfo":
+        """Load the token information from the system keyring.
+
+        Args:
+            domain: The domain for which to load the token information. If
+                not provided, defaults to the configuration domain.
+            create: If True, create a new TokenInfo object if not found.
+
+        Returns:
+            The token information.
+
+        """
+        domain = domain or AnacondaAuthConfig().domain
+
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
-        if keyring_data is None:
-            # Try again to see if there is a legacy token on disk
-            legacy_domain = MIGRATIONS.get(domain, domain)
-            keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
-            if keyring_data is None:
-                raise TokenNotFoundError
-            else:
-                # Migrate the domain and save token under new domain
-                decoded_dict = cls._decode(keyring_data)
-                decoded_dict["domain"] = domain
-                decoded_dict["version"] = 1
-                token_info = TokenInfo(**decoded_dict)
-                token_info.save()
-                keyring.delete_password(KEYRING_NAME, legacy_domain)
-                logger.debug(
-                    f"🔓 Token has been migrated from legacy domain '{legacy_domain}' to '{domain}' 🎉"
+        if keyring_data is not None:
+            logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
+            decoded_dict = cls._decode(keyring_data)
+            return TokenInfo(**decoded_dict)
+
+        # Try again to see if there is a legacy token on disk
+        legacy_domains = MIGRATIONS.get(domain, [])
+        for legacy_domain in legacy_domains:
+            existing_keyring_data = keyring.get_password(KEYRING_NAME, legacy_domain)
+            if existing_keyring_data is not None:
+                return cls._migrate(
+                    existing_keyring_data, from_domain=legacy_domain, to_domain=domain
                 )
 
-        logger.debug("🔓 Token has been successfully retrieved from keyring 🎉")
-        decoded_dict = cls._decode(keyring_data)
-        return TokenInfo(**decoded_dict)
+        if create:
+            logger.debug("🔓 Token has been successfully created 🎉")
+            return TokenInfo(domain=domain)
+
+        raise TokenNotFoundError
 
     def save(self) -> None:
         """Write the token information to the system keyring."""
@@ -301,6 +334,29 @@ class TokenInfo(BaseModel):
 
         return self.api_key
 
+    def set_repo_token(self, org_name: OrgName, token: TokenString) -> None:
+        """Set the repo token for a specific organization.
+
+        Args:
+            org_name: The organization name for which to search for a token.
+            token: The token value.
+
+        """
+
+        try:
+            self.get_repo_token(org_name=org_name)
+        except TokenNotFoundError:
+            # This is good, we don't need to do anything
+            pass
+        else:
+            # We need to remove the existing token for this org first
+            # TODO: We can drop this once we just use a dictionary instead
+            self.repo_tokens[:] = [
+                t for t in self.repo_tokens if t.org_name != org_name
+            ]
+
+        self.repo_tokens.append(RepoToken(org_name=org_name, token=token))
+
     def get_repo_token(self, org_name: OrgName) -> TokenString:
         """Return the installed repo token for a specific organization.
 
@@ -318,3 +374,16 @@ class TokenInfo(BaseModel):
             if token.org_name == org_name:
                 return token.token
         raise TokenNotFoundError(f"Could not find repo token for org {org_name}")
+
+    def delete_repo_token(self, org_name: OrgName) -> None:
+        """Delete the repo token for a specific organization.
+
+        Args:
+            org_name: The organization name for which to delete a token.
+
+        """
+        # TODO: Confirm whether we should raise an exception or not if token doesn't exist for specified organization
+
+        # We need to remove the existing token for this org first
+        # TODO: We can drop this once we just use a dictionary instead
+        self.repo_tokens[:] = [t for t in self.repo_tokens if t.org_name != org_name]

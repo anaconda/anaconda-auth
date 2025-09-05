@@ -18,6 +18,22 @@ def pytest_configure(config):
     warnings.filterwarnings("always")
 
 
+@pytest.fixture(scope="session")
+def test_server_url() -> str:
+    """Run a test server, and return its URL."""
+    from . import testing_server
+
+    return testing_server.run_server()
+
+
+@pytest.fixture
+def repo_url(test_server_url: str) -> str:
+    repo_url = test_server_url + "/repo/"
+    with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
+        with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
+            yield repo_url
+
+
 @pytest.fixture(scope="session", autouse=True)
 def reset_channels_alias():
     clean_index()
@@ -52,8 +68,14 @@ def remove_token(repo_url):
     token_remove()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def remove_token_end_of_session():
+    yield
+    token_remove()
+
+
 @pytest.fixture(scope="function")
-def remove_anaconda_cloud_token():
+def remove_token_no_repo_url_mock():
     """
     Remove token without mock repo_url
     """
@@ -65,7 +87,7 @@ def remove_anaconda_cloud_token():
 @pytest.fixture(scope="function")
 def set_dummy_token(repo_url):
     token_remove()
-    token_set("SECRET")
+    token_set("SECRET", force=True)
     yield
     token_remove()
 
@@ -73,8 +95,8 @@ def set_dummy_token(repo_url):
 @pytest.fixture(scope="function")
 def set_secret_token():
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
-    token_set(secret_token)
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
+    token_set(secret_token, force=True)
     yield
     token_remove()
 
@@ -82,8 +104,8 @@ def set_secret_token():
 @pytest.fixture(scope="function")
 def set_secret_token_mock_server(repo_url):
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
-    token_set(secret_token)
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
+    token_set(secret_token, force=True)
     yield
     token_remove()
 
@@ -91,15 +113,15 @@ def set_secret_token_mock_server(repo_url):
 @pytest.fixture(scope="function")
 def set_secret_token_with_signing():
     token_remove()
-    secret_token = os.environ.get("CE_TOKEN", "")
-    token_set(secret_token, enable_signature_verification=True)
+    secret_token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
+    token_set(secret_token, enable_signature_verification=True, force=True)
     yield
     token_remove()
 
 
 @pytest.fixture(scope="function")
 def secret_token():
-    token = os.environ.get("CE_TOKEN", "")
+    token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     yield token
 
 
@@ -118,18 +140,3 @@ def channeldata_url(repo_url):
 @pytest.fixture
 def repodata_url(repo_url):
     return repo_url + "main/osx-64/repodata.json"
-
-
-@pytest.fixture
-def repo_url(test_server_url):
-    repo_url = test_server_url + "/repo/"
-    with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
-        with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
-            yield repo_url
-
-
-@pytest.fixture(scope="session")
-def test_server_url():
-    from . import testing_server
-
-    return testing_server.run_server()
