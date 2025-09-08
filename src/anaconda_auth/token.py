@@ -208,6 +208,82 @@ class RepoToken(BaseModel):
     org_name: Union[OrgName, None] = None
 
 
+class ExternalToken(BaseModel):
+    token: TokenString
+    type: Optional[str] = None
+    expires_at: Optional[int] = None
+
+
+class ExternalTokens(BaseModel):
+    tokens: Dict[str, Dict[str, ExternalToken]]
+
+    def get_app_tokens(self, app_name: str) -> Dict[str, ExternalToken]:
+        """
+        Given an app name, return the entire dict of issuer → ExternalToken.
+        """
+        try:
+            return self.tokens[app_name]
+        except KeyError:
+            raise KeyError(f"App '{app_name}' not found")
+
+    def get_token(self, app_name: str, issuer: str) -> ExternalToken:
+        """
+        Given app & issuer, return the ExternalToken.
+        """
+        try:
+            return self.tokens[app_name][issuer]
+        except KeyError:
+            if app_name not in self.tokens:
+                raise KeyError(f"App '{app_name}' not found")
+            raise KeyError(f"Issuer '{issuer}' not found under app '{app_name}'")
+
+    def add_token(
+        self,
+        app_name: str,
+        issuer: str,
+        token: Union[ExternalToken, dict]
+    ) -> None:
+        """
+        Add a new token. If it already exists, ValueError.
+        """
+        if app_name not in self.tokens:
+            self.tokens[app_name] = {}
+        if issuer in self.tokens[app_name]:
+            raise ValueError(f"Token already exists for app='{app_name}', issuer='{issuer}'")
+        self.tokens[app_name][issuer] = (
+            token if isinstance(token, ExternalToken)
+            else ExternalToken.parse_obj(token)
+        )
+
+    def update_token(
+        self,
+        app_name: str,
+        issuer: str,
+        token: Union[ExternalToken, dict]
+    ) -> None:
+        """
+        Replace/Update an existing token.
+        """
+        if app_name not in self.tokens or issuer not in self.tokens[app_name]:
+            raise KeyError(f"Cannot update; no token for app='{app_name}', issuer='{issuer}'")
+        self.tokens[app_name][issuer] = (
+            token if isinstance(token, ExternalToken)
+            else ExternalToken.parse_obj(token)
+        )
+
+    def delete_token(self, app_name: str, issuer: str) -> None:
+        """
+        Delete the token for app_name & issuer.
+           If the app ends up with no issuers, remove the app too.
+        """
+        if app_name not in self.tokens or issuer not in self.tokens[app_name]:
+            raise KeyError(f"Cannot delete; no token for app='{app_name}', issuer='{issuer}'")
+        del self.tokens[app_name][issuer]
+        if not self.tokens[app_name]:
+            # no more issuers under this app - remove the app
+            del self.tokens[app_name]
+
+
 # A mapping of modern domain to a list of legacy domains. If a token is searched
 # for at the modern domain and not found, we will search for any of the legacy domains
 # and, if found, migrate the keyring storage from that domain to the new one.
@@ -222,6 +298,7 @@ class TokenInfo(BaseModel):
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
+    external_tokens: ExternalTokens = ExternalTokens(tokens={})
     version: Optional[int] = TOKEN_INFO_VERSION
 
     @classmethod
@@ -387,3 +464,30 @@ class TokenInfo(BaseModel):
         # We need to remove the existing token for this org first
         # TODO: We can drop this once we just use a dictionary instead
         self.repo_tokens[:] = [t for t in self.repo_tokens if t.org_name != org_name]
+
+    def get_external_token(self, app_name: str, issuer: str) -> ExternalToken:
+        """
+        Retrieve an external token given the app name and the issuer.
+        The app name is the name of the Anaconda app/product that manages the token
+        Issuer is the external resource that issues the token
+        """
+        return self.external_tokens.get_token(app_name, issuer)
+
+    def delete_external_token(self, app_name: str, issuer: str) -> None:
+        """
+        Delete an external token given an app name and the issuer
+        """
+        return self.external_tokens.delete_token(app_name, issuer)
+
+    def update_external_token(self, app_name: str, issuer: str, token: Union[ExternalToken, Dict]) -> None:
+        """
+        Updates (actually replaces) an existing external token with a new token given the app name and the issuer
+        """
+        return self.external_tokens.update_token(app_name, issuer, token)
+
+    def add_external_token(self, app_name: str, issuer: str, token: Union[ExternalToken, Dict]) -> None:
+        """
+        Adds a new token to a given app name and issuer. if the app does not have any entries in
+        the dictionary a new one will be created.
+        """
+        return self.external_tokens.add_token(app_name, issuer, token)
