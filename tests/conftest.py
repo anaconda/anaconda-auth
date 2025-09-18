@@ -110,9 +110,9 @@ def is_not_none() -> Any:
 
 @pytest.fixture
 def disable_dot_env(mocker: MockerFixture) -> None:
-    from anaconda_auth.config import AnacondaAuthConfig
+    from anaconda_cli_base.config import AnacondaBaseSettings
 
-    mocker.patch.dict(AnacondaAuthConfig.model_config, {"env_file": ""})
+    mocker.patch.dict(AnacondaBaseSettings.model_config, {"env_file": ""})
 
 
 @pytest.fixture(autouse=True)
