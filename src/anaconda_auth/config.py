@@ -9,10 +9,10 @@ from urllib.parse import urljoin
 
 import requests
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import RootModel
-from pydantic import model_validator
+from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
-from typing_extensions import Self
 
 from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
@@ -36,7 +36,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     )
 
 
-class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
+class AnacondaAuthBase(BaseModel):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -117,6 +117,11 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
             return None
 
 
+class AnacondaAuthConfig(
+    AnacondaAuthBase, AnacondaBaseSettings, plugin_name="auth"
+): ...
+
+
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
@@ -152,32 +157,39 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         super().__init__(**kwargs)
 
 
-class Site(BaseModel):
-    domain: str = "anaconda.com"
-    ssl_verify: bool = True
-    extra_headers: Optional[Dict[str, str]] = None
-    api_key: Optional[str] = None
-    auth: Optional[AnacondaAuthConfig] = None
-
-
-class Sites(RootModel[Dict[str, Site]]):
-    def __getitem__(self, key) -> Site:
+class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
+    def __getitem__(self, key) -> AnacondaAuthBase:
         return self.root[key]
 
 
-ANACONDA_COM_SITE = Site(domain="anaconda.com", ssl_verify=True)
-
-
 class SiteConfig(AnacondaBaseSettings, plugin_name=None):
-    sites: Sites = Sites({"anaconda.com": ANACONDA_COM_SITE})
+    sites: Sites = Field(
+        default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
+    )
     default_site: str = "anaconda.com"
 
-    @model_validator(mode="after")
-    def add_anaconda_com_site(self) -> Self:
-        if "anaconda.com" not in self.sites.root:
-            self.sites.root["anaconda.com"] = ANACONDA_COM_SITE
+    @field_validator("sites", mode="before")
+    @classmethod
+    def add_anaconda_com_site(cls, sites: Any) -> Any:
+        if isinstance(sites, dict):
+            if "anaconda.com" in sites:
+                raise ValueError(
+                    "You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]"
+                )
 
-        return self
+            sites["anaconda.com"] = AnacondaAuthConfig()
 
-    def get_default_site(self) -> Site:
+        return sites
+
+    # @field_validator("sites", mode="after")
+    # @classmethod
+    # def add_anaconda_com_site(cls, sites: Sites) -> Sites:
+    #     if "anaconda.com" in sites.root:
+    #         raise ValueError("You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]")
+
+    #     sites.root["anaconda.com"] = AnacondaAuthConfig()
+
+    #     return sites
+
+    def get_default_site(self) -> AnacondaAuthBase:
         return self.sites[self.default_site]

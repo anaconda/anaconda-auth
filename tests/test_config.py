@@ -1,6 +1,5 @@
 from pathlib import Path
 from textwrap import dedent
-from typing import Generator
 
 import pytest
 import requests
@@ -8,20 +7,11 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from anaconda_auth.config import ANACONDA_COM_SITE
+from anaconda_auth.config import AnacondaAuthBase
 from anaconda_auth.config import AnacondaAuthConfig
-from anaconda_auth.config import Site
 from anaconda_auth.config import SiteConfig
 from anaconda_auth.config import Sites
-
-
-@pytest.fixture
-def config_toml(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> Generator[Path, None, None]:
-    config_file = tmp_path / "config.toml"
-    monkeypatch.setenv("ANACONDA_CONFIG_TOML", str(config_file))
-    yield config_file
+from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -74,9 +64,29 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
 def test_default_site_no_config() -> None:
     config = SiteConfig()
 
-    assert config.sites == Sites({"anaconda.com": ANACONDA_COM_SITE})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
-    assert config.get_default_site() == ANACONDA_COM_SITE
+    assert config.get_default_site() == AnacondaAuthConfig()
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_default_site_with_plugin_config(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        ssl_verify = false
+    """)
+    )
+    config = SiteConfig()
+
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
+    assert config.default_site == "anaconda.com"
+    assert config.get_default_site() == AnacondaAuthConfig()
+
+    default_site = config.get_default_site()
+    assert default_site.domain == "localhost"
+    assert not default_site.ssl_verify
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -86,25 +96,22 @@ def test_extra_site_config(config_toml: Path) -> None:
         [sites.local]
         domain = "localhost"
         ssl_verify = false
-        auth = {"domain" = "auth-test"}
     """)
     )
 
     config = SiteConfig()
 
-    local = Site(
+    local = AnacondaAuthBase(
         domain="localhost",
         ssl_verify=False,
-        extra_headers=None,
-        api_key=None,
-        auth=AnacondaAuthConfig(domain="auth-test"),
     )
 
-    assert config.sites == Sites({"anaconda.com": ANACONDA_COM_SITE, "local": local})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
 
     assert config.sites["local"] == local
+    assert config.sites["local"].domain == "localhost"
     assert config.default_site == "anaconda.com"
-    assert config.get_default_site() == ANACONDA_COM_SITE
+    assert config.get_default_site() == AnacondaAuthConfig()
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -115,23 +122,19 @@ def test_default_extra_site_config(config_toml: Path) -> None:
 
         [sites.local]
         domain = "localhost"
+        auth_domain_override = "auth-local"
         ssl_verify = false
-        auth = {"domain" = "auth-test"}
 
     """)
     )
 
     config = SiteConfig()
 
-    local = Site(
-        domain="localhost",
-        ssl_verify=False,
-        extra_headers=None,
-        api_key=None,
-        auth=AnacondaAuthConfig(domain="auth-test"),
+    local = AnacondaAuthBase(
+        domain="localhost", ssl_verify=False, auth_domain_override="auth-local"
     )
 
-    assert config.sites == Sites({"anaconda.com": ANACONDA_COM_SITE, "local": local})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthBase(), "local": local})
 
     assert config.sites["local"] == local
     assert config.default_site == "local"
@@ -139,24 +142,15 @@ def test_default_extra_site_config(config_toml: Path) -> None:
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_anaconda_override(config_toml: Path) -> None:
+def test_anaconda_override_fails(config_toml: Path) -> None:
     config_toml.write_text(
         dedent("""\
         [sites."anaconda.com"]
         ssl_verify = false
-        auth = {"ssl_verify" = false}
+        client_id = "foo"
 
     """)
     )
 
-    config = SiteConfig()
-
-    assert config.sites == Sites(
-        {
-            "anaconda.com": Site(
-                domain="anaconda.com",
-                ssl_verify=False,
-                auth=AnacondaAuthConfig(ssl_verify=False),
-            )
-        }
-    )
+    with pytest.raises(AnacondaConfigValidationError):
+        _ = SiteConfig()
