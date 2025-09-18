@@ -9,7 +9,10 @@ from urllib.parse import urljoin
 
 import requests
 from pydantic import BaseModel
+from pydantic import RootModel
+from pydantic import model_validator
 from pydantic_settings import SettingsConfigDict
+from typing_extensions import Self
 
 from anaconda_auth import __version__ as version
 from anaconda_cli_base.config import AnacondaBaseSettings
@@ -147,3 +150,34 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
             )
 
         super().__init__(**kwargs)
+
+
+class Site(BaseModel):
+    domain: str = "anaconda.com"
+    ssl_verify: bool = True
+    extra_headers: Optional[Dict[str, str]] = None
+    api_key: Optional[str] = None
+    auth: Optional[AnacondaAuthConfig] = None
+
+
+class Sites(RootModel[Dict[str, Site]]):
+    def __getitem__(self, key) -> Site:
+        return self.root[key]
+
+
+ANACONDA_COM_SITE = Site(domain="anaconda.com", ssl_verify=True)
+
+
+class SiteConfig(AnacondaBaseSettings, plugin_name=None):
+    sites: Sites = Sites({"anaconda.com": ANACONDA_COM_SITE})
+    default_site: str = "anaconda.com"
+
+    @model_validator(mode="after")
+    def add_anaconda_com_site(self) -> Self:
+        if "anaconda.com" not in self.sites.root:
+            self.sites.root["anaconda.com"] = ANACONDA_COM_SITE
+
+        return self
+
+    def get_default_site(self) -> Site:
+        return self.sites[self.default_site]
