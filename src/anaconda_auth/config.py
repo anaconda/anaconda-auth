@@ -181,15 +181,5 @@ class SiteConfig(AnacondaBaseSettings, plugin_name=None):
 
         return sites
 
-    # @field_validator("sites", mode="after")
-    # @classmethod
-    # def add_anaconda_com_site(cls, sites: Sites) -> Sites:
-    #     if "anaconda.com" in sites.root:
-    #         raise ValueError("You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]")
-
-    #     sites.root["anaconda.com"] = AnacondaAuthConfig()
-
-    #     return sites
-
     def get_default_site(self) -> AnacondaAuthBase:
         return self.sites[self.default_site]
