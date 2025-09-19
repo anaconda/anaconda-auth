@@ -134,7 +134,7 @@ def test_default_extra_site_config(config_toml: Path) -> None:
         domain="localhost", ssl_verify=False, auth_domain_override="auth-local"
     )
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthBase(), "local": local})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
 
     assert config.sites["local"] == local
     assert config.default_site == "local"
