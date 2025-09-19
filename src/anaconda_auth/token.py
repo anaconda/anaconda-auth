@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 
@@ -138,12 +139,12 @@ class NavigatorFallback(KeyringBackend):
 
 
 class AnacondaKeyring(KeyringBackend):
-    name = "token AnacondaKeyring" # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
+    name = "token AnacondaKeyring"  # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
     keyring_path = Path("~/.anaconda/keyring").expanduser()
 
     @classproperty
     def priority(cls) -> float:
-        config = AnacondaAuthConfig()
+        config = SiteConfig().get_default_site()
         if config.preferred_token_storage == "system":
             return 0.2
         elif config.preferred_token_storage == "anaconda-keyring":
@@ -218,7 +219,7 @@ TOKEN_INFO_VERSION = 2
 
 
 class TokenInfo(BaseModel):
-    domain: str = Field(default_factory=lambda: AnacondaAuthConfig().domain)
+    domain: str = Field(default_factory=lambda: SiteConfig().get_default_site().domain)
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
@@ -259,7 +260,7 @@ class TokenInfo(BaseModel):
             The token information.
 
         """
-        domain = domain or AnacondaAuthConfig().domain
+        domain = domain or SiteConfig().get_default_site().domain
 
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
         if keyring_data is not None:

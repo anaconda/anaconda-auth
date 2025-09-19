@@ -13,7 +13,7 @@ from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
@@ -232,10 +232,18 @@ def main(
 
 
 @app.command("login")
-def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
+def auth_login(
+    force: bool = False, ssl_verify: bool = True, at: Optional[str] = None
+) -> None:
     """Login"""
     try:
-        auth_domain = AnacondaAuthConfig().domain
+        site_config = SiteConfig()
+        if at is not None:
+            config = site_config.sites[at]
+        else:
+            config = site_config.get_default_site()
+
+        auth_domain = config.domain
         expired = TokenInfo.load(domain=auth_domain).expired
         if expired:
             console.print("Your API key has expired, logging into anaconda.com")
@@ -251,13 +259,13 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
         if not force:
             raise typer.Exit()
 
-    login(force=force, ssl_verify=ssl_verify)
+    login(config=config, force=force, ssl_verify=ssl_verify)
 
 
 @app.command(name="whoami")
-def auth_info() -> None:
+def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
-    client = BaseClient()
+    client = BaseClient(site=at)
     response = client.get("/api/account")
     response.raise_for_status()
     console.print("Your anaconda.com info:")
@@ -265,9 +273,14 @@ def auth_info() -> None:
 
 
 @app.command(name="api-key")
-def auth_key() -> None:
+def auth_key(at: Optional[str] = None) -> None:
     """Display API Key for signed-in user"""
-    config = AnacondaAuthConfig()
+    site_config = SiteConfig()
+    if at is not None:
+        config = site_config.sites[at]
+    else:
+        config = site_config.get_default_site()
+
     if config.api_key:
         print(config.api_key)
         return
@@ -281,6 +294,19 @@ def auth_key() -> None:
 
 
 @app.command(name="logout")
-def auth_logout() -> None:
+def auth_logout(at: Optional[str] = None) -> None:
     """Logout"""
-    logout()
+    site_config = SiteConfig()
+    if at is not None:
+        config = site_config.sites[at]
+    else:
+        config = site_config.get_default_site()
+
+    logout(config=config)
+
+
+@app.command(name="sites")
+def auth_sites() -> None:
+    """Show configured sites"""
+    site_config = SiteConfig()
+    console.print_json(data=site_config.model_dump())

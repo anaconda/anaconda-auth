@@ -164,6 +164,9 @@ class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
         try:
             return self.root[key]
         except KeyError:
+            for site in self.root.values():
+                if site.domain == key:
+                    return site
             raise UnknownSiteName(
                 f"The site name {key} has not been configured in {anaconda_config_path()}"
             )

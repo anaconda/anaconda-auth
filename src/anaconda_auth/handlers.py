@@ -16,7 +16,8 @@ from urllib.parse import urlparse
 import requests
 from pydantic import BaseModel
 
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthBase
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import AuthenticationError
 
 logger = logging.getLogger(__name__)
@@ -42,13 +43,13 @@ class AuthCodeRedirectServer(HTTPServer):
         self,
         oidc_path: str,
         server_address: Tuple[str, int],
-        config: Optional[AnacondaAuthConfig] = None,
+        config: Optional[AnacondaAuthBase] = None,
     ):
         super().__init__(server_address, AuthCodeRedirectRequestHandler)  # type: ignore[arg-type]
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
-        self.config = config or AnacondaAuthConfig()
+        self.config = config or SiteConfig().get_default_site()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
         self._open_servers.add(self)
@@ -132,9 +133,9 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 
 
 def capture_auth_code(
-    redirect_uri: str, state: str, config: Optional[AnacondaAuthConfig] = None
+    redirect_uri: str, state: str, config: Optional[AnacondaAuthBase] = None
 ) -> str:
-    config = config or AnacondaAuthConfig()
+    config = config or SiteConfig().get_default_site()
     parsed_url = urlparse(redirect_uri)
 
     host_name, port = parsed_url.netloc.split(":")
