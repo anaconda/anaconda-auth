@@ -15,7 +15,9 @@ from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
 
 from anaconda_auth import __version__ as version
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.config import AnacondaBaseSettings
+from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 
 
@@ -159,7 +161,12 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
 
 class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
     def __getitem__(self, key) -> AnacondaAuthBase:
-        return self.root[key]
+        try:
+            return self.root[key]
+        except KeyError:
+            raise UnknownSiteName(
+                f"The site name {key} has not been configured in {anaconda_config_path()}"
+            )
 
 
 class SiteConfig(AnacondaBaseSettings, plugin_name=None):
