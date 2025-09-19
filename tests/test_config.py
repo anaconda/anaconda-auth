@@ -11,6 +11,7 @@ from anaconda_auth.config import AnacondaAuthBase
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import SiteConfig
 from anaconda_auth.config import Sites
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 
@@ -60,13 +61,21 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
     assert config.auth_domain == "another-auth.anaconda.com"
 
 
-@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
 def test_default_site_no_config() -> None:
     config = SiteConfig()
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
     assert config.get_default_site() == AnacondaAuthConfig()
+
+
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
+def test_unknown_site() -> None:
+    config = SiteConfig()
+
+    with pytest.raises(UnknownSiteName):
+        _ = config.sites["unknown-site"]
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -113,6 +122,8 @@ def test_extra_site_config(config_toml: Path) -> None:
     assert config.default_site == "anaconda.com"
     assert config.get_default_site() == AnacondaAuthConfig()
 
+    assert config.sites["local"] == config.sites["localhost"]
+
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_default_extra_site_config(config_toml: Path) -> None:
@@ -139,6 +150,30 @@ def test_default_extra_site_config(config_toml: Path) -> None:
     assert config.sites["local"] == local
     assert config.default_site == "local"
     assert config.get_default_site() == local
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [sites.local1]
+        domain = "localhost"
+        ssl_verify = false
+
+        [sites.local2]
+        domain = "localhost"
+        ssl_verify = true
+
+    """)
+    )
+
+    config = SiteConfig()
+
+    assert config.sites["local1"].ssl_verify is False
+    assert config.sites["local2"].ssl_verify is True
+
+    with pytest.raises(ValueError):
+        _ = config.sites["localhost"]
 
 
 @pytest.mark.usefixtures("disable_dot_env")

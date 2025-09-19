@@ -164,12 +164,16 @@ class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
         try:
             return self.root[key]
         except KeyError:
-            for site in self.root.values():
-                if site.domain == key:
-                    return site
-            raise UnknownSiteName(
-                f"The site name {key} has not been configured in {anaconda_config_path()}"
-            )
+            matches = [site for site in self.root.values() if site.domain == key]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"The domain {key} matches more than one configured site"
+                )
+            elif len(matches) == 0:
+                raise UnknownSiteName(
+                    f"The site name {key} has not been configured in {anaconda_config_path()}"
+                )
+            return matches[0]
 
 
 class SiteConfig(AnacondaBaseSettings, plugin_name=None):
