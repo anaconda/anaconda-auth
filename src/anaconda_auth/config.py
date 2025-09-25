@@ -41,8 +41,8 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 class AnacondaAuthSite(BaseModel):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
-    domain: str = "anaconda.com"
-    auth_domain_override: Optional[str] = None
+    domain: str = "localhost/api/auth/"
+    auth_domain_override: Optional[str] = "localhost/api/auth/"
     api_key: Optional[str] = None
     ssl_verify: Union[bool, Literal["truststore"]] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
@@ -57,6 +57,7 @@ class AnacondaAuthSite(BaseModel):
     proxy_servers: Optional[MutableMapping[str, str]] = None
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
+    use_device_flow: bool = False
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
