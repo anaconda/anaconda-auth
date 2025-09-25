@@ -74,7 +74,7 @@ class AnacondaAuthBase(BaseModel):
         """
         if self.auth_domain_override:
             return self.auth_domain_override
-        return f"auth.{self.domain}"
+        return self.domain
 
     @property
     def well_known_url(self) -> str:

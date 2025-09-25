@@ -53,6 +53,11 @@ def test_init_arg_over_env_variable(monkeypatch: MonkeyPatch, prefix: str) -> No
     assert config.domain == "set-in-init"
 
 
+def test_auth_domain_default_behavior() -> None:
+    config = AnacondaAuthConfig()
+    assert config.domain == config.auth_domain
+
+
 def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv(
         "ANACONDA_AUTH_AUTH_DOMAIN_OVERRIDE", "another-auth.anaconda.com"
