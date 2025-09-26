@@ -15,7 +15,8 @@ from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthBase
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -56,7 +57,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaAuthConfig().domain
+            domain = SiteConfig().get_default_site().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -79,6 +80,7 @@ class BaseClient(requests.Session):
 
     def __init__(
         self,
+        site: Optional[Union[str, AnacondaAuthBase]] = None,
         base_uri: Optional[str] = None,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
@@ -90,6 +92,18 @@ class BaseClient(requests.Session):
     ):
         super().__init__()
 
+        # Prepare the requested or default site config
+        site_config = SiteConfig()
+        if site is None:
+            config = site_config.get_default_site()
+        elif isinstance(site, str):
+            config = site_config.sites[site]
+        elif isinstance(site, AnacondaAuthBase):
+            config = site
+        else:
+            raise ValueError(f"type(site): {type(site)} is not a supported site type")
+
+        # Prepare site overrides
         if base_uri and domain:
             raise ValueError("Can only specify one of `domain` or `base_uri` argument")
 
@@ -105,7 +119,7 @@ class BaseClient(requests.Session):
         if hash_hostname is not None:
             kwargs["hash_hostname"] = hash_hostname
 
-        self.config = AnacondaAuthConfig(**kwargs)
+        self.config = config.model_copy(update=kwargs)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -130,7 +144,7 @@ class BaseClient(requests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
     def urljoin(self, url: str) -> str:

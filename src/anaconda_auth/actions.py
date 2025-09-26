@@ -3,13 +3,15 @@ import uuid
 import warnings
 import webbrowser
 from typing import Optional
+from typing import Union
 from urllib.parse import urlencode
 
 import pkce
 import requests
 
 from anaconda_auth import __version__
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthBase
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import AuthenticationError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.handlers import capture_auth_code
@@ -20,12 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 def make_auth_code_request_url(
-    code_challenge: str, state: str, config: Optional[AnacondaAuthConfig] = None
+    code_challenge: str, state: str, config: Optional[AnacondaAuthBase] = None
 ) -> str:
     """Build the authorization code request URL."""
 
     if config is None:
-        config = AnacondaAuthConfig()
+        config = SiteConfig().get_default_site()
 
     authorization_endpoint = config.oidc.authorization_endpoint
     client_id = config.client_id
@@ -47,14 +49,14 @@ def make_auth_code_request_url(
 
 
 def _send_auth_code_request(
-    code_challenge: str, state: str, config: AnacondaAuthConfig
+    code_challenge: str, state: str, config: AnacondaAuthBase
 ) -> None:
     """Open the authentication flow in the browser."""
     url = make_auth_code_request_url(code_challenge, state, config)
     webbrowser.open(url)
 
 
-def refresh_access_token(refresh_token: str, config: AnacondaAuthConfig) -> str:
+def refresh_access_token(refresh_token: str, config: AnacondaAuthBase) -> str:
     """Refresh and save the tokens."""
     response = requests.post(
         config.oidc.token_endpoint,
@@ -73,7 +75,7 @@ def refresh_access_token(refresh_token: str, config: AnacondaAuthConfig) -> str:
 
 
 def request_access_token(
-    auth_code: str, code_verifier: str, config: AnacondaAuthConfig
+    auth_code: str, code_verifier: str, config: AnacondaAuthBase
 ) -> str:
     """Request an access token using the provided authorization code and code verifier."""
     token_endpoint = config.oidc.token_endpoint
@@ -102,9 +104,9 @@ def request_access_token(
     return access_token
 
 
-def _do_auth_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
+def _do_auth_flow(config: Optional[AnacondaAuthBase] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    config = config or AnacondaAuthConfig()
+    config = config or SiteConfig().get_default_site()
 
     state = str(uuid.uuid4())
     code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
@@ -119,7 +121,7 @@ def _do_auth_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
     return request_access_token(auth_code, code_verifier, config)
 
 
-def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
+def _login_with_username(config: Optional[AnacondaAuthBase] = None) -> str:
     """Prompt for username and password and log in with the password grant flow."""
     warnings.warn(
         "Basic login with username/password is deprecated and will be disabled soon.",
@@ -128,7 +130,7 @@ def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
     )
 
     if config is None:
-        config = AnacondaAuthConfig()
+        config = SiteConfig().get_default_site()
 
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
@@ -148,20 +150,22 @@ def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
     return access_token
 
 
-def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
+def _do_login(config: AnacondaAuthBase, basic: bool) -> None:
     if basic:
         access_token = _login_with_username(config=config)
     else:
         access_token = _do_auth_flow(config=config)
-    api_key = get_api_key(access_token, config.ssl_verify)
+    api_key = get_api_key(access_token, config.ssl_verify, config=config)
     token_info = TokenInfo(api_key=api_key, domain=config.domain)
     token_info.save()
 
 
 def get_api_key(
-    access_token: str, ssl_verify: bool = True, config: Optional[AnacondaAuthConfig] = None
+    access_token: str,
+    ssl_verify: bool = True,
+    config: Optional[AnacondaAuthBase] = None,
 ) -> str:
-    config = config or AnacondaAuthConfig()
+    config = config or SiteConfig().get_default_site()
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -192,7 +196,7 @@ def get_api_key(
     return response.json()["api_key"]
 
 
-def _api_key_is_valid(config: AnacondaAuthConfig) -> bool:
+def _api_key_is_valid(config: AnacondaAuthBase) -> bool:
     try:
         valid = not TokenInfo.load(config.domain).expired
     except TokenNotFoundError:
@@ -202,23 +206,27 @@ def _api_key_is_valid(config: AnacondaAuthConfig) -> bool:
 
 
 def login(
-    config: Optional[AnacondaAuthConfig] = None,
+    config: Optional[AnacondaAuthBase] = None,
     basic: bool = False,
     force: bool = False,
     ssl_verify: bool = True,
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
-        config = AnacondaAuthConfig(ssl_verify=ssl_verify)
+        config = (
+            SiteConfig()
+            .get_default_site()
+            .model_copy(update=dict(ssl_verify=ssl_verify))
+        )
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
 
 
-def logout(config: Optional[AnacondaAuthConfig] = None) -> None:
+def logout(config: Optional[AnacondaAuthBase] = None) -> None:
     """Log out of anaconda.com."""
     if config is None:
-        config = AnacondaAuthConfig()
+        config = SiteConfig().get_default_site()
 
     try:
         token_info = TokenInfo.load(domain=config.domain)
@@ -242,8 +250,13 @@ def logout(config: Optional[AnacondaAuthConfig] = None) -> None:
         pass
 
 
-def is_logged_in() -> bool:
-    config = AnacondaAuthConfig()
+def is_logged_in(site: Optional[Union[str, AnacondaAuthBase]] = None) -> bool:
+    site_config = SiteConfig()
+    if site is None:
+        config = site_config.get_default_site()
+    else:
+        config = site_config.sites[site]
+
     try:
         token_info = TokenInfo.load(domain=config.domain)
     except TokenNotFoundError:
