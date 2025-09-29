@@ -35,8 +35,8 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
-    domain: str = "anaconda.com"
-    auth_domain_override: Optional[str] = None
+    domain: str = "localhost/api/auth/"
+    auth_domain_override: Optional[str] = "localhost/api/auth/"
     api_key: Optional[str] = None
     ssl_verify: bool = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
@@ -48,6 +48,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     login_error_path: str = "/app/local-login-error"
     use_unified_repo_api_key: bool = False
     hash_hostname: bool = True
+    use_device_flow: bool = False
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
