@@ -358,7 +358,9 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
         (True, "test-hostname", "gQ3w7KzEFT543NdWZR-TVg"),
     ],
 )
-def test_hostname_header(mocker: MockerFixture, hash: bool, hostname: str, expected_result: str) -> None:
+def test_hostname_header(
+    mocker: MockerFixture, hash: bool, hostname: str, expected_result: str
+) -> None:
     mocker.patch("anaconda_auth.utils.gethostname", return_value=hostname)
 
     client = BaseClient(hash_hostname=hash)

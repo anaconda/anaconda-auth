@@ -1,0 +1,5 @@
+channels:
+  - conda-forge
+dependencies:
+  # renovate: datasource=conda depName=conda-forge/pre-commit
+  - pre-commit=4.3.0
