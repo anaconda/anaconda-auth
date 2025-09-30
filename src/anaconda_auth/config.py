@@ -160,7 +160,7 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
 
 
 class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
-    def __getitem__(self, key) -> AnacondaAuthBase:
+    def __getitem__(self, key: str) -> AnacondaAuthBase:
         try:
             return self.root[key]
         except KeyError:
