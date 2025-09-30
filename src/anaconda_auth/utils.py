@@ -1,11 +1,9 @@
-from typing import Optional
-from typing import Union
-
 import base64
 import logging
-
 from hashlib import blake2b
 from socket import gethostname
+from typing import Optional
+from typing import Union
 
 logger = logging.getLogger(__name__)
 

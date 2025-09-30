@@ -330,4 +330,5 @@ def test_logout_removes_anaconda_cloud_tokens(saved_domains: str) -> None:
 
 def test_anaconda_keyring_name():
     from anaconda_auth.token import AnacondaKeyring
+
     assert AnacondaKeyring.name == "token AnacondaKeyring"
