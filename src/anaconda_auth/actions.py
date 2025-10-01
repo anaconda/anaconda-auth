@@ -254,6 +254,8 @@ def is_logged_in(site: Optional[Union[str, AnacondaAuthBase]] = None) -> bool:
     site_config = SiteConfig()
     if site is None:
         config = site_config.get_default_site()
+    elif isinstance(site, AnacondaAuthBase):
+        config = site
     else:
         config = site_config.sites[site]
 
