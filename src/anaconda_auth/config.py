@@ -171,7 +171,7 @@ class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
                 )
             elif len(matches) == 0:
                 raise UnknownSiteName(
-                    f"The site name {key} has not been configured in {anaconda_config_path()}"
+                    f"The site name or domain {key} has not been configured in {anaconda_config_path()}"
                 )
             return matches[0]
 

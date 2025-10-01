@@ -83,6 +83,7 @@ class BaseClient(requests.Session):
         site: Optional[Union[str, AnacondaAuthBase]] = None,
         base_uri: Optional[str] = None,
         domain: Optional[str] = None,
+        auth_domain_override: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
@@ -110,6 +111,8 @@ class BaseClient(requests.Session):
         kwargs: Dict[str, Any] = {}
         if domain is not None:
             kwargs["domain"] = domain
+        if auth_domain_override is not None:
+            kwargs["auth_domain_override"] = auth_domain_override
         if api_key is not None:
             kwargs["api_key"] = api_key
         if ssl_verify is not None:
