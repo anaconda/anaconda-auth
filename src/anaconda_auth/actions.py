@@ -159,7 +159,9 @@ def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
 
 
 def get_api_key(
-    access_token: str, ssl_verify: bool = True, config: Optional[AnacondaAuthConfig] = None
+    access_token: str,
+    ssl_verify: bool = True,
+    config: Optional[AnacondaAuthConfig] = None,
 ) -> str:
     config = config or AnacondaAuthConfig()
 

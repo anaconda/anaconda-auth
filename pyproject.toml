@@ -191,6 +191,7 @@ envlist =
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
     py311
     py312
+    py313
     mypy
     report
 isolated_build = True
@@ -204,6 +205,7 @@ python =
     3.10: py310, mypy
     3.11: py311, mypy
     3.12: py312, mypy
+    3.13: py313, mypy
 
 [testenv]
 passenv =

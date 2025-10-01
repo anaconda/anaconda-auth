@@ -135,7 +135,6 @@ def main(
     ),
     weak: Optional[bool] = typer.Option(
         None,
-        "--strong",
         "-w",
         "--weak",
         hidden=True,
