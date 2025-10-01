@@ -179,7 +179,7 @@ class BaseClient(requests.Session):
 
     @cached_property
     def account(self) -> dict:
-        res = self.get("/api/account")
+        res = self.get("/api/auth/passport")
         res.raise_for_status()
         account = res.json()
         return account

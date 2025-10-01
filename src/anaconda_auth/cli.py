@@ -265,9 +265,9 @@ def auth_login(
 def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
     client = BaseClient(site=at)
-    response = client.get("/api/account")
+    response = client.get("/api/auth/passport")
     response.raise_for_status()
-    console.print("Your anaconda.com info:")
+    console.print(f"Your info at {client.config.domain}:")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
 
