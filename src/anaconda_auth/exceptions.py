@@ -16,3 +16,7 @@ class LoginRequiredError(Exception):
 
 class TokenExpiredError(Exception):
     pass
+
+
+class UnknownSiteName(Exception):
+    pass
