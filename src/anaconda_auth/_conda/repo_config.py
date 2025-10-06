@@ -30,6 +30,7 @@ from conda.models.channel import Channel
 from packaging import version
 from rich.prompt import Confirm
 
+from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.condarc import CondaRC
 from anaconda_cli_base import console
 
@@ -43,13 +44,6 @@ ARCHIVE_CHANNELS = ["free", "mro-archive", "pro"]
 user_rc_path = abspath(expanduser("~/.condarc"))
 escaped_user_rc_path = user_rc_path.replace("%", "%%")
 escaped_sys_rc_path = abspath(join(sys.prefix, ".condarc")).replace("%", "%%")
-
-
-class Commands:
-    """Names for conda commands used."""
-
-    CONFIG = "config"
-    CLEAN = "clean"
 
 
 class CondaTokenError(RuntimeError):
