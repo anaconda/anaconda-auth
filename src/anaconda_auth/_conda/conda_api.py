@@ -21,7 +21,7 @@ class Commands:
     SEARCH = "search"
 
 
-def run_command(*args, use_exception_handler=False):
+def run_command(*args, use_exception_handler=False):  # type: ignore
     args = ("python", "-m", "conda") + args
     proc = subprocess.run(args, capture_output=True, text=True)
     return proc.stdout, proc.stderr, proc.returncode
