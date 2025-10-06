@@ -30,6 +30,7 @@ from conda.models.channel import Channel
 from packaging import version
 from rich.prompt import Confirm
 
+from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.condarc import CondaRC
 from anaconda_cli_base import console
 
@@ -45,13 +46,6 @@ escaped_user_rc_path = user_rc_path.replace("%", "%%")
 escaped_sys_rc_path = abspath(join(sys.prefix, ".condarc")).replace("%", "%%")
 
 
-class Commands:
-    """Names for conda commands used."""
-
-    CONFIG = "config"
-    CLEAN = "clean"
-
-
 class CondaTokenError(RuntimeError):
     pass
 
@@ -61,7 +55,10 @@ class CondaVersionWarning(UserWarning):
 
 
 def can_restore_free_channel() -> bool:
-    return CONDA_VERSION >= version.parse("4.7.0")
+    # restore_free_channel was removed in conda 25.9.0
+    return CONDA_VERSION >= version.parse("4.7.0") and CONDA_VERSION < version.parse(
+        "25.9.0"
+    )
 
 
 def get_ssl_verify() -> bool:
