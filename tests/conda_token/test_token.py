@@ -2,12 +2,12 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 import pytest
-from conda.cli.python_api import Commands
-from conda.cli.python_api import run_command
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.gateways.connection.session import CondaSession
 from requests import HTTPError
 
+from anaconda_auth._conda.conda_api import Commands
+from anaconda_auth._conda.conda_api import run_command
 from anaconda_auth._conda.repo_config import CondaTokenError
 from anaconda_auth._conda.repo_config import get_ssl_verify
 from anaconda_auth._conda.repo_config import token_list

@@ -2,10 +2,10 @@ import json
 from textwrap import dedent
 
 import pytest
-from conda.cli.python_api import Commands
-from conda.cli.python_api import run_command
 from packaging.version import parse
 
+from anaconda_auth._conda.conda_api import Commands
+from anaconda_auth._conda.conda_api import run_command
 from anaconda_auth._conda.repo_config import CONDA_VERSION
 
 
