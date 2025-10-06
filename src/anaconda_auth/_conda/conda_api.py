@@ -3,9 +3,9 @@
 # the run_command functionality needed for tests. But most of the internal
 # uses of run_command do not require this overhead and are better served
 # working in process. So when subprocess is needed, we do this:
-#   from conda_token.conda_api import Commands, run_command
+#   from anaconda_auth._conda.conda_api import Commands, run_command
 # and when it is not needed, we do this:
-#   from conda_token.conda_api import Commands
+#   from anaconda_auth._conda.conda_api import Commands
 #   from conda.cli.main import main as run_command
 
 
