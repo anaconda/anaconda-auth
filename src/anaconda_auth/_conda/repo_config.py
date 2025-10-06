@@ -61,7 +61,10 @@ class CondaVersionWarning(UserWarning):
 
 
 def can_restore_free_channel() -> bool:
-    return CONDA_VERSION >= version.parse("4.7.0")
+    # restore_free_channel was removed in conda 25.9.0
+    return CONDA_VERSION >= version.parse("4.7.0") and CONDA_VERSION < version.parse(
+        "25.9.0"
+    )
 
 
 def get_ssl_verify() -> bool:
