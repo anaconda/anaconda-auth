@@ -6,12 +6,29 @@ conditionally import it in case conda is not installed in the user's environment
 """
 
 from typing import Iterable
+from typing import Optional
 
 from conda import plugins
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
+from anaconda_auth._conda.conda_token import cli
 
-__all__ = ["conda_auth_handlers"]
+__all__ = ["conda_subcommands", "conda_auth_handlers"]
+
+
+def _cli_wrapper(argv: Optional[list[str]] = None) -> int:  # type: ignore
+    # If argv is empty tuple, we need to set it back to None
+    return cli(argv=argv or None)
+
+
+@plugins.hookimpl
+def conda_subcommands() -> Iterable[plugins.CondaSubcommand]:
+    """Defines subcommands into conda itself (not `anaconda` CLI)."""
+    yield plugins.CondaSubcommand(
+        name="token",
+        summary="Set repository access token and configure default_channels",
+        action=_cli_wrapper,  # type: ignore
+    )
 
 
 @plugins.hookimpl
