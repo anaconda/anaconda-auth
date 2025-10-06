@@ -1,10 +1,18 @@
 import pytest
 import urllib3.exceptions
+from conda.cli.main import main as run_command
 from packaging.version import parse
 
 from anaconda_auth._conda.conda_token import cli
 from anaconda_auth._conda.repo_config import CONDA_VERSION
 from anaconda_auth._conda.repo_config import CondaVersionWarning
+
+
+def test_conda_subcommand_plugin(mocker):
+    """Check that we access the CLI via the plugin system."""
+    mock = mocker.patch("anaconda_auth._conda.plugins._cli_wrapper")
+    run_command("token", "set", "MY-TOKEN")
+    mock.assert_called_with(("set", "MY-TOKEN"))
 
 
 @pytest.mark.skip(reason="blocking release in CI but passing fine locally")
