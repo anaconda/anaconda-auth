@@ -86,11 +86,13 @@ def test_unknown_site() -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_default_site_with_plugin_config(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [plugin.auth]
-        domain = "localhost"
-        ssl_verify = false
-    """)
+        dedent(
+            """\
+            [plugin.auth]
+            domain = "localhost"
+            ssl_verify = false
+            """
+        )
     )
     config = SiteConfig()
 
@@ -106,11 +108,13 @@ def test_default_site_with_plugin_config(config_toml: Path) -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_extra_site_config(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [sites.local]
-        domain = "localhost"
-        ssl_verify = false
-    """)
+        dedent(
+            """\
+            [sites.local]
+            domain = "localhost"
+            ssl_verify = false
+            """
+        )
     )
 
     config = SiteConfig()
@@ -133,15 +137,16 @@ def test_extra_site_config(config_toml: Path) -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_default_extra_site_config(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        default_site = "local"
+        dedent(
+            """\
+            default_site = "local"
 
-        [sites.local]
-        domain = "localhost"
-        auth_domain_override = "auth-local"
-        ssl_verify = false
-
-    """)
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            """
+        )
     )
 
     config = SiteConfig()
@@ -160,16 +165,17 @@ def test_default_extra_site_config(config_toml: Path) -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [sites.local1]
-        domain = "localhost"
-        ssl_verify = false
+        dedent(
+            """\
+            [sites.local1]
+            domain = "localhost"
+            ssl_verify = false
 
-        [sites.local2]
-        domain = "localhost"
-        ssl_verify = true
-
-    """)
+            [sites.local2]
+            domain = "localhost"
+            ssl_verify = true
+            """
+        )
     )
 
     config = SiteConfig()
@@ -184,12 +190,13 @@ def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_anaconda_override_fails(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [sites."anaconda.com"]
-        ssl_verify = false
-        client_id = "foo"
-
-    """)
+        dedent(
+            """\
+            [sites."anaconda.com"]
+            ssl_verify = false
+            client_id = "foo"
+            """
+        )
     )
 
     with pytest.raises(AnacondaConfigValidationError):

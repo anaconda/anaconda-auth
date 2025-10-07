@@ -387,10 +387,12 @@ def test_anaconda_com_default_site_config() -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [plugin.auth]
-        ssl_verify = false
-    """)
+        dedent(
+            """\
+            [plugin.auth]
+            ssl_verify = false
+            """
+        )
     )
 
     client = BaseClient()
@@ -408,14 +410,15 @@ def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_site_selection_by_name(config_toml: Path) -> None:
     config_toml.write_text(
-        dedent("""\
-        [sites.local]
-        domain = "localhost"
-        auth_domain_override = "auth-local"
-        ssl_verify = false
-        api_key = "foo"
-
-    """)
+        dedent(
+            """\
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            api_key = "foo"
+            """
+        )
     )
 
     # make sure the default hasn't changed
