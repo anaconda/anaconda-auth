@@ -10,7 +10,11 @@ import requests
 
 from anaconda_auth import __version__
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.device_flow import DeviceCodeFlow
 from anaconda_auth.exceptions import AuthenticationError
+from anaconda_auth.exceptions import DeviceFlowDenied
+from anaconda_auth.exceptions import DeviceFlowError
+from anaconda_auth.exceptions import DeviceFlowTimeout
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.handlers import capture_auth_code
 from anaconda_auth.token import TokenInfo
@@ -102,6 +106,89 @@ def request_access_token(
     return access_token
 
 
+def _do_device_flow(config: Optional[AnacondaAuthConfig] = None) -> None:
+    """Login using OAuth 2.0 device code flow."""
+    config = config or AnacondaAuthConfig()
+
+    # Initialize device flow
+    device_flow = DeviceCodeFlow(
+        auth_url="http://localhost/api/auth",
+        client_id=config.client_id,
+        ssl_verify=config.ssl_verify,
+    )
+
+    try:
+        # Step 1: Initiate device authorization
+        print("Initiating device authorization...")
+        user_code, verification_uri = device_flow.initiate_device_authorization()
+
+        # Step 2: Display instructions to user
+        _display_device_instructions(user_code, verification_uri, device_flow)
+
+        # Step 3: Poll for token
+        print("\nWaiting for authorization...")
+        print("(You can cancel by pressing Ctrl+C)")
+
+        token_response = device_flow.poll_for_token()
+
+        # return access token
+        return token_response["access_token"]
+
+        print("✓ Login successful!")
+
+    except DeviceFlowTimeout:
+        print("❌ Authorization timed out. Please try again.")
+        raise
+    except DeviceFlowDenied:
+        print("❌ Authorization was denied.")
+        raise
+    except KeyboardInterrupt:
+        print("\n❌ Login cancelled by user.")
+        raise
+    except DeviceFlowError as e:
+        print(f"❌ Login failed: {e}")
+        raise
+
+
+def _display_device_instructions(
+    user_code: str, verification_uri: str, device_flow: DeviceCodeFlow
+) -> None:
+    """Display device authorization instructions to the user."""
+    print("\n" + "=" * 60)
+    print("DEVICE AUTHORIZATION REQUIRED")
+    print("=" * 60)
+
+    complete_uri = device_flow.get_complete_verification_uri()
+
+    if complete_uri:
+        print("1. Open this URL in your browser:")
+        print(f"   {complete_uri}")
+        print("\n2. The code should be pre-filled, just approve the request")
+
+        # Try to open browser automatically
+        try:
+            webbrowser.open(complete_uri)
+            print("   (Browser should open automatically)")
+        except Exception:
+            pass
+
+    else:
+        print("1. Open this URL in your browser:")
+        print(f"   {verification_uri}")
+        print(f"\n2. Enter this code: {user_code}")
+        print(f"   (Code: {user_code})")
+
+        # Try to open browser automatically
+        try:
+            webbrowser.open(verification_uri)
+            print("   (Browser should open automatically)")
+        except Exception:
+            pass
+
+    print("\n3. Complete the authorization in your browser")
+    print("=" * 60)
+
+
 def _do_auth_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
     config = config or AnacondaAuthConfig()
@@ -151,6 +238,8 @@ def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
 def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
     if basic:
         access_token = _login_with_username(config=config)
+    elif True:
+        access_token = _do_device_flow(config=config)
     else:
         access_token = _do_auth_flow(config=config)
     api_key = get_api_key(access_token, config.ssl_verify)
