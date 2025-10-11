@@ -15,7 +15,8 @@ from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthBase
+from anaconda_auth.config import SiteConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -56,7 +57,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaAuthConfig().domain
+            domain = SiteConfig().get_default_site().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -79,8 +80,10 @@ class BaseClient(requests.Session):
 
     def __init__(
         self,
+        site: Optional[Union[str, AnacondaAuthBase]] = None,
         base_uri: Optional[str] = None,
         domain: Optional[str] = None,
+        auth_domain_override: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
@@ -90,12 +93,26 @@ class BaseClient(requests.Session):
     ):
         super().__init__()
 
+        # Prepare the requested or default site config
+        site_config = SiteConfig()
+        if site is None:
+            config = site_config.get_default_site()
+        elif isinstance(site, str):
+            config = site_config.sites[site]
+        elif isinstance(site, AnacondaAuthBase):
+            config = site
+        else:
+            raise ValueError(f"type(site): {type(site)} is not a supported site type")
+
+        # Prepare site overrides
         if base_uri and domain:
             raise ValueError("Can only specify one of `domain` or `base_uri` argument")
 
         kwargs: Dict[str, Any] = {}
         if domain is not None:
             kwargs["domain"] = domain
+        if auth_domain_override is not None:
+            kwargs["auth_domain_override"] = auth_domain_override
         if api_key is not None:
             kwargs["api_key"] = api_key
         if ssl_verify is not None:
@@ -105,7 +122,7 @@ class BaseClient(requests.Session):
         if hash_hostname is not None:
             kwargs["hash_hostname"] = hash_hostname
 
-        self.config = AnacondaAuthConfig(**kwargs)
+        self.config = config.model_copy(update=kwargs)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -130,7 +147,7 @@ class BaseClient(requests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
     def urljoin(self, url: str) -> str:
@@ -162,14 +179,14 @@ class BaseClient(requests.Session):
 
     @cached_property
     def account(self) -> dict:
-        res = self.get("/api/account")
+        res = self.get("/api/auth/passport")
         res.raise_for_status()
         account = res.json()
         return account
 
     @property
     def name(self) -> str:
-        user = self.account.get("user", {})
+        user = self.account.get("profile", {})
 
         first_name = user.get("first_name", "")
         last_name = user.get("last_name", "")
@@ -180,7 +197,7 @@ class BaseClient(requests.Session):
 
     @property
     def email(self) -> str:
-        value = self.account.get("user", {}).get("email")
+        value = self.account.get("profile", {}).get("email")
         if value is None:
             raise ValueError(
                 "Something is wrong with your account. An email address could not be found."

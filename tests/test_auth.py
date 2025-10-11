@@ -57,12 +57,11 @@ def test_login_no_ssl_verify(mocker: MockerFixture, api_key: str) -> None:
 
 @pytest.mark.integration
 def test_get_auth_info(integration_test_client: BaseClient, is_not_none: Any) -> None:
-    response = integration_test_client.get("/api/account")
+    response = integration_test_client.get("/api/auth/passport")
     assert response.status_code == 200
     assert response.json() == {
-        "user": is_not_none,
+        "user_id": is_not_none,
         "profile": is_not_none,
-        "subscriptions": is_not_none,
     }
 
 
