@@ -277,10 +277,7 @@ def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
     config = obtain_site_config(at)
     client = BaseClient(site=config)
-    response = client.get("/api/account")
-    response.raise_for_status()
-    console.print("Your anaconda.com info:")
-    console.print_json(data=response.json(), indent=2, sort_keys=True)
+    console.print_json(data=client.account, indent=2, sort_keys=True)
 
 
 @app.command(name="api-key")

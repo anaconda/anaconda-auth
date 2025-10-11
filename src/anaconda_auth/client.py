@@ -179,14 +179,14 @@ class BaseClient(requests.Session):
 
     @cached_property
     def account(self) -> dict:
-        res = self.get("/api/account")
+        res = self.get("/api/auth/passport")
         res.raise_for_status()
         account = res.json()
         return account
 
     @property
     def name(self) -> str:
-        user = self.account.get("user", {})
+        user = self.account.get("profile", {})
 
         first_name = user.get("first_name", "")
         last_name = user.get("last_name", "")
@@ -197,7 +197,7 @@ class BaseClient(requests.Session):
 
     @property
     def email(self) -> str:
-        value = self.account.get("user", {}).get("email")
+        value = self.account.get("profile", {}).get("email")
         if value is None:
             raise ValueError(
                 "Something is wrong with your account. An email address could not be found."
