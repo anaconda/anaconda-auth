@@ -209,7 +209,8 @@ def test_api_key_init_arg_over_variable(
 
 def test_name_reverts_to_email(mocker: MockerFixture) -> None:
     account = {
-        "profile": {
+        "user": {
+            "id": "uuid",
             "email": "me@example.com",
             "first_name": None,
             "last_name": None,
@@ -229,7 +230,8 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
 
 def test_first_and_last_name(mocker: MockerFixture) -> None:
     account = {
-        "profile": {
+        "user": {
+            "id": "uuid",
             "email": "me@example.com",
             "first_name": "Anaconda",
             "last_name": "User",
@@ -249,7 +251,8 @@ def test_first_and_last_name(mocker: MockerFixture) -> None:
 
 def test_gravatar_missing(mocker: MockerFixture) -> None:
     account = {
-        "profile": {
+        "user": {
+            "id": "uuid",
             "email": f"{uuid4()}@example.com",
             "first_name": "Anaconda",
             "last_name": "User",
@@ -268,7 +271,8 @@ def test_gravatar_missing(mocker: MockerFixture) -> None:
 
 def test_gravatar_found(mocker: MockerFixture) -> None:
     account = {
-        "profile": {
+        "user": {
+            "id": "uuid",
             "email": "test1@example.com",
             "first_name": "Anaconda",
             "last_name": "User",
