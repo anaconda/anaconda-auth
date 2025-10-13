@@ -195,5 +195,12 @@ class SiteConfig(AnacondaBaseSettings, plugin_name=None):
 
         return sites
 
-    def get_default_site(self) -> AnacondaAuthBase:
-        return self.sites[self.default_site]
+    @classmethod
+    def load_site(cls, site: Optional[str] = None) -> AnacondaAuthBase:
+        """Load the site configuration object (site=None loads default_site)"""
+        sites_config = cls()
+
+        if site is None:
+            return sites_config.sites[sites_config.default_site]
+        else:
+            return sites_config.sites[site]

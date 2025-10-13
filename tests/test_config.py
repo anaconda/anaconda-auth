@@ -72,7 +72,7 @@ def test_default_site_no_config() -> None:
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
-    assert config.get_default_site() == AnacondaAuthConfig()
+    assert SiteConfig.load_site() == AnacondaAuthConfig()
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
@@ -98,9 +98,9 @@ def test_default_site_with_plugin_config(config_toml: Path) -> None:
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
-    assert config.get_default_site() == AnacondaAuthConfig()
 
-    default_site = config.get_default_site()
+    default_site = SiteConfig.load_site()
+    assert default_site == AnacondaAuthConfig()
     assert default_site.domain == "localhost"
     assert not default_site.ssl_verify
 
@@ -126,12 +126,13 @@ def test_extra_site_config(config_toml: Path) -> None:
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
 
-    assert config.sites["local"] == local
-    assert config.sites["local"].domain == "localhost"
     assert config.default_site == "anaconda.com"
-    assert config.get_default_site() == AnacondaAuthConfig()
+    assert SiteConfig.load_site() == AnacondaAuthConfig()
 
-    assert config.sites["local"] == config.sites["localhost"]
+    site = SiteConfig.load_site(site="local")
+    assert site == local
+    assert site.domain == "localhost"
+    assert SiteConfig.load_site(site="local") == SiteConfig.load_site(site="localhost")
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -159,7 +160,7 @@ def test_default_extra_site_config(config_toml: Path) -> None:
 
     assert config.sites["local"] == local
     assert config.default_site == "local"
-    assert config.get_default_site() == local
+    assert SiteConfig.load_site() == local
 
 
 @pytest.mark.usefixtures("disable_dot_env")

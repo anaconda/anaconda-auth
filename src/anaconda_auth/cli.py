@@ -99,16 +99,12 @@ def http_error(e: HTTPError) -> int:
 
 
 def obtain_site_config(at: Optional[str] = None) -> AnacondaAuthBase:
-    site_config = SiteConfig()
-    if at is not None:
-        try:
-            config = site_config.sites[at]
-        except UnknownSiteName as e:
-            console.print(e.args[0])
-            raise typer.Abort(1)
-    else:
-        config = site_config.get_default_site()
-    return config
+    try:
+        config = SiteConfig.load_site(site=at)
+        return config
+    except UnknownSiteName as e:
+        console.print(e.args[0])
+        raise typer.Abort(1)
 
 
 app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth commands")

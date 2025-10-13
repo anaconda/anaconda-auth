@@ -465,5 +465,5 @@ def test_client_site_selection_with_config() -> None:
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(UnknownSiteName):
         _ = BaseClient(site=1)  # type: ignore

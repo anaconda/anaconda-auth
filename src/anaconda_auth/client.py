@@ -57,7 +57,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = SiteConfig().get_default_site().domain
+            domain = SiteConfig.load_site().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -94,15 +94,10 @@ class BaseClient(requests.Session):
         super().__init__()
 
         # Prepare the requested or default site config
-        site_config = SiteConfig()
-        if site is None:
-            config = site_config.get_default_site()
-        elif isinstance(site, str):
-            config = site_config.sites[site]
-        elif isinstance(site, AnacondaAuthBase):
+        if isinstance(site, AnacondaAuthBase):
             config = site
         else:
-            raise ValueError(f"type(site): {type(site)} is not a supported site type")
+            config = SiteConfig.load_site(site=site)
 
         # Prepare site overrides
         if base_uri and domain:

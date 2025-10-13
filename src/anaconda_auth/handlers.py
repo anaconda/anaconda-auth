@@ -49,7 +49,7 @@ class AuthCodeRedirectServer(HTTPServer):
         self.result: Union[Result, None] = None
         self.host_name = str(self.server_address[0])
         self.oidc_path = oidc_path
-        self.config = config or SiteConfig().get_default_site()
+        self.config = config or SiteConfig.load_site()
 
     def __enter__(self) -> "AuthCodeRedirectServer":
         self._open_servers.add(self)
@@ -135,7 +135,7 @@ class AuthCodeRedirectRequestHandler(BaseHTTPRequestHandler):
 def capture_auth_code(
     redirect_uri: str, state: str, config: Optional[AnacondaAuthBase] = None
 ) -> str:
-    config = config or SiteConfig().get_default_site()
+    config = config or SiteConfig.load_site()
     parsed_url = urlparse(redirect_uri)
 
     host_name, port = parsed_url.netloc.split(":")

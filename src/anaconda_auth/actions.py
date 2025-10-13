@@ -27,7 +27,7 @@ def make_auth_code_request_url(
     """Build the authorization code request URL."""
 
     if config is None:
-        config = SiteConfig().get_default_site()
+        config = SiteConfig.load_site()
 
     authorization_endpoint = config.oidc.authorization_endpoint
     client_id = config.client_id
@@ -106,7 +106,7 @@ def request_access_token(
 
 def _do_auth_flow(config: Optional[AnacondaAuthBase] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    config = config or SiteConfig().get_default_site()
+    config = config or SiteConfig.load_site()
 
     state = str(uuid.uuid4())
     code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
@@ -130,7 +130,7 @@ def _login_with_username(config: Optional[AnacondaAuthBase] = None) -> str:
     )
 
     if config is None:
-        config = SiteConfig().get_default_site()
+        config = SiteConfig.load_site()
 
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
@@ -165,7 +165,7 @@ def get_api_key(
     ssl_verify: bool = True,
     config: Optional[AnacondaAuthBase] = None,
 ) -> str:
-    config = config or SiteConfig().get_default_site()
+    config = config or SiteConfig.load_site()
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -213,11 +213,7 @@ def login(
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
-        config = (
-            SiteConfig()
-            .get_default_site()
-            .model_copy(update=dict(ssl_verify=ssl_verify))
-        )
+        config = SiteConfig.load_site().model_copy(update=dict(ssl_verify=ssl_verify))
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
@@ -226,7 +222,7 @@ def login(
 def logout(config: Optional[AnacondaAuthBase] = None) -> None:
     """Log out of anaconda.com."""
     if config is None:
-        config = SiteConfig().get_default_site()
+        config = SiteConfig.load_site()
 
     try:
         token_info = TokenInfo.load(domain=config.domain)
@@ -251,13 +247,10 @@ def logout(config: Optional[AnacondaAuthBase] = None) -> None:
 
 
 def is_logged_in(site: Optional[Union[str, AnacondaAuthBase]] = None) -> bool:
-    site_config = SiteConfig()
-    if site is None:
-        config = site_config.get_default_site()
-    elif isinstance(site, AnacondaAuthBase):
+    if isinstance(site, AnacondaAuthBase):
         config = site
     else:
-        config = site_config.sites[site]
+        config = SiteConfig.load_site(site=site)
 
     try:
         token_info = TokenInfo.load(domain=config.domain)
