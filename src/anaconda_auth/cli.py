@@ -85,7 +85,7 @@ def http_error(e: HTTPError) -> int:
     except JSONDecodeError:
         error_code = ""
 
-    if error_code == "auth_required" or error_code == "authentication_error":
+    if error_code == "auth_required":
         if "Authorization" in e.request.headers:
             console.print(
                 "[bold][red]InvalidAuthentication:[/red][/bold] Your provided API Key or login token is invalid"
