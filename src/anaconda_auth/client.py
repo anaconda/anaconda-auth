@@ -39,7 +39,7 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
         except requests.JSONDecodeError:
             error_code = ""
 
-        if error_code == "auth_required":
+        if error_code == "auth_required" or error_code == "authentication_error":
             if has_auth_header:
                 response.reason = "Your API key or login token is invalid."
             else:
