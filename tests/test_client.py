@@ -14,8 +14,8 @@ from requests.exceptions import SSLError
 
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
-from anaconda_auth.config import AnacondaAuthBase
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 
@@ -378,10 +378,10 @@ def test_anaconda_com_default_site_config() -> None:
     """Test that without external modifiers the config matches the coded parameters"""
 
     client = BaseClient()
-    assert client.config.model_dump() == AnacondaAuthBase().model_dump()
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
     client = BaseClient(site="anaconda.com")
-    assert client.config.model_dump() == AnacondaAuthBase().model_dump()
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -451,7 +451,7 @@ def test_client_site_selection_with_config() -> None:
     client = BaseClient()
     assert client.config == AnacondaAuthConfig()
 
-    site = AnacondaAuthBase(domain="example.com", api_key="foo", ssl_verify=False)
+    site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
 
     # load configured site
     client = BaseClient(site=site)

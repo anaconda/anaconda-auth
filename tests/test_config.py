@@ -7,9 +7,9 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from anaconda_auth.config import AnacondaAuthBase
 from anaconda_auth.config import AnacondaAuthConfig
-from anaconda_auth.config import SiteConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
@@ -68,16 +68,16 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
 def test_default_site_no_config() -> None:
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
-    assert SiteConfig.load_site() == AnacondaAuthConfig()
+    assert AnacondaAuthSitesConfig.load_site() == AnacondaAuthConfig()
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
 def test_unknown_site() -> None:
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
     with pytest.raises(UnknownSiteName):
         _ = config.sites["unknown-site"]
@@ -94,12 +94,12 @@ def test_default_site_with_plugin_config(config_toml: Path) -> None:
             """
         )
     )
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
     assert config.default_site == "anaconda.com"
 
-    default_site = SiteConfig.load_site()
+    default_site = AnacondaAuthSitesConfig.load_site()
     assert default_site == AnacondaAuthConfig()
     assert default_site.domain == "localhost"
     assert not default_site.ssl_verify
@@ -117,9 +117,9 @@ def test_extra_site_config(config_toml: Path) -> None:
         )
     )
 
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
-    local = AnacondaAuthBase(
+    local = AnacondaAuthSite(
         domain="localhost",
         ssl_verify=False,
     )
@@ -127,12 +127,14 @@ def test_extra_site_config(config_toml: Path) -> None:
     assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
 
     assert config.default_site == "anaconda.com"
-    assert SiteConfig.load_site() == AnacondaAuthConfig()
+    assert AnacondaAuthSitesConfig.load_site() == AnacondaAuthConfig()
 
-    site = SiteConfig.load_site(site="local")
+    site = AnacondaAuthSitesConfig.load_site(site="local")
     assert site == local
     assert site.domain == "localhost"
-    assert SiteConfig.load_site(site="local") == SiteConfig.load_site(site="localhost")
+    assert AnacondaAuthSitesConfig.load_site(
+        site="local"
+    ) == AnacondaAuthSitesConfig.load_site(site="localhost")
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -150,9 +152,9 @@ def test_default_extra_site_config(config_toml: Path) -> None:
         )
     )
 
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
-    local = AnacondaAuthBase(
+    local = AnacondaAuthSite(
         domain="localhost", ssl_verify=False, auth_domain_override="auth-local"
     )
 
@@ -160,7 +162,7 @@ def test_default_extra_site_config(config_toml: Path) -> None:
 
     assert config.sites["local"] == local
     assert config.default_site == "local"
-    assert SiteConfig.load_site() == local
+    assert AnacondaAuthSitesConfig.load_site() == local
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -179,7 +181,7 @@ def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
         )
     )
 
-    config = SiteConfig()
+    config = AnacondaAuthSitesConfig()
 
     assert config.sites["local1"].ssl_verify is False
     assert config.sites["local2"].ssl_verify is True
@@ -201,4 +203,4 @@ def test_anaconda_override_fails(config_toml: Path) -> None:
     )
 
     with pytest.raises(AnacondaConfigValidationError):
-        _ = SiteConfig()
+        _ = AnacondaAuthSitesConfig()

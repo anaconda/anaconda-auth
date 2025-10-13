@@ -13,8 +13,8 @@ from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaAuthBase
-from anaconda_auth.config import SiteConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -98,9 +98,9 @@ def http_error(e: HTTPError) -> int:
         return 1
 
 
-def obtain_site_config(at: Optional[str] = None) -> AnacondaAuthBase:
+def obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
     try:
-        config = SiteConfig.load_site(site=at)
+        config = AnacondaAuthSitesConfig.load_site(site=at)
         return config
     except UnknownSiteName as e:
         console.print(e.args[0])

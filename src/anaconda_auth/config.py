@@ -38,7 +38,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     )
 
 
-class AnacondaAuthBase(BaseModel):
+class AnacondaAuthSite(BaseModel):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -120,7 +120,7 @@ class AnacondaAuthBase(BaseModel):
 
 
 class AnacondaAuthConfig(
-    AnacondaAuthBase, AnacondaBaseSettings, plugin_name="auth"
+    AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"
 ): ...
 
 
@@ -159,8 +159,8 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         super().__init__(**kwargs)
 
 
-class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
-    def __getitem__(self, key: str) -> AnacondaAuthBase:
+class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
+    def __getitem__(self, key: str) -> AnacondaAuthSite:
         try:
             return self.root[key]
         except KeyError:
@@ -176,7 +176,7 @@ class Sites(RootModel[Dict[str, AnacondaAuthBase]]):
             return matches[0]
 
 
-class SiteConfig(AnacondaBaseSettings, plugin_name=None):
+class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     sites: Sites = Field(
         default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
     )
@@ -196,7 +196,7 @@ class SiteConfig(AnacondaBaseSettings, plugin_name=None):
         return sites
 
     @classmethod
-    def load_site(cls, site: Optional[str] = None) -> AnacondaAuthBase:
+    def load_site(cls, site: Optional[str] = None) -> AnacondaAuthSite:
         """Load the site configuration object (site=None loads default_site)"""
         sites_config = cls()
 
