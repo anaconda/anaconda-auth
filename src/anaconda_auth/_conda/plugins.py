@@ -55,20 +55,27 @@ def merge_auth_configs(command):
     to this plugin for authentication.
     """
     from conda.base.context import context
+
     result = []
     wildcards = set(DEFAULT_CHANNEL_AUTH)
     for orec in context.channel_settings:
         channel = orec.get("channel")
+        if channel is None:
+            break
+
         for c in DEFAULT_CHANNEL_AUTH:
             if channel.startswith(c):
-                if channel == c + '*':
+                if channel == c + "*":
                     wildcards.discard(c)
                 if "auth" not in orec:
                     orec = frozendict([*orec.items(), ("auth", "anaconda-auth")])
                 break
         result.append(orec)
+
     for channel in wildcards:
-        result.append(frozendict([("channel", channel + '*'), ("auth", "anaconda-auth")]))
+        result.append(
+            frozendict([("channel", channel + "*"), ("auth", "anaconda-auth")])
+        )
     context.channel_settings = tuple(result)
 
 
