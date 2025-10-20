@@ -65,7 +65,7 @@ def _get_condarc_args(
     condarc_system: bool = False,
     condarc_env: bool = False,
     condarc_file: str | None = None,
-) -> None:
+) -> list[str]:
     """Construct conda CLI args related to condarc location."""
     config_args = []
 
