@@ -8,6 +8,8 @@ from ruamel.yaml import YAMLError
 
 from anaconda_cli_base import console
 
+DEFAULT_CONDARC_PATH = Path("~/.condarc").expanduser()
+
 yaml = YAML()
 
 
@@ -21,7 +23,7 @@ class CondaRC:
         Initializes the CondaRC object by attempting to open and load the contents
         of the condarc file found in the user's home directory.
         """
-        self.condarc_path = condarc_path or Path("~/.condarc").expanduser()
+        self.condarc_path = condarc_path or DEFAULT_CONDARC_PATH
         self._loaded_yaml: dict[str, Any] = {}
         self.load()
 
