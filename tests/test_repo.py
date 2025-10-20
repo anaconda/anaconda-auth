@@ -15,7 +15,7 @@ from conda.base.context import reset_context
 
 # ruff: noqa: E402
 from anaconda_auth._conda import condarc as condarc_module
-from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth._conda import repo_config
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
@@ -28,6 +28,18 @@ from anaconda_auth.token import TokenNotFoundError
 def empty_condarc(monkeypatch, tmp_path):
     condarc_path = tmp_path / ".condarc"
     monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
+
+    orig_get_condarc_args = repo_config._get_condarc_args
+
+    def _new_get_condarc_args(
+        condarc_system: bool = False,
+        condarc_env: bool = False,
+        condarc_file: str | None = None,
+    ) -> None:
+        return orig_get_condarc_args(condarc_file=str(condarc_path))
+
+    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
+
     with condarc_path.open("w") as fp:
         fp.write("")
     reset_context([condarc_path])
@@ -253,7 +265,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     test_repo_token = "test-repo-token"
     mock = mocker.patch(
         "anaconda_auth._conda.repo_config.read_binstar_tokens",
-        return_value={REPO_URL: test_repo_token},
+        return_value={repo_config.REPO_URL: test_repo_token},
     )
     result = invoke_cli(["token", "list"])
 
@@ -261,7 +273,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
 
     assert result.exit_code == 0
     assert "Anaconda Repository Tokens" in result.stdout
-    assert REPO_URL in result.stdout
+    assert repo_config.REPO_URL in result.stdout
     assert test_repo_token in result.stdout
 
 
@@ -277,6 +289,27 @@ def test_token_install_does_not_exist_yet(
     result = invoke_cli(
         ["token", "install", option_flag, org_name],
         input="y\n",
+    )
+    assert result.exit_code == 0
+
+    token_info = TokenInfo.load()
+    repo_token = token_info.get_repo_token(org_name=org_name)
+    assert repo_token == token_created_in_service.token
+
+
+@pytest.mark.parametrize("option_flag", ["-o", "--org"])
+def test_token_install_does_not_exist_yet_no_configure(
+    option_flag: str,
+    org_name: str,
+    token_does_not_exist_in_service: None,
+    token_created_in_service: str,
+    capsys,
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    result = invoke_cli(
+        ["token", "install", option_flag, org_name],
+        input="n\n",
     )
     assert result.exit_code == 0
 
