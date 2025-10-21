@@ -13,12 +13,12 @@ import warnings
 from os.path import abspath
 from os.path import expanduser
 from os.path import join
-from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
 import conda
 import conda.gateways.logging  # noqa: F401
+from conda.base import context as context_module
 from conda.base.context import context
 from conda.base.context import reset_context
 from conda.cli import main as conda_main
@@ -87,11 +87,8 @@ def can_restore_free_channel() -> bool:
     )
 
 
-def get_ssl_verify(search_path: list[str | Path] | None = None) -> bool:
-    if search_path:
-        context = reset_context(search_path)
-    else:
-        context = reset_context()
+def get_ssl_verify() -> bool:
+    context = context_module.reset_context()
     return context.ssl_verify
 
 

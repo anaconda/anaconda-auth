@@ -64,4 +64,4 @@ def test_conda_context(empty_condarc):
         f"--file={empty_condarc}",
         use_exception_handler=True,
     )
-    assert not get_ssl_verify([empty_condarc])
+    assert not get_ssl_verify()
