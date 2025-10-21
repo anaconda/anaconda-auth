@@ -46,10 +46,11 @@ escaped_user_rc_path = user_rc_path.replace("%", "%%")
 escaped_sys_rc_path = abspath(join(sys.prefix, ".condarc")).replace("%", "%%")
 
 
-def run_command(*args):
+def run_command(*args: Any, **kwargs: Any) -> int:
     with warnings.catch_warnings():
+        # Ignore PendingDeprecationWarning from any other plugins invoked when calling conda
         warnings.simplefilter("ignore", PendingDeprecationWarning)
-        return run_command_orig(*args)
+        return run_command_orig(*args, **kwargs)
 
 
 class CondaTokenError(RuntimeError):
