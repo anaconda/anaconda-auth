@@ -205,7 +205,7 @@ envlist =
     py311-{conda}
     py312-{conda}
     py313-{conda}
-    pendingdeprecations-{conda}
+    pendingdeprecations
     mypy
     report
 isolated_build = True
@@ -249,6 +249,7 @@ conda_deps =
     anaconda-client
     # Optionally install conda to test plugins
     conda: conda
+    pendingdeprecations: conda
 conda_channels =
     anaconda-cloud
     defaults
