@@ -12,7 +12,6 @@ from anaconda_auth._conda import condarc as condarc_module  # noqa: E402
 from anaconda_auth._conda import repo_config  # noqa: E402
 from anaconda_auth._conda.conda_api import Commands  # noqa: E402
 from anaconda_auth._conda.conda_api import run_command  # noqa: E402
-from anaconda_auth._conda.repo_config import clean_index  # noqa: E402
 from anaconda_auth._conda.repo_config import token_remove  # noqa: E402
 from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
@@ -57,55 +56,6 @@ def repo_url(test_server_url: str) -> str:
     with mock.patch.dict(os.environ, {"CONDA_TOKEN_REPO_URL": repo_url}):
         with mock.patch("anaconda_auth._conda.repo_config.REPO_URL", repo_url):
             yield repo_url
-
-
-@pytest.fixture(scope="session")
-def reset_channels_alias(empty_condarc):
-    clean_index()
-    run_command(
-        Commands.CONFIG,
-        "--remove-key",
-        "channels",
-        f"--file={empty_condarc}",
-        use_exception_handler=True,
-    )
-    run_command(
-        Commands.CONFIG,
-        "--prepend",
-        "channels",
-        "defaults",
-        f"--file={empty_condarc}",
-        use_exception_handler=True,
-    )
-    run_command(
-        Commands.CONFIG,
-        "--set",
-        "channel_alias",
-        "https://conda.anaconda.org",
-        f"--file={empty_condarc}",
-        use_exception_handler=True,
-    )
-
-
-@pytest.fixture(scope="function")
-def set_ssl_verify_true(empty_condarc):
-    run_command(
-        Commands.CONFIG,
-        "--set",
-        "ssl_verify",
-        "true",
-        f"--file={empty_condarc}",
-        use_exception_handler=True,
-    )
-    yield
-    run_command(
-        Commands.CONFIG,
-        "--set",
-        "ssl_verify",
-        "true",
-        f"--file={empty_condarc}",
-        use_exception_handler=True,
-    )
 
 
 @pytest.fixture(scope="function")
