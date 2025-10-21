@@ -60,29 +60,51 @@ def repo_url(test_server_url: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def reset_channels_alias():
+def reset_channels_alias(empty_condarc):
     clean_index()
-    run_command(Commands.CONFIG, "--remove-key", "channels", use_exception_handler=True)
     run_command(
-        Commands.CONFIG, "--prepend", "channels", "defaults", use_exception_handler=True
+        Commands.CONFIG,
+        "--remove-key",
+        "channels",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
+    )
+    run_command(
+        Commands.CONFIG,
+        "--prepend",
+        "channels",
+        "defaults",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
     )
     run_command(
         Commands.CONFIG,
         "--set",
         "channel_alias",
         "https://conda.anaconda.org",
+        f"--file={empty_condarc}",
         use_exception_handler=True,
     )
 
 
 @pytest.fixture(scope="function")
-def set_ssl_verify_true():
+def set_ssl_verify_true(empty_condarc):
     run_command(
-        Commands.CONFIG, "--set", "ssl_verify", "true", use_exception_handler=True
+        Commands.CONFIG,
+        "--set",
+        "ssl_verify",
+        "true",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
     )
     yield
     run_command(
-        Commands.CONFIG, "--set", "ssl_verify", "true", use_exception_handler=True
+        Commands.CONFIG,
+        "--set",
+        "ssl_verify",
+        "true",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
     )
 
 
@@ -151,10 +173,24 @@ def secret_token():
 
 
 @pytest.fixture(scope="function")
-def uninstall_rope():
-    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
+def uninstall_rope(empty_condarc):
+    run_command(
+        Commands.REMOVE,
+        "rope",
+        "-y",
+        "--force",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
+    )
     yield
-    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
+    run_command(
+        Commands.REMOVE,
+        "rope",
+        "-y",
+        "--force",
+        f"--file={empty_condarc}",
+        use_exception_handler=True,
+    )
 
 
 @pytest.fixture
