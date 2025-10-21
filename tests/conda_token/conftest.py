@@ -30,6 +30,8 @@ def empty_condarc(monkeypatch, tmp_path):
 
     """
     condarc_path = tmp_path / ".condarc"
+    condarc_path.touch()
+
     monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
 
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
@@ -43,9 +45,6 @@ def empty_condarc(monkeypatch, tmp_path):
         return orig_get_condarc_args(condarc_file=condarc_file or str(condarc_path))
 
     monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
-
-    with condarc_path.open("w") as fp:
-        fp.write("")
 
     # Patch reset_context function such that it only loads config from our temp file
     orig_reset_context = reset_context
