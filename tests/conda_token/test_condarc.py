@@ -5,7 +5,6 @@ from packaging.version import parse
 
 from anaconda_auth._conda.repo_config import CONDA_VERSION
 from anaconda_auth._conda.repo_config import _set_ssl_verify_false
-from anaconda_auth._conda.repo_config import can_restore_free_channel
 from anaconda_auth._conda.repo_config import configure_default_channels
 from anaconda_auth._conda.repo_config import enable_extra_safety_checks
 
@@ -99,70 +98,37 @@ def test_replace_default_channels_with_inactive(empty_condarc):
 
 
 def test_default_channels_with_conda_forge(empty_condarc):
-    if can_restore_free_channel():
-        original_condarc = dedent(
-            """\
-            ssl_verify: true
+    original_condarc = dedent(
+        """\
+        ssl_verify: true
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
-        )
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
 
-        empty_condarc.write_text(original_condarc)
-        configure_default_channels(force=True)
-        assert empty_condarc.read_text() == dedent(
-            """\
-            ssl_verify: true
+    empty_condarc.write_text(original_condarc)
+    configure_default_channels(force=True)
+    assert empty_condarc.read_text() == dedent(
+        """\
+        ssl_verify: true
 
-            channels:
-              - defaults
-              - conda-forge
+        channels:
+          - defaults
+          - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            default_channels:
-              - https://repo.anaconda.cloud/repo/main
-              - https://repo.anaconda.cloud/repo/r
-              - https://repo.anaconda.cloud/repo/msys2
-            """
-        )
-    else:
-        original_condarc = dedent(
-            """\
-            ssl_verify: true
-
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
-
-            channel_alias: https://conda.anaconda.org/
-            """
-        )
-
-        empty_condarc.write_text(original_condarc)
-        configure_default_channels(force=True)
-        assert empty_condarc.read_text() == dedent(
-            """\
-            ssl_verify: true
-
-            channels:
-              - defaults
-              - conda-forge
-
-            channel_alias: https://conda.anaconda.org/
-            default_channels:
-              - https://repo.anaconda.cloud/repo/main
-              - https://repo.anaconda.cloud/repo/r
-              - https://repo.anaconda.cloud/repo/msys2
-            """
-        )
+        channel_alias: https://conda.anaconda.org/
+        default_channels:
+          - https://repo.anaconda.cloud/repo/main
+          - https://repo.anaconda.cloud/repo/r
+          - https://repo.anaconda.cloud/repo/msys2
+        """
+    )
 
 
 def test_no_ssl_verify_from_true(empty_condarc):
