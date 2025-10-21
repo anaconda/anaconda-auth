@@ -219,7 +219,8 @@ python =
     3.10: py310, mypy
     3.11: py311, mypy
     3.12: py312, mypy
-    3.13: py313, mypy, pendingdeprecations
+    3.13: py313, mypy
+    3.13-pendingdeprecations: pendingdeprecations
 
 [testenv]
 passenv =
