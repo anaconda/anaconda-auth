@@ -163,6 +163,8 @@ filterwarnings = [
   "ignore:The following fields have been set using legacy environment variables:DeprecationWarning",
   "ignore:AnacondaCloudConfig is deprecated, please use AnacondaAuthConfig instead:DeprecationWarning",
   "ignore:Please replace imports from `import anaconda_cloud_auth` to `import anaconda_auth`:DeprecationWarning",
+  # TODO(mattkram): This is something we need to fix in anaconda-cli-base
+  "ignore:pkg_resources is deprecated as an API:UserWarning",
   # Ignore conda's PendingDeprecationWarning
   "ignore::PendingDeprecationWarning"
 ]
