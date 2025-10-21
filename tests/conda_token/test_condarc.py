@@ -9,7 +9,7 @@ from anaconda_auth._conda.repo_config import configure_default_channels
 from anaconda_auth._conda.repo_config import enable_extra_safety_checks
 
 
-def test_default_channels(empty_condarc):
+def test_default_channels(condarc_path):
     final_condarc = dedent(
         """\
         default_channels:
@@ -19,10 +19,10 @@ def test_default_channels(empty_condarc):
         """
     )
     configure_default_channels(force=True)
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_default_channels_no_exception(empty_condarc, capsys):
+def test_default_channels_no_exception(condarc_path, capsys):
     """Ensure that no CondaKeyError is raised if the .condarc does not have default_channels defined."""
     configure_default_channels(force=True)
 
@@ -30,7 +30,7 @@ def test_default_channels_no_exception(empty_condarc, capsys):
     assert "CondaKeyError: 'default_channels'" not in res.err
 
 
-def test_replace_default_channels(empty_condarc):
+def test_replace_default_channels(condarc_path):
     original_condarc = dedent(
         """\
         default_channels:
@@ -47,12 +47,12 @@ def test_replace_default_channels(empty_condarc):
           - https://repo.anaconda.cloud/repo/msys2
         """
     )
-    empty_condarc.write_text(original_condarc)
+    condarc_path.write_text(original_condarc)
     configure_default_channels(force=True)
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_default_channels_with_inactive(empty_condarc):
+def test_default_channels_with_inactive(condarc_path):
     original_condarc = dedent(
         """\
         default_channels:
@@ -72,14 +72,14 @@ def test_default_channels_with_inactive(empty_condarc):
           - https://repo.anaconda.cloud/repo/mro-archive
         """
     )
-    empty_condarc.write_text(original_condarc)
+    condarc_path.write_text(original_condarc)
     configure_default_channels(
         include_archive_channels=["free", "pro", "mro-archive"], force=True
     )
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_replace_default_channels_with_inactive(empty_condarc):
+def test_replace_default_channels_with_inactive(condarc_path):
     final_condarc = dedent(
         """\
         default_channels:
@@ -94,10 +94,10 @@ def test_replace_default_channels_with_inactive(empty_condarc):
     configure_default_channels(
         include_archive_channels=["free", "pro", "mro-archive"], force=True
     )
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_default_channels_with_conda_forge(empty_condarc):
+def test_default_channels_with_conda_forge(condarc_path):
     original_condarc = dedent(
         """\
         ssl_verify: true
@@ -112,9 +112,9 @@ def test_default_channels_with_conda_forge(empty_condarc):
         """
     )
 
-    empty_condarc.write_text(original_condarc)
+    condarc_path.write_text(original_condarc)
     configure_default_channels(force=True)
-    assert empty_condarc.read_text() == dedent(
+    assert condarc_path.read_text() == dedent(
         """\
         ssl_verify: true
 
@@ -131,7 +131,7 @@ def test_default_channels_with_conda_forge(empty_condarc):
     )
 
 
-def test_no_ssl_verify_from_true(empty_condarc):
+def test_no_ssl_verify_from_true(condarc_path):
     original_condarc = dedent(
         """\
         ssl_verify: true
@@ -142,22 +142,22 @@ def test_no_ssl_verify_from_true(empty_condarc):
         ssl_verify: false
         """
     )
-    empty_condarc.write_text(original_condarc)
+    condarc_path.write_text(original_condarc)
     _set_ssl_verify_false()
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_no_ssl_verify_from_empty(empty_condarc):
+def test_no_ssl_verify_from_empty(condarc_path):
     final_condarc = dedent(
         """\
         ssl_verify: false
         """
     )
     _set_ssl_verify_false()
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
-def test_no_ssl_verify_from_false(empty_condarc):
+def test_no_ssl_verify_from_false(condarc_path):
     original_condarc = dedent(
         """\
         ssl_verify: false
@@ -169,16 +169,16 @@ def test_no_ssl_verify_from_false(empty_condarc):
         """
     )
 
-    empty_condarc.write_text(original_condarc)
+    condarc_path.write_text(original_condarc)
     _set_ssl_verify_false()
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc
 
 
 @pytest.mark.skipif(
     CONDA_VERSION < parse("4.10.1"),
     reason="Signature verification was added in Conda 4.10.1",
 )
-def test_enable_package_signing(empty_condarc):
+def test_enable_package_signing(condarc_path):
     final_condarc = dedent(
         """\
         extra_safety_checks: true
@@ -187,4 +187,4 @@ def test_enable_package_signing(empty_condarc):
     )
 
     enable_extra_safety_checks()
-    assert empty_condarc.read_text() == final_condarc
+    assert condarc_path.read_text() == final_condarc

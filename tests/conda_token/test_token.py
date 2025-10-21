@@ -55,13 +55,13 @@ def test_validate_token_works(secret_token, repo_url):
     assert validate_token(secret_token) is None
 
 
-def test_conda_context(empty_condarc):
+def test_conda_context(condarc_path):
     run_command(
         Commands.CONFIG,
         "--set",
         "ssl_verify",
         "false",
-        f"--file={empty_condarc}",
+        f"--file={condarc_path}",
         use_exception_handler=True,
     )
     assert not get_ssl_verify()

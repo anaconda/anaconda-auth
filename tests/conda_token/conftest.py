@@ -21,17 +21,19 @@ def pytest_configure(config):
     warnings.filterwarnings("always")
 
 
-@pytest.fixture(autouse=True)
-def empty_condarc(monkeypatch, tmp_path):
-    """Returns the path of a temporary, empty .condarc file.
-
-    Operations to modify conda configuration are monkey-patched to prevent modifying
-    the ~/.condarc of the user running the tests.
-
-    """
+@pytest.fixture()
+def condarc_path(tmp_path):
+    """Returns the path of a temporary, empty .condarc file."""
     condarc_path = tmp_path / ".condarc"
     condarc_path.touch()
+    yield condarc_path
 
+
+@pytest.fixture(autouse=True)
+def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
+    """Patch operations that modify .condarc to prevent modifying
+    the ~/.condarc of the user running the tests.
+    """
     monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
 
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
@@ -134,13 +136,13 @@ def secret_token():
 
 
 @pytest.fixture(scope="function")
-def uninstall_rope(empty_condarc):
+def uninstall_rope(condarc_path):
     run_command(
         Commands.REMOVE,
         "rope",
         "-y",
         "--force",
-        f"--file={empty_condarc}",
+        f"--file={condarc_path}",
         use_exception_handler=True,
     )
     yield
@@ -149,7 +151,7 @@ def uninstall_rope(empty_condarc):
         "rope",
         "-y",
         "--force",
-        f"--file={empty_condarc}",
+        f"--file={condarc_path}",
         use_exception_handler=True,
     )
 
