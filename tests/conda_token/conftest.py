@@ -23,9 +23,16 @@ def pytest_configure(config):
 
 @pytest.fixture(autouse=True)
 def empty_condarc(monkeypatch, tmp_path):
+    """Returns the path of a temporary, empty .condarc file.
+
+    Operations to modify conda configuration are monkey-patched to prevent modifying
+    the ~/.condarc of the user running the tests.
+
+    """
     condarc_path = tmp_path / ".condarc"
     monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
 
+    # Patch the handling of conda CLI arguments to pass the path to the condarc file
     orig_get_condarc_args = repo_config._get_condarc_args
 
     def _new_get_condarc_args(
@@ -40,6 +47,7 @@ def empty_condarc(monkeypatch, tmp_path):
     with condarc_path.open("w") as fp:
         fp.write("")
 
+    # Patch reset_context function such that it only loads config from our temp file
     orig_reset_context = reset_context
 
     def _new_reset_context(*args, **kwargs):
