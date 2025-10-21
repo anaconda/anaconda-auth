@@ -174,19 +174,13 @@ def pytest_configure(config):
                 category, PendingDeprecationWarning
             ):
                 stack = traceback.extract_stack()
+                # Ignore the warning if any of the known plugins matches
                 for frame in stack:
-                    print(frame.filename)
                     if "conda_libmamba_solver" in frame.filename:
-                        print("Returning")
                         return
                     if "anaconda_anon_usage" in frame.filename:
-                        print("Returning")
                         return
-                    # if "repo_config" in frame.filename:
-                    #     print("Returning")
-                    #     return
 
-            print(f"Raising original warning: {message}")
             original_warn(message, category, stacklevel + 1, source)
 
         warnings.warn = custom_warn
