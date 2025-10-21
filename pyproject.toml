@@ -249,6 +249,7 @@ conda_deps =
     anaconda-client
     # Optionally install conda to test plugins
     conda: conda
+    pendingdeprecations: conda
 conda_channels =
     anaconda-cloud
     defaults
