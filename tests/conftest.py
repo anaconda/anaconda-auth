@@ -165,6 +165,8 @@ def pytest_configure(config):
     raised by other conda plugins, while allowing us to still catch our own.
     """
     if config.getoption("--error-on-pending-deprecations"):
+        warnings.simplefilter("error", PendingDeprecationWarning)
+
         original_warn = warnings.warn
 
         def custom_warn(message, category=UserWarning, stacklevel=1, source=None):
