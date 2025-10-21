@@ -30,9 +30,9 @@ jobs:
       - name: Test with tox
         env:
           CE_TOKEN: ${{ secrets.TEST_REPO_TOKEN }}
-          TOX_POSARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '-W error::PendingDeprecationWarning' || '' }}
+          PYTEST_ARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '-W error::PendingDeprecationWarning' || '' }}
         run: |
-          tox
+          tox -- $PYTEST_ARGS
 
   build-conda-package:
     name: Build conda package
