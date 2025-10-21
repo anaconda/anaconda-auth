@@ -30,7 +30,7 @@ jobs:
       - name: Test with tox
         env:
           CE_TOKEN: ${{ secrets.TEST_REPO_TOKEN }}
-          PYTEST_ARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '-W error::PendingDeprecationWarning' || '' }}
+          PYTEST_ARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '-W error::PendingDeprecationWarning --error-on-pending-deprecations' || '' }}
         run: |
           tox -- $PYTEST_ARGS
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import traceback
+import warnings
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
@@ -150,6 +152,42 @@ def pytest_addoption(parser):  # type: ignore
         default=False,
         help="enable integration tests",
     )
+    parser.addoption(
+        "--error-on-pending-deprecations",
+        action="store_true",
+        default=False,
+        help="Treat PendingDeprecationWarnings from anaconda_auth as errors",
+    )
+
+
+def pytest_configure(config):
+    """Customize warning filters to ignore PendingDeprecationWarnings that are
+    raised by other conda plugins, while allowing us to still catch our own.
+    """
+    if config.getoption("--error-on-pending-deprecations"):
+        original_warn = warnings.warn
+
+        def custom_warn(message, category=UserWarning, stacklevel=1, source=None):
+            if isinstance(category, type) and issubclass(
+                category, PendingDeprecationWarning
+            ):
+                stack = traceback.extract_stack()
+                for frame in stack:
+                    print(frame.filename)
+                    if "conda_libmamba_solver" in frame.filename:
+                        print("Returning")
+                        return
+                    if "anaconda_anon_usage" in frame.filename:
+                        print("Returning")
+                        return
+                    # if "repo_config" in frame.filename:
+                    #     print("Returning")
+                    #     return
+
+            print(f"Raising original warning: {message}")
+            original_warn(message, category, stacklevel + 1, source)
+
+        warnings.warn = custom_warn
 
 
 def pytest_collection_modifyitems(config, items):  # type: ignore
