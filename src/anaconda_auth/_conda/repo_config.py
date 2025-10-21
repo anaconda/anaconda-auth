@@ -20,7 +20,6 @@ import conda
 import conda.gateways.logging  # noqa: F401
 from conda.base import context as context_module
 from conda.base.context import context
-from conda.base.context import reset_context
 from conda.cli import main as conda_main
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
