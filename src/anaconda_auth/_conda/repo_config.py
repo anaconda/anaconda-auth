@@ -20,7 +20,7 @@ import conda
 import conda.gateways.logging  # noqa: F401
 from conda.base.context import context
 from conda.base.context import reset_context
-from conda.cli import main as run_command_orig
+from conda.cli import main as conda_main
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
 from conda.gateways.anaconda_client import remove_binstar_token
@@ -50,7 +50,7 @@ def run_command(*args: Any, **kwargs: Any) -> int:
     with warnings.catch_warnings():
         # Ignore PendingDeprecationWarning from any other plugins invoked when calling conda
         warnings.simplefilter("ignore", PendingDeprecationWarning)
-        return run_command_orig(*args, **kwargs)
+        return conda_main(*args, **kwargs)
 
 
 class CondaTokenError(RuntimeError):
