@@ -20,7 +20,7 @@ import conda
 import conda.gateways.logging  # noqa: F401
 from conda.base.context import context
 from conda.base.context import reset_context
-from conda.cli import main as run_command
+from conda.cli import main as run_command_orig
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
 from conda.gateways.anaconda_client import remove_binstar_token
@@ -44,6 +44,12 @@ ARCHIVE_CHANNELS = ["free", "mro-archive", "pro"]
 user_rc_path = abspath(expanduser("~/.condarc"))
 escaped_user_rc_path = user_rc_path.replace("%", "%%")
 escaped_sys_rc_path = abspath(join(sys.prefix, ".condarc")).replace("%", "%%")
+
+
+def run_command(*args):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PendingDeprecationWarning)
+        return run_command_orig(*args)
 
 
 class CondaTokenError(RuntimeError):
