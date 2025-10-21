@@ -59,7 +59,7 @@ def repo_url(test_server_url: str) -> str:
             yield repo_url
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def reset_channels_alias():
     clean_index()
     run_command(Commands.CONFIG, "--remove-key", "channels", use_exception_handler=True)
@@ -75,7 +75,7 @@ def reset_channels_alias():
     )
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function")
 def set_ssl_verify_true():
     run_command(
         Commands.CONFIG, "--set", "ssl_verify", "true", use_exception_handler=True
@@ -93,7 +93,7 @@ def remove_token(repo_url):
     token_remove()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def remove_token_end_of_session():
     yield
     token_remove()
