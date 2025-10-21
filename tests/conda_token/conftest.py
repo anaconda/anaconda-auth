@@ -6,6 +6,10 @@ import pytest
 
 conda = pytest.importorskip("conda")
 
+from conda.base.context import reset_context  # noqa: E402
+
+from anaconda_auth._conda import condarc as condarc_module  # noqa: E402
+from anaconda_auth._conda import repo_config  # noqa: E402
 from anaconda_auth._conda.conda_api import Commands  # noqa: E402
 from anaconda_auth._conda.conda_api import run_command  # noqa: E402
 from anaconda_auth._conda.repo_config import clean_index  # noqa: E402
@@ -15,6 +19,28 @@ from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
 def pytest_configure(config):
     warnings.filterwarnings("always")
+
+
+@pytest.fixture(autouse=True)
+def empty_condarc(monkeypatch, tmp_path):
+    condarc_path = tmp_path / ".condarc"
+    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
+
+    orig_get_condarc_args = repo_config._get_condarc_args
+
+    def _new_get_condarc_args(
+        condarc_system: bool = False,
+        condarc_env: bool = False,
+        condarc_file: str | None = None,
+    ) -> None:
+        return orig_get_condarc_args(condarc_file=str(condarc_path))
+
+    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
+
+    with condarc_path.open("w") as fp:
+        fp.write("")
+    reset_context([condarc_path])
+    yield condarc_path
 
 
 @pytest.fixture(scope="session")
