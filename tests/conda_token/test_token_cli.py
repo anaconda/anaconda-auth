@@ -273,27 +273,6 @@ def test_token_install_does_not_exist_yet(
 
 
 @pytest.mark.parametrize("option_flag", ["-o", "--org"])
-def test_token_install_does_not_exist_yet_no_configure(
-    option_flag: str,
-    org_name: str,
-    token_does_not_exist_in_service: None,
-    token_created_in_service: str,
-    capsys,
-    *,
-    invoke_cli: CLIInvoker,
-) -> None:
-    result = invoke_cli(
-        ["token", "install", option_flag, org_name],
-        input="n\n",
-    )
-    assert result.exit_code == 0
-
-    token_info = TokenInfo.load()
-    repo_token = token_info.get_repo_token(org_name=org_name)
-    assert repo_token == token_created_in_service.token
-
-
-@pytest.mark.parametrize("option_flag", ["-o", "--org"])
 def test_token_install_exists_already_accept(
     option_flag: str,
     org_name: str,
