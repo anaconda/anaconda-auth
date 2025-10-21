@@ -13,6 +13,7 @@ import warnings
 from os.path import abspath
 from os.path import expanduser
 from os.path import join
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -86,8 +87,11 @@ def can_restore_free_channel() -> bool:
     )
 
 
-def get_ssl_verify() -> bool:
-    context = reset_context()
+def get_ssl_verify(search_path: list[str | Path] | None = None) -> bool:
+    if search_path:
+        context = reset_context(search_path)
+    else:
+        context = reset_context()
     return context.ssl_verify
 
 
