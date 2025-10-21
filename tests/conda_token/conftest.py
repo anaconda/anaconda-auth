@@ -6,6 +6,7 @@ import pytest
 
 conda = pytest.importorskip("conda")
 
+from conda.base import context as conda_context  # noqa: E402
 from conda.base.context import reset_context  # noqa: E402
 
 from anaconda_auth._conda import condarc as condarc_module  # noqa: E402
@@ -38,7 +39,14 @@ def empty_condarc(monkeypatch, tmp_path):
 
     with condarc_path.open("w") as fp:
         fp.write("")
-    reset_context([condarc_path])
+
+    orig_reset_context = reset_context
+
+    def _new_reset_context(*args, **kwargs):
+        return orig_reset_context([condarc_path])
+
+    monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
+    reset_context()
     yield condarc_path
 
 
