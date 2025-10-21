@@ -37,12 +37,8 @@ def empty_condarc(monkeypatch, tmp_path):
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
     orig_get_condarc_args = repo_config._get_condarc_args
 
-    def _new_get_condarc_args(
-        condarc_system: bool = False,
-        condarc_env: bool = False,
-        condarc_file: str | None = None,
-    ) -> None:
-        return orig_get_condarc_args(condarc_file=condarc_file or str(condarc_path))
+    def _new_get_condarc_args(*args, **kwargs) -> None:
+        return orig_get_condarc_args(condarc_file=str(condarc_path))
 
     monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
 
