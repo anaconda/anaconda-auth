@@ -33,7 +33,7 @@ def empty_condarc(monkeypatch, tmp_path):
         condarc_env: bool = False,
         condarc_file: str | None = None,
     ) -> None:
-        return orig_get_condarc_args(condarc_file=str(condarc_path))
+        return orig_get_condarc_args(condarc_file=condarc_file or str(condarc_path))
 
     monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
 
