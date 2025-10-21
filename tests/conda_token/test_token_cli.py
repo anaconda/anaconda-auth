@@ -11,10 +11,7 @@ from ..conftest import CLIInvoker
 
 pytest.importorskip("conda")
 
-from conda.base.context import reset_context
-
 # ruff: noqa: E402
-from anaconda_auth._conda import condarc as condarc_module
 from anaconda_auth._conda import repo_config
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
@@ -22,28 +19,6 @@ from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
-
-
-@pytest.fixture(autouse=True)
-def empty_condarc(monkeypatch, tmp_path):
-    condarc_path = tmp_path / ".condarc"
-    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
-
-    orig_get_condarc_args = repo_config._get_condarc_args
-
-    def _new_get_condarc_args(
-        condarc_system: bool = False,
-        condarc_env: bool = False,
-        condarc_file: str | None = None,
-    ) -> None:
-        return orig_get_condarc_args(condarc_file=str(condarc_path))
-
-    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
-
-    with condarc_path.open("w") as fp:
-        fp.write("")
-    reset_context([condarc_path])
-    yield condarc_path
 
 
 @pytest.fixture()
