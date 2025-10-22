@@ -11,7 +11,6 @@ from typing import cast
 from urllib.parse import urljoin
 
 import requests
-from conda import CondaError
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase

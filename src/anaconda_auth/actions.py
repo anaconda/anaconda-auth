@@ -153,7 +153,10 @@ def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
         access_token = _login_with_username(config=config)
     else:
         access_token = _do_auth_flow(config=config)
-    api_key = get_api_key(access_token, config.ssl_verify)
+
+    api_key = get_api_key(
+        access_token, config.ssl_verify if isinstance(config.ssl_verify, bool) else True
+    )
     token_info = TokenInfo(api_key=api_key, domain=config.domain)
     token_info.save()
 
