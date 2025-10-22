@@ -118,16 +118,23 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> None:
     device_authorization = device_flow.initiate_device_authorization()
 
     # Step 2: Display instructions to user
-    console.print("1. Open this URL in your browser:")
-    console.print(f"   {device_authorization.verification_uri_complete}")
-    console.print(f"   code: {device_authorization.user_code}")
-    console.print("\n2. The code should be pre-filled, just approve the request")
+    console.print(
+        "Attempting to automatically open the authorization page in your default browser."
+    )
+    console.print(
+        "If the browser does not open or you wish to use a different device to authorize this request, open the following URL:"
+    )
+    console.print()
+    console.print(device_authorization.verification_uri)
+    console.print()
+    console.print("Then enter the code:")
+    console.print()
+    console.print(device_authorization.user_code)
+    console.print()
 
     # Try to open browser automatically
     try:
         webbrowser.open(device_authorization.verification_uri_complete)
-        console.print("   (Browser should open automatically)")
-        console.print()
     except Exception:
         pass
 
