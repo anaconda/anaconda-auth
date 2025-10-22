@@ -83,13 +83,10 @@ def can_restore_free_channel() -> bool:
     return CONDA_VERSION >= version.parse("4.7.0") and CONDA_VERSION < version.parse(
         "25.9.0"
     )
-<<<<<<< HEAD
 
 
 def get_conda_context() -> context_module.Context:
     return context_module.reset_context()
-=======
->>>>>>> 0854f39 (fix: Replace references to removed `python_api` module in conda (#137))
 
 
 def get_ssl_verify() -> bool:

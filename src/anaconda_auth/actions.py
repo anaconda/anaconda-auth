@@ -107,7 +107,7 @@ def request_access_token(
     return access_token
 
 
-def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> None:
+def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     """Login using OAuth 2.0 device code flow."""
     config = config or AnacondaAuthSitesConfig.load_site()
 
@@ -154,45 +154,6 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> None:
     except DeviceFlowError:
         status.stop()
         raise
-
-
-def _display_device_instructions(
-    user_code: str, verification_uri: str, device_flow: DeviceCodeFlow
-) -> None:
-    """Display device authorization instructions to the user."""
-    print("\n" + "=" * 60)
-    print("DEVICE AUTHORIZATION REQUIRED")
-    print("=" * 60)
-
-    complete_uri = device_flow.get_complete_verification_uri()
-
-    if complete_uri:
-        print("1. Open this URL in your browser:")
-        print(f"   {complete_uri}")
-        print("\n2. The code should be pre-filled, just approve the request")
-
-        # Try to open browser automatically
-        try:
-            webbrowser.open(complete_uri)
-            print("   (Browser should open automatically)")
-        except Exception:
-            pass
-
-    else:
-        print("1. Open this URL in your browser:")
-        print(f"   {verification_uri}")
-        print(f"\n2. Enter this code: {user_code}")
-        print(f"   (Code: {user_code})")
-
-        # Try to open browser automatically
-        try:
-            webbrowser.open(verification_uri)
-            print("   (Browser should open automatically)")
-        except Exception:
-            pass
-
-    print("\n3. Complete the authorization in your browser")
-    print("=" * 60)
 
 
 def _do_auth_flow(config: Optional[AnacondaAuthSite] = None) -> str:

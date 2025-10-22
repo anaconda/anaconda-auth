@@ -10,7 +10,7 @@ from typing import Optional
 import requests
 from pydantic import BaseModel
 
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.exceptions import DeviceFlowDenied
 from anaconda_auth.exceptions import DeviceFlowError
 from anaconda_auth.exceptions import DeviceFlowTimeout
@@ -33,7 +33,10 @@ class DeviceCodeFlow:
     or have limited input capabilities.
     """
 
-    def __init__(self, config: AnacondaAuthConfig):
+    config: AnacondaAuthSite
+    authorize_response: Optional[DeviceAuthorizationResponse]
+
+    def __init__(self, config: AnacondaAuthSite):
         """
         Initialize device code flow.
 
@@ -114,48 +117,45 @@ class DeviceCodeFlow:
 
     def _request_token(self) -> Dict[str, str]:
         """Make a single token request."""
+        if not self.authorize_response:
+            raise DeviceFlowError("Must call initiate_device_authorization first")
+
         data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
             "device_code": self.authorize_response.device_code,
             "client_id": self.config.client_id,
         }
 
+        response = requests.post(
+            self.config.oidc.token_endpoint,
+            data=data,
+            verify=self.config.ssl_verify,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        if response.status_code == 200:
+            return response.json()
+
+        # Handle error responses
         try:
-            response = requests.post(
-                self.config.oidc.token_endpoint,
-                data=data,
-                verify=self.config.ssl_verify,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
+            error_data = response.json()
+            error_code = error_data.get("error", "unknown_error")
+            error_description = error_data.get("error_description", "")
 
-            if response.status_code == 200:
-                return response.json()
+            if error_code == "authorization_pending":
+                raise DeviceFlowError("authorization_pending")
+            elif error_code == "slow_down":
+                raise DeviceFlowError("slow_down")
+            elif error_code == "expired_token":
+                raise DeviceFlowTimeout("Device code expired")
+            elif error_code == "access_denied":
+                raise DeviceFlowDenied("User denied authorization")
+            else:
+                raise DeviceFlowError(
+                    f"Token request failed: {error_code} - {error_description}"
+                )
 
-            # Handle error responses
-            try:
-                error_data = response.json()
-                error_code = error_data.get("error", "unknown_error")
-                error_description = error_data.get("error_description", "")
+        except json.JSONDecodeError:
+            response.raise_for_status()
 
-                if error_code == "authorization_pending":
-                    raise DeviceFlowError("authorization_pending")
-                elif error_code == "slow_down":
-                    raise DeviceFlowError("slow_down")
-                elif error_code == "expired_token":
-                    raise DeviceFlowTimeout("Device code expired")
-                elif error_code == "access_denied":
-                    raise DeviceFlowDenied("User denied authorization")
-                else:
-                    raise DeviceFlowError(
-                        f"Token request failed: {error_code} - {error_description}"
-                    )
-
-            except json.JSONDecodeError:
-                response.raise_for_status()
-
-        except requests.RequestException as e:
-            raise DeviceFlowError(f"Token request failed: {e}")
-
-    def get_complete_verification_uri(self) -> Optional[str]:
-        """Get the complete verification URI if available."""
-        return self.verification_uri_complete
+        raise DeviceFlowError("Token request failed")
