@@ -131,7 +131,7 @@ class BaseClient(requests.Session):
                 try:
                     import ssl
 
-                    import truststore
+                    import truststore  # type: ignore
 
                     ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                 except ImportError:
