@@ -11,7 +11,6 @@ from typing import cast
 from urllib.parse import urljoin
 
 import requests
-from conda import CondaError
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
@@ -117,9 +116,9 @@ class BaseClient(requests.Session):
         # Attempt to load base conda context
 
         try:
+            from conda import CondaError
             from conda.base.context import context
             from conda.gateways.connection.adapters.http import HTTPAdapter
-            from conda import CondaError
 
             # We need to decide which takes precedence, for now im assuming conda base config.
             self.config.ssl_verify_policy = context.ssl_verify
