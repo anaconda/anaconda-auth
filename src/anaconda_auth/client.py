@@ -2,17 +2,18 @@ import json
 import warnings
 from functools import cached_property
 from hashlib import md5
-from typing import Any, MutableMapping
+from typing import Any
 from typing import Dict
+from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from typing import cast
 from urllib.parse import urljoin
 
 import requests
+from conda import CondaError
 from requests import PreparedRequest
 from requests import Response
-from requests.adapters import HTTPAdapter
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
@@ -120,7 +121,7 @@ class BaseClient(requests.Session):
             from conda.gateways.connection.adapters.http import HTTPAdapter
             from conda import CondaError
 
-            # We need to decide which takes precendence, for now im assuming conda base config.
+            # We need to decide which takes precedence, for now im assuming conda base config.
             self.config.ssl_verify_policy = context.ssl_verify
             self.config.proxy_servers = context.proxy_servers
             self.config.ssl_verify = context.ssl_verify

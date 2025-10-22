@@ -1,8 +1,9 @@
 import warnings
 from functools import cached_property
-from typing import Any, MutableMapping
+from typing import Any
 from typing import Dict
 from typing import Literal
+from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
