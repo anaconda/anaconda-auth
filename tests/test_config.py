@@ -23,6 +23,7 @@ def mock_openid_configuration(requests_mock: RequestMocker):
     expected = {
         "authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/authorize",
         "token_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/token",
+        "device_authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/device/authorize",
     }
     requests_mock.get(url=config.well_known_url, json=expected)
 
