@@ -7,12 +7,12 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from .conftest import CLIInvoker
+from ..conftest import CLIInvoker
 
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
-from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth._conda import repo_config
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
@@ -240,7 +240,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     test_repo_token = "test-repo-token"
     mock = mocker.patch(
         "anaconda_auth._conda.repo_config.read_binstar_tokens",
-        return_value={REPO_URL: test_repo_token},
+        return_value={repo_config.REPO_URL: test_repo_token},
     )
     result = invoke_cli(["token", "list"])
 
@@ -248,7 +248,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
 
     assert result.exit_code == 0
     assert "Anaconda Repository Tokens" in result.stdout
-    assert REPO_URL in result.stdout
+    assert repo_config.REPO_URL in result.stdout
     assert test_repo_token in result.stdout
 
 
