@@ -1,6 +1,6 @@
 import warnings
 from functools import cached_property
-from typing import Any
+from typing import Any, MutableMapping
 from typing import Dict
 from typing import Literal
 from typing import Optional
@@ -38,7 +38,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
-    ssl_verify: bool = True
+    ssl_verify: Optional[Union[bool, str]] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
@@ -48,6 +48,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     login_error_path: str = "/app/local-login-error"
     use_unified_repo_api_key: bool = False
     hash_hostname: bool = True
+    proxy_servers: Optional[MutableMapping[str, str]] = None
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
