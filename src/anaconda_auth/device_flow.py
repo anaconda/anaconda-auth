@@ -6,13 +6,23 @@ import json
 import time
 from typing import Dict
 from typing import Optional
-from typing import Tuple
 
 import requests
+from pydantic import BaseModel
 
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import DeviceFlowDenied
 from anaconda_auth.exceptions import DeviceFlowError
 from anaconda_auth.exceptions import DeviceFlowTimeout
+
+
+class DeviceAuthorizationResponse(BaseModel):
+    device_code: str
+    user_code: str
+    verification_uri: str
+    verification_uri_complete: str
+    expires_in: int = 60
+    interval: int = 5
 
 
 class DeviceCodeFlow:
@@ -23,102 +33,41 @@ class DeviceCodeFlow:
     or have limited input capabilities.
     """
 
-    def __init__(
-        self,
-        auth_url: str,
-        client_id: str,
-        scopes: Optional[str] = None,
-        timeout: int = 300,  # 5 minutes default
-        ssl_verify: bool = True,
-    ):
+    def __init__(self, config: AnacondaAuthConfig):
         """
         Initialize device code flow.
 
         Args:
-            auth_url: Base URL of the authorization server
-            client_id: OAuth client identifier
-            scopes: Space-separated list of requested scopes
-            timeout: Maximum time to wait for user authorization (seconds)
-            ssl_verify: Whether to verify SSL certificates
+            config: Configuration for the client
         """
-        self.auth_url = auth_url.rstrip("/")
-        self.client_id = client_id
-        self.scopes = scopes or "openid email profile"
-        self.timeout = timeout
-        self.ssl_verify = ssl_verify
-
-        # Will be populated from well-known config
-        self.device_authorization_endpoint = None
-        self.token_endpoint = None
+        self.config = config
 
         # Device authorization response data
-        self.device_code = None
-        self.user_code = None
-        self.verification_uri = None
-        self.verification_uri_complete = None
-        self.expires_in = None
-        self.interval = 5  # Default polling interval
+        self.authorize_response = None
 
-    def _discover_endpoints(self) -> None:
-        """Discover OAuth endpoints from well-known configuration."""
-        well_known_url = f"{self.auth_url}/.well-known/openid-configuration"
-
-        try:
-            response = requests.get(well_known_url, verify=self.ssl_verify)
-            response.raise_for_status()
-            config = response.json()
-
-            self.device_authorization_endpoint = config.get(
-                "device_authorization_endpoint"
-            )
-            self.token_endpoint = config.get("token_endpoint")
-
-            if not self.device_authorization_endpoint:
-                raise DeviceFlowError(
-                    "Device authorization endpoint not found in well-known configuration"
-                )
-            if not self.token_endpoint:
-                raise DeviceFlowError(
-                    "Token endpoint not found in well-known configuration"
-                )
-
-        except requests.RequestException as e:
-            raise DeviceFlowError(f"Failed to discover endpoints: {e}")
-
-    def initiate_device_authorization(self) -> Tuple[str, str]:
+    def initiate_device_authorization(self) -> DeviceAuthorizationResponse:
         """
         Initiate device authorization request.
 
         Returns:
             Tuple of (user_code, verification_uri) to display to user
         """
-        if not self.device_authorization_endpoint:
-            self._discover_endpoints()
 
-        data = {"client_id": self.client_id, "scope": self.scopes}
+        data = {"client_id": self.config.client_id, "scope": "openid"}
 
         try:
             response = requests.post(
-                self.device_authorization_endpoint,
+                self.config.oidc.device_authorization_endpoint,
                 data=data,
-                verify=self.ssl_verify,
+                verify=self.config.ssl_verify,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
 
             auth_response = response.json()
 
-            # Store response data
-            self.device_code = auth_response["device_code"]
-            self.user_code = auth_response["user_code"]
-            self.verification_uri = auth_response["verification_uri"]
-            self.verification_uri_complete = auth_response.get(
-                "verification_uri_complete"
-            )
-            self.expires_in = auth_response.get("expires_in", 1800)  # 30 min default
-            self.interval = auth_response.get("interval", 5)
-
-            return self.user_code, self.verification_uri
+            self.authorize_response = DeviceAuthorizationResponse(**auth_response)
+            return self.authorize_response
 
         except requests.RequestException as e:
             raise DeviceFlowError(f"Device authorization request failed: {e}")
@@ -132,12 +81,14 @@ class DeviceCodeFlow:
         Returns:
             Token response containing access_token, etc.
         """
-        if not self.device_code:
+        if not self.authorize_response:
             raise DeviceFlowError("Must call initiate_device_authorization first")
 
         start_time = time.time()
+        expires_in = self.authorize_response.expires_in
+        interval = self.authorize_response.interval
 
-        while time.time() - start_time < self.timeout:
+        while time.time() - start_time < expires_in:
             try:
                 token_response = self._request_token()
                 return token_response
@@ -149,12 +100,12 @@ class DeviceCodeFlow:
             except DeviceFlowError as e:
                 # Check for authorization_pending
                 if "authorization_pending" in str(e).lower():
-                    time.sleep(self.interval)
+                    time.sleep(interval)
                     continue
                 elif "slow_down" in str(e).lower():
                     # Server asked us to slow down
-                    self.interval = min(self.interval + 5, 30)
-                    time.sleep(self.interval)
+                    interval = min(interval + 5, 30)
+                    time.sleep(interval)
                     continue
                 else:
                     raise
@@ -165,15 +116,15 @@ class DeviceCodeFlow:
         """Make a single token request."""
         data = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            "device_code": self.device_code,
-            "client_id": self.client_id,
+            "device_code": self.authorize_response.device_code,
+            "client_id": self.config.client_id,
         }
 
         try:
             response = requests.post(
-                self.token_endpoint,
+                self.config.oidc.token_endpoint,
                 data=data,
-                verify=self.ssl_verify,
+                verify=self.config.ssl_verify,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
 

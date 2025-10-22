@@ -35,8 +35,8 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
-    domain: str = "localhost/api/auth/"
-    auth_domain_override: Optional[str] = "localhost/api/auth/"
+    domain: str = "anaconda.com"
+    auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
     ssl_verify: bool = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
@@ -70,7 +70,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
         """
         if self.auth_domain_override:
             return self.auth_domain_override
-        return f"auth.{self.domain}"
+        return self.domain
 
     @property
     def well_known_url(self) -> str:
@@ -118,6 +118,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
+    device_authorization_endpoint: str
 
 
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}

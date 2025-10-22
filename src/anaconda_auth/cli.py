@@ -30,14 +30,16 @@ def _continue_with_login() -> int:
             return -1
         else:
             console.print(
-                dedent("""
+                dedent(
+                    """
                 To configure your credentials you can run
                   [green]anaconda login --at anaconda.com[/green]
 
                 or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
                 or set
-                """)
+                """
+                )
             )
             console.print(
                 Syntax(
@@ -257,6 +259,8 @@ def auth_login(force: bool = False, ssl_verify: bool = True) -> None:
 def auth_info() -> None:
     """Display information about the currently signed-in user"""
     client = BaseClient()
+    # This endpoint is available everywhere and should be used
+    # response = client.get("/api/auth/oauth2/userinfo")
     response = client.get("/api/account")
     response.raise_for_status()
     console.print("Your anaconda.com info:")
