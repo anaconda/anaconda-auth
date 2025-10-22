@@ -9,7 +9,6 @@ from typing import Union
 from typing import cast
 from urllib.parse import urljoin
 
-from conda import CondaError
 import requests
 from requests import PreparedRequest
 from requests import Response
@@ -119,6 +118,7 @@ class BaseClient(requests.Session):
         try:
             from conda.base.context import context
             from conda.gateways.connection.adapters.http import HTTPAdapter
+            from conda import CondaError
 
             # We need to decide which takes precendence, for now im assuming conda base config.
             self.config.ssl_verify_policy = context.ssl_verify
