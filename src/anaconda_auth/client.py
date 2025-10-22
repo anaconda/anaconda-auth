@@ -116,9 +116,9 @@ class BaseClient(requests.Session):
         # Attempt to load base conda context
 
         try:
+            from conda import CondaError
             from conda.base.context import context
             from conda.gateways.connection.adapters.http import HTTPAdapter
-            from conda import CondaError
 
             # We need to decide which takes precedence, for now im assuming conda base config.
             self.config.ssl_verify_policy = context.ssl_verify
