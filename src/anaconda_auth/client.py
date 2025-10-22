@@ -121,7 +121,6 @@ class BaseClient(requests.Session):
             from conda.gateways.connection.adapters.http import HTTPAdapter
 
             # We need to decide which takes precedence, for now im assuming conda base config.
-            self.config.ssl_verify_policy = context.ssl_verify
             self.config.proxy_servers = context.proxy_servers
             self.config.ssl_verify = context.ssl_verify
 
