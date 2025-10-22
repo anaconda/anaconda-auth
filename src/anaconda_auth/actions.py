@@ -104,7 +104,7 @@ def request_access_token(
     return access_token
 
 
-def _do_device_flow(config: Optional[AnacondaAuthConfig] = None) -> None:
+def _do_device_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
     """Login using OAuth 2.0 device code flow."""
     config = config or AnacondaAuthConfig()
 
