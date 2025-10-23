@@ -111,18 +111,45 @@ class BaseClient(requests.Session):
 
         self.config = AnacondaAuthConfig(**kwargs)
 
-        # Begin sorting out SSL errors
+        self.configure_ssl()
 
-        # Attempt to load base conda context
+        # base_url overrides domain
+        self._base_uri = base_uri or f"https://{self.config.domain}"
+        self.headers["User-Agent"] = user_agent or self._user_agent
+        self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
+        self.api_version = api_version or self._api_version
+        if self.api_version:
+            self.headers["Api-Version"] = self.api_version
 
+        if self.config.extra_headers is not None:
+            if isinstance(self.config.extra_headers, str):
+                try:
+                    self.config.extra_headers = cast(
+                        dict, json.loads(self.config.extra_headers)
+                    )
+                except json.decoder.JSONDecodeError:
+                    raise ValueError(
+                        f"{repr(self.config.extra_headers)} is not valid JSON."
+                    )
+
+            keys_to_add = self.config.extra_headers.keys() - self.headers.keys()
+            for k in keys_to_add:
+                self.headers[k] = self.config.extra_headers[k]
+
+        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.hooks["response"].append(login_required)
+
+    def configure_ssl(self) -> None:
         try:
             from conda import CondaError
             from conda.base.context import context
             from conda.gateways.connection.adapters.http import HTTPAdapter
 
             # We need to decide which takes precedence, for now im assuming conda base config.
-            self.config.proxy_servers = context.proxy_servers
-            self.config.ssl_verify = context.ssl_verify
+
+            if self.config.proxy_servers is None and context.proxy_servers:
+                self.config.proxy_servers = context.proxy_servers
+                self.config.ssl_verify = context.ssl_verify
 
             self.proxies = self.config.proxy_servers
 
@@ -156,32 +183,6 @@ class BaseClient(requests.Session):
 
         except Exception:
             pass
-
-        # base_url overrides domain
-        self._base_uri = base_uri or f"https://{self.config.domain}"
-        self.headers["User-Agent"] = user_agent or self._user_agent
-        self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
-        self.api_version = api_version or self._api_version
-        if self.api_version:
-            self.headers["Api-Version"] = self.api_version
-
-        if self.config.extra_headers is not None:
-            if isinstance(self.config.extra_headers, str):
-                try:
-                    self.config.extra_headers = cast(
-                        dict, json.loads(self.config.extra_headers)
-                    )
-                except json.decoder.JSONDecodeError:
-                    raise ValueError(
-                        f"{repr(self.config.extra_headers)} is not valid JSON."
-                    )
-
-            keys_to_add = self.config.extra_headers.keys() - self.headers.keys()
-            for k in keys_to_add:
-                self.headers[k] = self.config.extra_headers[k]
-
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
-        self.hooks["response"].append(login_required)
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
