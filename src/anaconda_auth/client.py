@@ -151,7 +151,8 @@ class BaseClient(requests.Session):
                 self.config.proxy_servers = context.proxy_servers
                 self.config.ssl_verify = context.ssl_verify
 
-            self.proxies = self.config.proxy_servers
+            if self.config.proxy_servers:
+                self.proxies = self.config.proxy_servers
 
             ssl_context = None
             if self.config.ssl_verify == "truststore":
