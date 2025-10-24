@@ -4,6 +4,7 @@ from functools import cached_property
 from hashlib import md5
 from typing import Any
 from typing import Dict
+from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from typing import cast
@@ -87,6 +88,7 @@ class BaseClient(requests.Session):
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
+        proxy_servers: Optional[MutableMapping[str, str]] = None,
     ):
         super().__init__()
 
@@ -104,8 +106,12 @@ class BaseClient(requests.Session):
             kwargs["extra_headers"] = extra_headers
         if hash_hostname is not None:
             kwargs["hash_hostname"] = hash_hostname
+        if proxy_servers is not None:
+            kwargs["proxy_servers"] = proxy_servers
 
         self.config = AnacondaAuthConfig(**kwargs)
+
+        self.configure_ssl()
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -132,6 +138,52 @@ class BaseClient(requests.Session):
 
         self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
+
+    def configure_ssl(self) -> None:
+        try:
+            from conda import CondaError
+            from conda.base.context import context
+            from conda.gateways.connection.adapters.http import HTTPAdapter
+
+            # We need to decide which takes precedence, for now im assuming conda base config.
+
+            if self.config.proxy_servers is None and context.proxy_servers:
+                self.config.proxy_servers = context.proxy_servers
+                self.config.ssl_verify = context.ssl_verify
+
+            if self.config.proxy_servers:
+                self.proxies = self.config.proxy_servers
+
+            ssl_context = None
+            if self.config.ssl_verify == "truststore":
+                try:
+                    import ssl
+
+                    import truststore  # type: ignore
+
+                    ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                except ImportError:
+                    raise CondaError(
+                        "The `ssl_verify: truststore` setting is only supported on Python 3.10 or later."
+                    )
+                self.verify = True
+            else:
+                self.verify = self.config.ssl_verify
+
+            # We need an http adapter
+
+            http_adapter = HTTPAdapter(ssl_context=ssl_context)
+
+            self.mount("http://", http_adapter)
+            self.mount("https://", http_adapter)
+
+            if context.client_ssl_cert_key:
+                self.cert = (context.client_ssl_cert, context.client_ssl_cert_key)
+            elif context.client_ssl_cert:
+                self.cert = context.client_ssl_cert
+
+        except Exception:
+            pass
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
