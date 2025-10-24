@@ -10,7 +10,9 @@ import requests
 
 from anaconda_auth import __version__
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.device_flow import DeviceCodeFlow
 from anaconda_auth.exceptions import AuthenticationError
+from anaconda_auth.exceptions import DeviceFlowError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.handlers import capture_auth_code
 from anaconda_auth.token import TokenInfo
@@ -102,6 +104,55 @@ def request_access_token(
     return access_token
 
 
+def _do_device_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
+    """Login using OAuth 2.0 device code flow."""
+    config = config or AnacondaAuthConfig()
+
+    # Initialize device flow
+    device_flow = DeviceCodeFlow(config=config)
+
+    # Step 1: Initiate device authorization
+    device_authorization = device_flow.initiate_device_authorization()
+
+    # Step 2: Display instructions to user
+    console.print(
+        "Attempting to automatically open the authorization page in your default browser."
+    )
+    console.print(
+        "If the browser does not open or you wish to use a different device to authorize this request, open the following URL:"
+    )
+    console.print()
+    console.print(device_authorization.verification_uri)
+    console.print()
+    console.print("Then enter the code:")
+    console.print()
+    console.print(device_authorization.user_code)
+    console.print()
+
+    # Try to open browser automatically
+    try:
+        webbrowser.open(device_authorization.verification_uri_complete)
+    except Exception:
+        pass
+
+    status = console.status("Waiting for authorization (CTRL-C to cancel)")
+
+    try:
+        # Step 3: Poll for token
+        status.start()
+        token_response = device_flow.poll_for_token()
+        status.stop()
+        console.print("✓ Login successful!")
+        # return access token
+        return token_response["access_token"]
+    except KeyboardInterrupt:
+        status.stop()
+        raise
+    except DeviceFlowError:
+        status.stop()
+        raise
+
+
 def _do_auth_flow(config: Optional[AnacondaAuthConfig] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
     config = config or AnacondaAuthConfig()
@@ -151,6 +202,8 @@ def _login_with_username(config: Optional[AnacondaAuthConfig] = None) -> str:
 def _do_login(config: AnacondaAuthConfig, basic: bool) -> None:
     if basic:
         access_token = _login_with_username(config=config)
+    elif config.use_device_flow:
+        access_token = _do_device_flow(config=config)
     else:
         access_token = _do_auth_flow(config=config)
     api_key = get_api_key(access_token, config.ssl_verify)

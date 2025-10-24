@@ -48,6 +48,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
     login_error_path: str = "/app/local-login-error"
     use_unified_repo_api_key: bool = False
     hash_hostname: bool = True
+    use_device_flow: bool = False
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
@@ -69,7 +70,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
         """
         if self.auth_domain_override:
             return self.auth_domain_override
-        return f"auth.{self.domain}"
+        return self.domain
 
     @property
     def well_known_url(self) -> str:
@@ -117,6 +118,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
+    device_authorization_endpoint: str
 
 
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}

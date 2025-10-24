@@ -54,14 +54,15 @@ You can configure `anaconda-auth` by either:
 
 The following parameters in the `plugin.auth` section control the login actions and API requests to Anaconda Services.
 
-| Parameter | Env variable | Description | Default value |
-|-|-|-|-|
-| `domain` | `ANACONDA_AUTH_DOMAIN` | Authentication and API request domain | `"anaconda.com"` |
-| `ssl_verify` | `ANACONDA_AUTH_SSL_VERIFY` | SSL verification for all requests | `True` |
-| `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token; can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
-| `api_key` | `ANACONDA_AUTH_API_KEY` | API key; if `None`, defaults to keyring storage | `None` |
-| `extra_headers` | `ANACONDA_AUTH_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
-| `use_unified_repo_api_key` | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY` | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False` |
+| Parameter                  | Env variable                             | Description                                                                                                 | Default value        |
+| -------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| `domain`                   | `ANACONDA_AUTH_DOMAIN`                   | Authentication and API request domain                                                                       | `"anaconda.com"`     |
+| `ssl_verify`               | `ANACONDA_AUTH_SSL_VERIFY`               | SSL verification for all requests                                                                           | `True`               |
+| `preferred_token_storage`  | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE`  | Where to store the login token; can be `"anaconda-keyring"` or `"system"`                                   | `"anaconda-keyring"` |
+| `api_key`                  | `ANACONDA_AUTH_API_KEY`                  | API key; if `None`, defaults to keyring storage                                                             | `None`               |
+| `extra_headers`            | `ANACONDA_AUTH_EXTRA_HEADERS`            | Extra request headers in JSON format                                                                        | `None`               |
+| `use_unified_repo_api_key` | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY` | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False`              |
+| `use_device_flow`          | `ANACONDA_AUTH_USE_DEVICE_FLOW`          | Configures `anaconda-auth` to use device flow grant                                                         | `False`              |
 
 ### Example
 
@@ -82,10 +83,10 @@ deleted when you run `logout`. The auth token will need to be renewed once a yea
 The `preferred_storage` configuration parameter in the `plugin.auth` section of the `config.toml` file takes two
 possible values:
 
-| Storage location | Description |
-|-|-|
-| `"system"` | Use the system keyring, if available. Otherwise, use `anaconda-keyring` |
-| `"anaconda-keyring"` | A file-based keyring at `~/.anaconda/keyring` |
+| Storage location     | Description                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| `"system"`           | Use the system keyring, if available. Otherwise, use `anaconda-keyring` |
+| `"anaconda-keyring"` | A file-based keyring at `~/.anaconda/keyring`                           |
 
 `"anaconda-keyring"` is the default value.
 
@@ -95,10 +96,10 @@ If you want to utilize Anaconda Services on a system where you do not have inter
 use the `login` command, you have two options:
 
 1. On a system where you can log in, use `anaconda auth api-key` command to print the API key to the terminal. You can then
-utilize the API key on the non-interactive system with the `ANACONDA_AUTH_API_KEY` env var (or in a `.env` file) or set
-the `key` parameter in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
+   utilize the API key on the non-interactive system with the `ANACONDA_AUTH_API_KEY` env var (or in a `.env` file) or set
+   the `key` parameter in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
 1. With `preferred_token_storage` set to `"anaconda-keyring"`, run the `login` command to create the `~/.anaconda/keyring`
-file. Then, copy `~/.anaconda/keyring` to the non-interactive system.
+   file. Then, copy `~/.anaconda/keyring` to the non-interactive system.
 
 ## Python API
 
@@ -148,12 +149,12 @@ print(response.json())
 
 BaseClient accepts the following optional arguments.
 
-* `domain`: Domain to use for requests, defaults to `anaconda.com`
-* `ssl_verify`: Enable SSL verification, defaults to `True`
-* `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
-* `user_agent`: Defaults to `anaconda-auth/<package-version>`
-* `api_version`: Requested API version, defaults to latest available from the domain
-* `extra_headers`: Dictionary or JSON string of extra headers to send in requests
+- `domain`: Domain to use for requests, defaults to `anaconda.com`
+- `ssl_verify`: Enable SSL verification, defaults to `True`
+- `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
+- `user_agent`: Defaults to `anaconda-auth/<package-version>`
+- `api_version`: Requested API version, defaults to latest available from the domain
+- `extra_headers`: Dictionary or JSON string of extra headers to send in requests
 
 To create a Client class specific to your package, subclass BaseClient and set
 an appropriate user-agent and API version for your needs.
@@ -176,10 +177,10 @@ or subclasses outside of `anaconda` CLI subcommands.
 For the following cases, the user is running the CLI command interactively and is asked if they wish to continue with
 interactive login. Once completed, the command will be re-tried.
 
-* `TokenNotFoundError`: The subcommand requested to load the token from the keyring, but none were present.
-* `TokenExpiredError`: The token was successfully loaded but has expired.
-* `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
-* `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token, but Anaconda determined that the API was invalid.
+- `TokenNotFoundError`: The subcommand requested to load the token from the keyring, but none were present.
+- `TokenExpiredError`: The token was successfully loaded but has expired.
+- `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
+- `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token, but Anaconda determined that the API was invalid.
 
 Here's an example demonstrating that the user has not previously run `anaconda login` but attempted a CLI command that at some point requires authentication. By typing `y`, the login action is triggered and their browser will open.
 
