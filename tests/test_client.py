@@ -10,7 +10,7 @@ from niquests.exceptions import SSLError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
-from anaconda_auth.client import BaseClient, BaseAsyncClient
+from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
 from anaconda_auth.token import TokenInfo
 
