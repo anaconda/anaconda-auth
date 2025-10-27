@@ -64,13 +64,13 @@ def _login_required(
 def login_required(
     response: Response, *args: Any, **kwargs: Any
 ) -> Union[PreparedRequest, Response]:
-    return _login_required(response=response, *args, **kwargs)
+    return _login_required(response, *args, **kwargs)
 
 
 async def async_login_required(
     response: Response, *args: Any, **kwargs: Any
 ) -> Union[PreparedRequest, Response]:
-    return _login_required(response=response, *args, **kwargs)
+    return _login_required(response, *args, **kwargs)
 
 
 class TokenInfoAuth(AuthBase):
@@ -217,6 +217,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             res = self.get("/api/account")
             res.raise_for_status()
             self._account = res.json()
+        assert isinstance(self._account, dict)
         return self._account
 
     def name(self) -> str:
@@ -296,6 +297,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
             res = await self.get("/api/account")
             res.raise_for_status()
             self._account = res.json()
+        assert isinstance(self._account, dict)
         return self._account
 
     async def name(self) -> str:
