@@ -304,7 +304,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
         first_name = user.get("first_name", "")
         last_name = user.get("last_name", "")
         if not first_name and not last_name:
-            return self.email
+            return await self.email()
         else:
             return f"{first_name} {last_name}".strip()
 
@@ -320,7 +320,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
     async def avatar(self) -> Union[bytes, None]:
         # could be cached
         hashed = md5((await self.email()).encode("utf-8")).hexdigest()
-        res = await niquests.get(
+        res = await niquests.async_api.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
         )
