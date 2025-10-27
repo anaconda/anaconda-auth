@@ -96,6 +96,7 @@ class AnacondaClientMixin:
     hooks: Any
     auth: Any
     base_url: Any
+    _account = None
 
     def _initialize(
         self,
@@ -212,27 +213,25 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
 
         return response
 
-    @cached_property
     def account(self) -> dict:
-        res = self.get("/api/account")
-        res.raise_for_status()
-        account = res.json()
-        return account
+        if self._account is None:
+            res = self.get("/api/account")
+            res.raise_for_status()
+            self._account = res.json()
+        return self._account
 
-    @property
     def name(self) -> str:
-        user = self.account.get("user", {})
+        user = self.account().get("user", {})
 
         first_name = user.get("first_name", "")
         last_name = user.get("last_name", "")
         if not first_name and not last_name:
-            return self.email
+            return self.email()
         else:
             return f"{first_name} {last_name}".strip()
 
-    @property
     def email(self) -> str:
-        value = self.account.get("user", {}).get("email")
+        value = self.account().get("user", {}).get("email")
         if value is None:
             raise ValueError(
                 "Something is wrong with your account. An email address could not be found."
@@ -240,9 +239,8 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         else:
             return value
 
-    @cached_property
     def avatar(self) -> Union[bytes, None]:
-        hashed = md5(self.email.encode("utf-8")).hexdigest()
+        hashed = md5(self.email().encode("utf-8")).hexdigest()
         res = niquests.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
@@ -293,6 +291,44 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
         self._validate_api_version(min_api_version_string)
 
         return response
+
+    async def account(self) -> dict:
+        if self._account is None:
+            res = await self.get("/api/account")
+            res.raise_for_status()
+            self._account = res.json()
+        return self._account
+
+    async def name(self) -> str:
+        user = (await self.account()).get("user", {})
+
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+        if not first_name and not last_name:
+            return self.email
+        else:
+            return f"{first_name} {last_name}".strip()
+
+    async def email(self) -> str:
+        value = (await self.account()).get("user", {}).get("email")
+        if value is None:
+            raise ValueError(
+                "Something is wrong with your account. An email address could not be found."
+            )
+        else:
+            return value
+
+    async def avatar(self) -> Union[bytes, None]:
+        # could be cached
+        hashed = md5((await self.email()).encode("utf-8")).hexdigest()
+        res = await niquests.get(
+            f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
+            verify=self.config.ssl_verify,
+        )
+        if res.ok:
+            return res.content
+        else:
+            return None
 
 
 def _parse_semver_string(version: str) -> Optional[Version]:

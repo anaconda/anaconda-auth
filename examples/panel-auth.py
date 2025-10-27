@@ -68,5 +68,5 @@ else:
 
     client = BaseClient(api_key=pn.state.access_token)
 
-    text = f"# Anaconda Application\nWelcome back {client.name}!"
+    text = f"# Anaconda Application\nWelcome back {client.name()}!"
     pn.Column(text, button).servable()

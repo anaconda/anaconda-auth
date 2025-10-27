@@ -121,7 +121,7 @@ class RepoAPIClient(BaseClient):
         """Get a list of all organizations the user belongs to that have a Business subscription."""
         organizations = self.get_organizations_for_user()
         subscriptions = [
-            SubscriptionData(**sub) for sub in self.account.get("subscriptions", [])
+            SubscriptionData(**sub) for sub in self.account().get("subscriptions", [])
         ]
         business_subscription_org_ids = [
             sub.org_id for sub in subscriptions if "starter" not in sub.product_code

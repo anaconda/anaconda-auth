@@ -10,7 +10,7 @@ from niquests.exceptions import SSLError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 
-from anaconda_auth.client import BaseClient
+from anaconda_auth.client import BaseClient, BaseAsyncClient
 from anaconda_auth.client import client_factory
 from anaconda_auth.token import TokenInfo
 
@@ -212,8 +212,8 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
     )
     client = BaseClient()
 
-    assert client.email == "me@example.com"
-    assert client.name == client.email
+    assert client.email() == "me@example.com"
+    assert client.name() == client.email
 
 
 def test_first_and_last_name(mocker: MockerFixture) -> None:
@@ -233,8 +233,8 @@ def test_first_and_last_name(mocker: MockerFixture) -> None:
     )
     client = BaseClient()
 
-    assert client.email == "me@example.com"
-    assert client.name == "Anaconda User"
+    assert client.email() == "me@example.com"
+    assert client.name() == "Anaconda User"
 
 
 def test_gravatar_missing(mocker: MockerFixture) -> None:
@@ -254,7 +254,7 @@ def test_gravatar_missing(mocker: MockerFixture) -> None:
     )
     client = BaseClient()
 
-    assert client.avatar is None
+    assert client.avatar() is None
 
 
 def test_gravatar_found(mocker: MockerFixture) -> None:
@@ -341,6 +341,19 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
 
     client = BaseClient(ssl_verify=False)
     res = client.get("api/account")
+    assert res.ok
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.usefixtures("save_api_key_to_token")
+async def test_login_ssl_verify_false_async(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
+
+    client = AsyncBaseClient(ssl_verify=False)
+    res = await client.get("api/account")
     assert res.ok
 
 
