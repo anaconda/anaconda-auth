@@ -209,12 +209,11 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
     client = BaseClient()
 
     assert client.email() == "me@example.com"
-    assert client.name() == client.email
+    assert client.name() == client.email()
 
 
 def test_first_and_last_name(mocker: MockerFixture) -> None:
@@ -230,7 +229,6 @@ def test_first_and_last_name(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
     client = BaseClient()
 
@@ -248,11 +246,7 @@ def test_gravatar_missing(mocker: MockerFixture) -> None:
         }
     }
 
-    mocker.patch(
-        "anaconda_auth.client.BaseClient.account",
-        return_value=account,
-        new_callable=mocker.PropertyMock,
-    )
+    mocker.patch("anaconda_auth.client.BaseClient.account", return_value=account)
     client = BaseClient()
 
     assert client.avatar() is None
@@ -271,7 +265,6 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
     client = BaseClient()
     assert client.avatar is not None
