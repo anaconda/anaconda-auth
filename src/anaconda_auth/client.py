@@ -58,7 +58,7 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
 class CondaConfig(BaseModel):
     proxy_servers: Optional[MutableMapping[str, str]] = None
     ssl_verify: Optional[Union[bool, str]] = None
-    cert: Optional[str | tuple[str, str]] = None
+    cert: Optional[Union[str, tuple[str, str]]] = None
 
 
 class BearerAuth(AuthBase):
@@ -162,10 +162,10 @@ class BaseClient(requests.Session):
         self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
-    def configure_ssl(self, cfg: CondaConfig):
+    def configure_ssl(self, cfg: CondaConfig) -> None:
 
         if cfg.proxy_servers and self.config.proxy_servers is None:
-            self.proxies = self.config.proxy_servers
+            self.proxies = cfg.proxy_servers
 
         ssl_context = None
 
