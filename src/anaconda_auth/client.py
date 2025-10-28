@@ -10,9 +10,8 @@ from typing import Union
 from typing import cast
 from urllib.parse import urljoin
 
-from anaconda_cli_base.exceptions import AnacondaConfigValidationError
-from pydantic import BaseModel
 import requests
+from pydantic import BaseModel
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
@@ -25,6 +24,7 @@ from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
+from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
@@ -163,7 +163,6 @@ class BaseClient(requests.Session):
         self.hooks["response"].append(login_required)
 
     def configure_ssl(self, cfg: CondaConfig):
-
         if cfg.proxy_servers and self.config.proxy_servers is None:
             self.proxies = self.config.proxy_servers
 
