@@ -231,7 +231,7 @@ def main(
         cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
         return
 
-    has_options = any(
+    has_legacy_options = any(
         value is not None
         for value in (
             name,
@@ -251,7 +251,7 @@ def main(
         )
     )
 
-    if has_options or known_subcommand_name is None:
+    if has_legacy_options or known_subcommand_name is None:
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
