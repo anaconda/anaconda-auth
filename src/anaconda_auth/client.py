@@ -16,7 +16,8 @@ from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -57,7 +58,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaAuthConfig().domain
+            domain = AnacondaAuthSitesConfig.load_site().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -80,8 +81,10 @@ class BaseClient(requests.Session):
 
     def __init__(
         self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
         base_uri: Optional[str] = None,
         domain: Optional[str] = None,
+        auth_domain_override: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
@@ -92,12 +95,21 @@ class BaseClient(requests.Session):
     ):
         super().__init__()
 
+        # Prepare the requested or default site config
+        if isinstance(site, AnacondaAuthSite):
+            config = site
+        else:
+            config = AnacondaAuthSitesConfig.load_site(site=site)
+
+        # Prepare site overrides
         if base_uri and domain:
             raise ValueError("Can only specify one of `domain` or `base_uri` argument")
 
         kwargs: Dict[str, Any] = {}
         if domain is not None:
             kwargs["domain"] = domain
+        if auth_domain_override is not None:
+            kwargs["auth_domain_override"] = auth_domain_override
         if api_key is not None:
             kwargs["api_key"] = api_key
         if ssl_verify is not None:
@@ -109,7 +121,7 @@ class BaseClient(requests.Session):
         if proxy_servers is not None:
             kwargs["proxy_servers"] = proxy_servers
 
-        self.config = AnacondaAuthConfig(**kwargs)
+        self.config = config.model_copy(update=kwargs)
 
         self.configure_ssl()
 
@@ -136,7 +148,7 @@ class BaseClient(requests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(domain=domain, api_key=self.config.api_key)
+        self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
     def configure_ssl(self) -> None:

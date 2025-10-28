@@ -10,10 +10,15 @@ from urllib.parse import urljoin
 
 import requests
 from pydantic import BaseModel
+from pydantic import Field
+from pydantic import RootModel
+from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
 
 from anaconda_auth import __version__ as version
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.config import AnacondaBaseSettings
+from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 
 
@@ -34,7 +39,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     )
 
 
-class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
+class AnacondaAuthSite(BaseModel):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -71,7 +76,7 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
         """
         if self.auth_domain_override:
             return self.auth_domain_override
-        return f"auth.{self.domain}"
+        return self.domain
 
     @property
     def well_known_url(self) -> str:
@@ -116,6 +121,11 @@ class AnacondaAuthConfig(AnacondaBaseSettings, plugin_name="auth"):
             return None
 
 
+class AnacondaAuthConfig(
+    AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"
+): ...
+
+
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
@@ -149,3 +159,50 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
             )
 
         super().__init__(**kwargs)
+
+
+class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
+    def __getitem__(self, key: str) -> AnacondaAuthSite:
+        try:
+            return self.root[key]
+        except KeyError:
+            matches = [site for site in self.root.values() if site.domain == key]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"The domain {key} matches more than one configured site"
+                )
+            elif len(matches) == 0:
+                raise UnknownSiteName(
+                    f"The site name or domain {key} has not been configured in {anaconda_config_path()}"
+                )
+            return matches[0]
+
+
+class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
+    sites: Sites = Field(
+        default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
+    )
+    default_site: str = "anaconda.com"
+
+    @field_validator("sites", mode="before")
+    @classmethod
+    def add_anaconda_com_site(cls, sites: Any) -> Any:
+        if isinstance(sites, dict):
+            if "anaconda.com" in sites:
+                raise ValueError(
+                    "You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]"
+                )
+
+            sites["anaconda.com"] = AnacondaAuthConfig()
+
+        return sites
+
+    @classmethod
+    def load_site(cls, site: Optional[str] = None) -> AnacondaAuthSite:
+        """Load the site configuration object (site=None loads default_site)"""
+        sites_config = cls()
+
+        if site is None:
+            return sites_config.sites[sites_config.default_site]
+        else:
+            return sites_config.sites[site]
