@@ -163,7 +163,6 @@ class BaseClient(requests.Session):
         self.hooks["response"].append(login_required)
 
     def configure_ssl(self, cfg: CondaConfig) -> None:
-
         if cfg.proxy_servers and self.config.proxy_servers is None:
             self.proxies = cfg.proxy_servers
 
