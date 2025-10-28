@@ -227,6 +227,11 @@ def main(
     else:
         known_subcommand_name = None
 
+    # If the subcommand is known, then we delegate to the actual functions defined in this module
+    if cmd := ctx.command.commands.get(known_subcommand_name):
+        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+        return
+
     has_options = any(
         value is not None
         for value in (
@@ -265,11 +270,6 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
-
-    # If the subcommand is known, then we delegate to the actual functions defined in this module
-    if cmd := ctx.command.commands.get(known_subcommand_name):
-        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
-        return
 
 
 @app.command("login")
