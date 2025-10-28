@@ -44,7 +44,7 @@ class AnacondaAuthSite(BaseModel):
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
-    ssl_verify: Optional[Union[bool, str]] = True
+    ssl_verify: Union[bool, str] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
