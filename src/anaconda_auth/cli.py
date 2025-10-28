@@ -221,13 +221,13 @@ def main(
 
     # We have to manually handle subcommands due the the handling of the auth subcommand
     # as a top-level subcommand in anaconda-client
-    if extra_args and extra_args[0] in ctx.command.commands:
-        known_subcommand_name = extra_args[0]
+    if extra_args:
+        subcommand_name = extra_args[0]
     else:
-        known_subcommand_name = None
+        subcommand_name = None
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
-    if cmd := ctx.command.commands.get(known_subcommand_name):
+    if cmd := ctx.command.commands.get(subcommand_name):
         cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
         return
 
@@ -251,7 +251,7 @@ def main(
         )
     )
 
-    if has_legacy_options or known_subcommand_name is None:
+    if has_legacy_options or subcommand_name:
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
@@ -269,6 +269,10 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
+        return
+
+    # No subcommand was given, so we print help
+    console.print(ctx.get_help())
 
 
 @app.command("login")
