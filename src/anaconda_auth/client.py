@@ -88,7 +88,7 @@ class BaseClient(requests.Session):
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
-        ssl_verify: Optional[bool] = None,
+        ssl_verify: Optional[Union[bool, str]] = None,
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
         proxy_servers: Optional[MutableMapping[str, str]] = None,

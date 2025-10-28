@@ -158,7 +158,7 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
 
     api_key = get_api_key(
         access_token,
-        config.ssl_verify if isinstance(config.ssl_verify, bool) else True,
+        config.ssl_verify,
         config=config,
     )
 
@@ -168,9 +168,13 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
 
 def get_api_key(
     access_token: str,
-    ssl_verify: bool = True,
+    ssl_verify: Union[str, bool] = True,
     config: Optional[AnacondaAuthSite] = None,
 ) -> str:
+
+    if isinstance(ssl_verify, str):
+        ssl_verify = True
+
     config = config or AnacondaAuthSitesConfig.load_site()
 
     headers = {"Authorization": f"Bearer {access_token}"}
