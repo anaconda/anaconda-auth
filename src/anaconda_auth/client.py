@@ -157,7 +157,7 @@ class AnacondaClientMixin:
                 self.headers[k] = self.config.extra_headers[k]
 
         if self.config.api_key:
-            self.auth = BearerTokenAuth(api_key=self.config.api_key)
+            self.auth = BearerTokenAuth(token=self.config.api_key)
         else:
             self.token_info = TokenInfo(domain=self.config.domain)
             self.auth = TokenInfoAuth(self.token_info)
@@ -187,6 +187,7 @@ class AnacondaClientMixin:
 class BaseClient(niquests.Session, AnacondaClientMixin):
     def __init__(
         self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
@@ -198,6 +199,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
     ):
         super().__init__(**session_kwargs)
         self._initialize(
+            site=site,
             domain=domain,
             api_key=api_key,
             user_agent=user_agent,
@@ -268,6 +270,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
 class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
     def __init__(
         self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
         domain: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
@@ -278,6 +281,7 @@ class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
     ):
         super().__init__()
         self._initialize(
+            site=site,
             domain=domain,
             api_key=api_key,
             user_agent=user_agent,

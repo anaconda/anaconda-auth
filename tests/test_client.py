@@ -374,18 +374,24 @@ def test_hostname_header(
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
-def test_anaconda_com_default_site_config() -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_anaconda_com_default_site_config(
+    Client: BaseAsyncClient | BaseClient,
+) -> None:
     """Test that without external modifiers the config matches the coded parameters"""
 
-    client = BaseClient()
+    client = Client()
     assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
-    client = BaseClient(site="anaconda.com")
+    client = Client(site="anaconda.com")
     assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_anaconda_com_site_config_toml_and_kwargs_overrides(
+    Client: BaseAsyncClient | BaseClient, config_toml: Path
+) -> None:
     config_toml.write_text(
         dedent(
             """\
@@ -395,20 +401,23 @@ def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -
         )
     )
 
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
     assert not client.config.ssl_verify
     assert client.config.api_key is None
 
     # specific overrides by kwargs
-    client = BaseClient(api_key="bar")
+    client = Client(api_key="bar")
     assert client.config != AnacondaAuthConfig()
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_client_site_selection_by_name(config_toml: Path) -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_client_site_selection_by_name(
+    Client: BaseAsyncClient | BaseClient, config_toml: Path
+) -> None:
     config_toml.write_text(
         dedent(
             """\
@@ -422,11 +431,11 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     )
 
     # make sure the default hasn't changed
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
 
     # load configured site
-    client = BaseClient(site="local")
+    client = Client(site="local")
     assert client.config.domain == "localhost"
     assert client.config.auth_domain_override == "auth-local"
     assert not client.config.ssl_verify
@@ -434,7 +443,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     assert client.config.extra_headers is None
 
     # load configured site and override
-    client = BaseClient(site="local", api_key="bar", extra_headers='{"key": "value"}')
+    client = Client(site="local", api_key="bar", extra_headers='{"key": "value"}')
     assert client.config.domain == "localhost"
     assert client.config.auth_domain_override == "auth-local"
     assert not client.config.ssl_verify
@@ -442,28 +451,31 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     assert client.config.extra_headers == {"key": "value"}
 
     with pytest.raises(UnknownSiteName):
-        _ = BaseClient(site="unknown")
+        _ = Client(site="unknown")
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
-def test_client_site_selection_with_config() -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_client_site_selection_with_config(
+    Client: BaseAsyncClient | BaseClient,
+) -> None:
     # make sure the default hasn't changed
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
 
     site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
 
     # load configured site
-    client = BaseClient(site=site)
+    client = Client(site=site)
     assert client.config.domain == "example.com"
     assert not client.config.ssl_verify
     assert client.config.api_key == "foo"
 
     # load configured site and override
-    client = BaseClient(site=site, api_key="bar")
+    client = Client(site=site, api_key="bar")
     assert client.config.domain == "example.com"
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
     with pytest.raises(UnknownSiteName):
-        _ = BaseClient(site=1)  # type: ignore
+        _ = Client(site=1)  # type: ignore
