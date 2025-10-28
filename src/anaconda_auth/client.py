@@ -109,7 +109,7 @@ class AnacondaClientMixin:
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
-    ):
+    ) -> None:
         super().__init__()
 
         if isinstance(site, AnacondaAuthSite):
