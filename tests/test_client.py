@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import warnings
+from pathlib import Path
+from textwrap import dedent
 from uuid import uuid4
 
 import pytest
@@ -13,6 +15,9 @@ from pytest_mock import MockerFixture
 from anaconda_auth.client import BaseAsyncClient
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
+from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
@@ -366,3 +371,99 @@ def test_hostname_header(
     client = BaseClient(hash_hostname=hash)
 
     assert client.headers.get("X-Client-Hostname") == expected_result
+
+
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
+def test_anaconda_com_default_site_config() -> None:
+    """Test that without external modifiers the config matches the coded parameters"""
+
+    client = BaseClient()
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
+
+    client = BaseClient(site="anaconda.com")
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [plugin.auth]
+            ssl_verify = false
+            """
+        )
+    )
+
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+    assert not client.config.ssl_verify
+    assert client.config.api_key is None
+
+    # specific overrides by kwargs
+    client = BaseClient(api_key="bar")
+    assert client.config != AnacondaAuthConfig()
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_client_site_selection_by_name(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            api_key = "foo"
+            """
+        )
+    )
+
+    # make sure the default hasn't changed
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+
+    # load configured site
+    client = BaseClient(site="local")
+    assert client.config.domain == "localhost"
+    assert client.config.auth_domain_override == "auth-local"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "foo"
+    assert client.config.extra_headers is None
+
+    # load configured site and override
+    client = BaseClient(site="local", api_key="bar", extra_headers='{"key": "value"}')
+    assert client.config.domain == "localhost"
+    assert client.config.auth_domain_override == "auth-local"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+    assert client.config.extra_headers == {"key": "value"}
+
+    with pytest.raises(UnknownSiteName):
+        _ = BaseClient(site="unknown")
+
+
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
+def test_client_site_selection_with_config() -> None:
+    # make sure the default hasn't changed
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+
+    site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
+
+    # load configured site
+    client = BaseClient(site=site)
+    assert client.config.domain == "example.com"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "foo"
+
+    # load configured site and override
+    client = BaseClient(site=site, api_key="bar")
+    assert client.config.domain == "example.com"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+
+    with pytest.raises(UnknownSiteName):
+        _ = BaseClient(site=1)  # type: ignore

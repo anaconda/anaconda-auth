@@ -18,7 +18,8 @@ from niquests.auth import BearerTokenAuth
 from niquests.structures import CaseInsensitiveDict
 
 from anaconda_auth import __version__ as version
-from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -99,17 +100,28 @@ class AnacondaClientMixin:
 
     def _initialize(
         self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
         domain: Optional[str] = None,
+        auth_domain_override: Optional[str] = None,
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
         ssl_verify: Optional[bool] = None,
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
-    ) -> None:
+    ):
+        super().__init__()
+
+        if isinstance(site, AnacondaAuthSite):
+            config = site
+        else:
+            config = AnacondaAuthSitesConfig.load_site(site=site)
+
         config_kwargs: Dict[str, Any] = {}
         if domain is not None:
             config_kwargs["domain"] = domain
+        if auth_domain_override is not None:
+            config_kwargs["auth_domain_override"] = domain
         if api_key is not None:
             config_kwargs["api_key"] = api_key
         if ssl_verify is not None:
@@ -119,7 +131,7 @@ class AnacondaClientMixin:
         if hash_hostname is not None:
             config_kwargs["hash_hostname"] = hash_hostname
 
-        self.config = AnacondaAuthConfig(**config_kwargs)
+        self.config = config.model_copy(update=config_kwargs)
 
         self.base_url = f"https://{self.config.domain}"
         self.headers["User-Agent"] = user_agent or self._user_agent
@@ -145,10 +157,12 @@ class AnacondaClientMixin:
                 self.headers[k] = self.config.extra_headers[k]
 
         if self.config.api_key:
-            self.auth = BearerTokenAuth(self.config.api_key)
+            self.auth = BearerTokenAuth(api_key=self.config.api_key)
         else:
             self.token_info = TokenInfo(domain=self.config.domain)
             self.auth = TokenInfoAuth(self.token_info)
+
+        self.hooks["response"].append(login_required)
 
     def _validate_api_version(self, min_api_version_string: Optional[str]) -> None:
         """Validate that the client API version against the min API version from the service."""

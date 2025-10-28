@@ -13,7 +13,7 @@ dependencies = [
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
   "niquests >=3.11.0",
-  "anaconda-cli-base >=0.5.2"
+  "anaconda-cli-base >=0.5.4"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]

@@ -110,9 +110,9 @@ def is_not_none() -> Any:
 
 @pytest.fixture
 def disable_dot_env(mocker: MockerFixture) -> None:
-    from anaconda_auth.config import AnacondaAuthConfig
+    from anaconda_cli_base.config import AnacondaBaseSettings
 
-    mocker.patch.dict(AnacondaAuthConfig.model_config, {"env_file": ""})
+    mocker.patch.dict(AnacondaBaseSettings.model_config, {"env_file": ""})
 
 
 @pytest.fixture(autouse=True)
@@ -237,3 +237,12 @@ def invoke_cli(tmp_cwd: Path) -> CLIInvoker:
     runner = CliRunner()
 
     return partial(runner.invoke, cast(typer.Typer, app))
+
+
+@pytest.fixture
+def config_toml(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> Generator[Path, None, None]:
+    config_file = tmp_path / "config.toml"
+    monkeypatch.setenv("ANACONDA_CONFIG_TOML", str(config_file))
+    yield config_file
