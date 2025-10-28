@@ -1,6 +1,7 @@
 import sys
 import warnings
 from textwrap import dedent
+from typing import List
 from typing import Optional
 
 import typer
@@ -205,6 +206,9 @@ def main(
         "--info",
         "--current-info",
         hidden=True,
+    ),
+    extra_args: Optional[List[str]] = typer.Argument(
+        default=None, hidden=True, metavar=""
     ),
 ) -> None:
     if version:
