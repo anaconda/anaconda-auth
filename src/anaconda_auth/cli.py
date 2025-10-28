@@ -107,10 +107,22 @@ def _obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
         raise typer.Abort(1)
 
 
-app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth commands")
+app = typer.Typer(
+    name="auth",
+    add_completion=False,
+    help="anaconda.com auth commands",
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+        "help_option_names": ["--help", "-h"],
+    },
+)
 
 
-@app.callback(invoke_without_command=True)
+@app.callback(
+    invoke_without_command=True,
+    no_args_is_help=False,
+)
 def main(
     version: bool = typer.Option(False, "-V", "--version"),
     name: Optional[str] = typer.Option(
