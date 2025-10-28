@@ -194,7 +194,7 @@ class BaseClient(requests.Session):
             elif context.client_ssl_cert:
                 self.cert = context.client_ssl_cert
 
-        except Exception:
+        except ImportError:
             pass
 
     def urljoin(self, url: str) -> str:
