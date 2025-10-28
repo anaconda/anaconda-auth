@@ -98,7 +98,7 @@ def http_error(e: HTTPError) -> int:
         return 1
 
 
-def obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
+def _obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
     try:
         config = AnacondaAuthSitesConfig.load_site(site=at)
         return config
@@ -247,7 +247,7 @@ def auth_login(
 ) -> None:
     """Login"""
     try:
-        config = obtain_site_config(at)
+        config = _obtain_site_config(at)
 
         auth_domain = config.domain
         expired = TokenInfo.load(domain=auth_domain).expired
@@ -271,7 +271,7 @@ def auth_login(
 @app.command(name="whoami")
 def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
-    config = obtain_site_config(at)
+    config = _obtain_site_config(at)
     client = BaseClient(site=config)
     response = client.get("/api/account")
     response.raise_for_status()
@@ -282,7 +282,7 @@ def auth_info(at: Optional[str] = None) -> None:
 @app.command(name="api-key")
 def auth_key(at: Optional[str] = None) -> None:
     """Display API Key for signed-in user"""
-    config = obtain_site_config(at)
+    config = _obtain_site_config(at)
 
     if config.api_key:
         print(config.api_key)
@@ -299,5 +299,5 @@ def auth_key(at: Optional[str] = None) -> None:
 @app.command(name="logout")
 def auth_logout(at: Optional[str] = None) -> None:
     """Logout"""
-    config = obtain_site_config(at)
+    config = _obtain_site_config(at)
     logout(config=config)
