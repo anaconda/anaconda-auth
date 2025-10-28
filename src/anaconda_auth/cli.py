@@ -125,6 +125,7 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(False, "-V", "--version"),
     name: Optional[str] = typer.Option(
         None,
@@ -218,6 +219,14 @@ def main(
         )
         raise typer.Exit()
 
+    # We have to manually handle subcommands due the the handling of the auth subcommand
+    # as a top-level subcommand in anaconda-client
+    # TODO(mattkram): See if we can introspect the app to get the list of registered commands
+    if extra_args and extra_args[0] in ["login", "logout", "whoami"]:
+        known_subcommand_name = extra_args[0]
+    else:
+        known_subcommand_name = None
+
     has_options = any(
         value is not None
         for value in (
@@ -237,7 +246,8 @@ def main(
             info,
         )
     )
-    if has_options:
+
+    if has_options or known_subcommand_name is None:
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
@@ -255,6 +265,11 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
+
+    # If the subcommand is known, then we delegate to the actual functions defined in this module
+    if cmd := ctx.command.commands.get(known_subcommand_name):
+        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+        return
 
 
 @app.command("login")
