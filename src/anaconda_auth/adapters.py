@@ -1,6 +1,8 @@
-from typing import TYPE_CHECKING, Any, Optional
-from requests.adapters import HTTPAdapter as BaseHttpAdapter
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Optional
 
+from requests.adapters import HTTPAdapter as BaseHttpAdapter
 
 if TYPE_CHECKING:
     from ssl import SSLContext

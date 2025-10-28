@@ -10,9 +10,8 @@ from typing import Union
 from typing import cast
 from urllib.parse import urljoin
 
-from anaconda_cli_base.exceptions import AnacondaConfigValidationError
-from pydantic import BaseModel
 import requests
+from pydantic import BaseModel
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
@@ -25,6 +24,7 @@ from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
+from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
