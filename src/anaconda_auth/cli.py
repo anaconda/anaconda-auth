@@ -221,8 +221,7 @@ def main(
 
     # We have to manually handle subcommands due the the handling of the auth subcommand
     # as a top-level subcommand in anaconda-client
-    # TODO(mattkram): See if we can introspect the app to get the list of registered commands
-    if extra_args and extra_args[0] in ["login", "logout", "whoami"]:
+    if extra_args and extra_args[0] in ctx.command.commands:
         known_subcommand_name = extra_args[0]
     else:
         known_subcommand_name = None
