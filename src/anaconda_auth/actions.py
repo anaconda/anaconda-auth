@@ -171,7 +171,6 @@ def get_api_key(
     ssl_verify: Union[str, bool] = True,
     config: Optional[AnacondaAuthSite] = None,
 ) -> str:
-
     if isinstance(ssl_verify, str):
         ssl_verify = True
 
