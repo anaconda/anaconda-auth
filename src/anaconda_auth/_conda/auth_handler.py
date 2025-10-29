@@ -96,10 +96,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
                 token_netloc = urlparse(token_url).netloc
                 if token_netloc.lower() == domain and token is not None:
                     return token
-        return None
 
     @lru_cache
-    def _load_token(self, url: str) -> str:
+    def _load_token(self, url: str) -> Optional[str]:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
@@ -125,6 +124,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
             )
+        return None
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
@@ -140,6 +140,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """Inject the token as an Authorization header on each request."""
         request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
+        if not token:
+            return request
 
         config = AnacondaAuthConfig()
         if config.use_unified_repo_api_key:
