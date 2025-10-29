@@ -466,7 +466,6 @@ def test_client_condarc_base_defaults() -> None:
     )
 
     with make_temp_condarc(original_condarc) as rc:
-
         client = BaseClient()
         assert client.config.ssl_verify == True
         assert client.proxies["http"] == "condarc"
@@ -475,7 +474,6 @@ def test_client_condarc_base_defaults() -> None:
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
-
     config_toml.write_text(
         dedent(
             """\
@@ -488,7 +486,7 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
 
                 [plugin.auth.proxy_servers]
                 http = "toml"
-                https = "toml"                
+                https = "toml"
                 """
         )
     )
@@ -511,7 +509,6 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc) as rc:
-
         client = BaseClient()
         assert client.config.ssl_verify == True
         assert client.proxies["http"] == "toml"
@@ -520,7 +517,6 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_kwargs_supremecy(config_toml: Path) -> None:
-
     config_toml.write_text(
         dedent(
             """\
@@ -533,7 +529,7 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
 
                 [plugin.auth.proxy_servers]
                 http = "toml"
-                https = "toml"                
+                https = "toml"
                 """
         )
     )
@@ -556,7 +552,6 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc) as rc:
-
         client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
         assert client.config.ssl_verify == True
         assert client.proxies["http"] == "kwargy"
