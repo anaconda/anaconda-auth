@@ -139,10 +139,10 @@ def test_get_token_for_main_finds_first_token(handler):
 
 @pytest.mark.usefixtures("mocked_empty_conda_token")
 def test_get_token_missing(handler):
-    with pytest.raises(AnacondaAuthError):
-        _ = handler._load_token(
-            "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
-        )
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    )
+    assert token is None
 
 
 @pytest.fixture()
