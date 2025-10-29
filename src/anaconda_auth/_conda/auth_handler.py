@@ -22,7 +22,12 @@ from anaconda_auth.token import TokenInfo
 URI_PREFIX = "/repo/"
 
 # If the channel netloc matches the key, we look for a token stored under the value
-TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+TOKEN_DOMAIN_MAP = {
+    "repo.anaconda.cloud": "anaconda.com",
+    "repo.anaconda.com": "anaconda.com",
+}
+
+UNAUTHED_PATTERNS = ["/repo.anaconda.com/", "/repo.anaconda.cloud/repo/anaconda-tools/"]
 
 
 class AnacondaAuthError(CondaError):
@@ -133,7 +138,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        if "https://repo.anaconda.cloud/repo/anaconda-tools" in str(request.url):
+        if any(x in str(request.url) for x in UNAUTHED_PATTERNS):
             return request
 
         request.register_hook("response", self.handle_invalid_token)
