@@ -118,6 +118,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         elif token := self._load_token_via_conda_token(url):
             return token
+        return None
 
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
