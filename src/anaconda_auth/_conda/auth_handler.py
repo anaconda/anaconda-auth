@@ -108,8 +108,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         Args:
             url: The URL for the request.
 
-        Raises:
-             AnacondaAuthError: If no token is found using either method.
+        Returns:
+             The token, if it can be loaded. None, otherwise.
 
         """
 
