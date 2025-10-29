@@ -22,7 +22,15 @@ from anaconda_auth.token import TokenInfo
 URI_PREFIX = "/repo/"
 
 # If the channel netloc matches the key, we look for a token stored under the value
-TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+TOKEN_DOMAIN_MAP = {
+    "repo.anaconda.cloud": "anaconda.com",
+    "repo.anaconda.com": "anaconda.com",
+}
+
+UNAUTHED_PATTERNS = [
+    "/repo.anaconda.com/",
+    "/repo.anaconda.cloud/repo/anaconda-tools/"
+]
 
 
 class AnacondaAuthError(CondaError):
@@ -115,7 +123,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         elif token := self._load_token_via_conda_token(url):
             return token
-        else:
+        elif not any(x in url for x in UNAUTHED_PATTERNS):
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
