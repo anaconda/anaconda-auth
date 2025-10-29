@@ -122,7 +122,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
-        if response.status_code == 403:
+        if response.status_code in {401, 403}:
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
@@ -131,9 +131,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
-        if response.status_code == 403:
+        if response.status_code in {401, 403}:
             raise AnacondaAuthError(
-                f"Received authentication error (403) when accessing {self.channel_name}. "
+                f"Received authentication error ({response.status_code}) when "
+                f"accessing {self.channel_name}. "
                 "If your token is invalid or expired, please re-install with "
                 "`anaconda token install`."
             )

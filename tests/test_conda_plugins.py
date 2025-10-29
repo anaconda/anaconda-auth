@@ -175,22 +175,28 @@ def test_inject_header_during_request(session, url, monkeypatch):
     assert request.headers.get("Authorization") == "token my-test-token-in-token-info"
 
 
+@pytest.mark.parametrize("mocked_status_code", [401, 403])
 @pytest.mark.usefixtures("mocked_token_info")
-def test_response_callback_403(session, url, monkeypatch):
-    def trigger_403(req, *args, **kwargs):
+def test_response_callback_error_handler(
+    mocked_status_code, *, session, url, monkeypatch
+):
+    def _mocked_request(req, *args, **kwargs):
         response = Response()
-        response.status_code = 403
+        response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response
 
-    monkeypatch.setattr(session, "send", trigger_403)
+    monkeypatch.setattr(session, "send", _mocked_request)
 
     # A 403 response is captured by the hook and a custom exception is raised
     with pytest.raises(AnacondaAuthError):
         session.get(url)
 
 
-def test_inject_no_header_during_request_if_no_token(session, url, monkeypatch):
+@pytest.mark.parametrize("mocked_status_code", [401, 403])
+def test_inject_no_header_during_request_if_no_token(
+    mocked_status_code, *, session, url, monkeypatch
+):
     """
     If there is not token, we first make a request without an Authorization header.
     If the server responds with an error code, we raise an exception.
@@ -205,7 +211,7 @@ def test_inject_no_header_during_request_if_no_token(session, url, monkeypatch):
 
         # Simulate a 403 response from the server
         response = Response()
-        response.status_code = 403
+        response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response
 
