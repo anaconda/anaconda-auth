@@ -221,6 +221,7 @@ def main(
 
     # We have to manually handle subcommands due the the handling of the auth subcommand
     # as a top-level subcommand in anaconda-client
+    extra_args = extra_args or []
     if extra_args:
         subcommand_name = extra_args[0]
     else:
