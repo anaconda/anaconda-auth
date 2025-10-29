@@ -448,9 +448,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_condarc_base_defaults() -> None:
-
     try:
-
         from tests.conda_token.test_condarc import make_temp_condarc
 
         original_condarc = dedent(
@@ -497,7 +495,7 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
 
                     [plugin.auth.proxy_servers]
                     http = "toml"
-                    https = "toml"                
+                    https = "toml"
                     """
             )
         )
@@ -546,7 +544,7 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
 
                     [plugin.auth.proxy_servers]
                     http = "toml"
-                    https = "toml"                
+                    https = "toml"
                     """
             )
         )
