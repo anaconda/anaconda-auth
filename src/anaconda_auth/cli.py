@@ -226,8 +226,12 @@ def main(
     else:
         subcommand_name = None
 
+    # Extract the subcommands attached to the app. Use dynamic loading just to be safe,
+    # because static typing shows this to be invalid.
+    subcommands_dict = getattr(ctx.command, "commands", {})
+
     # If the subcommand is known, then we delegate to the actual functions defined in this module
-    if cmd := ctx.command.commands.get(subcommand_name):
+    if cmd := subcommands_dict.get(subcommand_name):
         cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
         return
 
