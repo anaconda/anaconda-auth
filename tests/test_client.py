@@ -470,10 +470,10 @@ def test_client_condarc_base_defaults() -> None:
             """
         )
 
-        with make_temp_condarc(original_condarc) as rc:
+        with make_temp_condarc(original_condarc):
 
             client = BaseClient()
-            assert client.config.ssl_verify == True
+            assert client.config.ssl_verify
             assert client.proxies["http"] == "condarc"
             assert client.proxies["https"] == "condarc"
     except ImportError:
@@ -519,10 +519,10 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
             """
         )
 
-        with make_temp_condarc(original_condarc) as rc:
+        with make_temp_condarc(original_condarc):
 
             client = BaseClient()
-            assert client.config.ssl_verify == True
+            assert client.config.ssl_verify
             assert client.proxies["http"] == "toml"
             assert client.proxies["https"] == "toml"
     except ImportError:
@@ -568,10 +568,10 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
             """
         )
 
-        with make_temp_condarc(original_condarc) as rc:
+        with make_temp_condarc(original_condarc):
 
             client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
-            assert client.config.ssl_verify == True
+            assert client.config.ssl_verify
             assert client.proxies["http"] == "kwargy"
             assert client.proxies["https"] == "kwargy"
 
@@ -601,10 +601,10 @@ def test_client_ssl_context(config_toml: Path) -> None:
             """
         )
 
-        with make_temp_condarc(original_condarc) as rc:
+        with make_temp_condarc(original_condarc):
 
             client = BaseClient()
-            assert client.config.ssl_verify == True
+            assert client.config.ssl_verify
             assert isinstance(client.adapters["http://"], HTTPAdapter)
             assert isinstance(client.adapters["https://"], HTTPAdapter)
 
@@ -636,7 +636,7 @@ def test_client_condarc_certs(config_toml: Path) -> None:
             """
         )
 
-        with make_temp_condarc(original_condarc) as rc:
+        with make_temp_condarc(original_condarc):
 
             client = BaseClient()
             assert client.cert == ("client_cert.pem", "client_cert_key")
