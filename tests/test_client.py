@@ -469,7 +469,6 @@ def test_client_condarc_base_defaults() -> None:
         )
 
         with make_temp_condarc(original_condarc):
-
             client = BaseClient()
             assert client.config.ssl_verify
             assert client.proxies["http"] == "condarc"
@@ -518,7 +517,6 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
         )
 
         with make_temp_condarc(original_condarc):
-
             client = BaseClient()
             assert client.config.ssl_verify
             assert client.proxies["http"] == "toml"
@@ -567,7 +565,6 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
         )
 
         with make_temp_condarc(original_condarc):
-
             client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
             assert client.config.ssl_verify
             assert client.proxies["http"] == "kwargy"
@@ -600,7 +597,6 @@ def test_client_ssl_context(config_toml: Path) -> None:
         )
 
         with make_temp_condarc(original_condarc):
-
             client = BaseClient()
             assert client.config.ssl_verify
             assert isinstance(client.adapters["http://"], HTTPAdapter)
@@ -635,7 +631,6 @@ def test_client_condarc_certs(config_toml: Path) -> None:
         )
 
         with make_temp_condarc(original_condarc):
-
             client = BaseClient()
             assert client.cert == ("client_cert.pem", "client_cert_key")
 
