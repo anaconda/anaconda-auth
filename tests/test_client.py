@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 from requests import Request
 from requests.exceptions import SSLError
 
+from anaconda_auth.adapters import HTTPAdapter
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
 from anaconda_auth.config import AnacondaAuthConfig
@@ -561,6 +562,62 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
         assert client.config.ssl_verify == True
         assert client.proxies["http"] == "kwargy"
         assert client.proxies["https"] == "kwargy"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_client_ssl_context(config_toml: Path) -> None:
+
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        proxy_servers:
+          http: condarc
+          https: condarc
+
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
+
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
+
+    with make_temp_condarc(original_condarc) as rc:
+
+        client = BaseClient()
+        assert client.config.ssl_verify == True
+        assert isinstance(client.adapters["http://"], HTTPAdapter)
+        assert isinstance(client.adapters["https://"], HTTPAdapter)
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_client_condarc_certs(config_toml: Path) -> None:
+
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        client_cert: client_cert.pem
+        client_cert_key: client_cert_key
+        proxy_servers:
+          http: condarc
+          https: condarc
+
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
+
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
+
+    with make_temp_condarc(original_condarc) as rc:
+
+        client = BaseClient()
+        assert client.cert == ("client_cert.pem", "client_cert_key")
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")

@@ -163,7 +163,6 @@ class BaseClient(requests.Session):
         self.hooks["response"].append(login_required)
 
     def configure_ssl(self, cfg: CondaConfig) -> None:
-        print(f"self.config.proxy_servers: {self.config.proxy_servers}")
         if cfg.proxy_servers and self.config.proxy_servers is None:
             self.proxies = cfg.proxy_servers
         elif self.config.proxy_servers:
@@ -199,14 +198,10 @@ class BaseClient(requests.Session):
         try:
             from conda.base.context import context
 
-            # from conda.gateways.connection.adapters.http import HTTPAdapter
-
-            # We need to decide which takes precedence, for now im assuming conda base config.
-            print("Here we are the import has succeeded")
-
             conda_config.proxy_servers = context.proxy_servers
-            print(f"Look at our proxy servers: {context.proxy_servers}")
             conda_config.ssl_verify = context.ssl_verify
+
+            print(f"cert keys: {context.client_ssl_cert}")
 
             if context.client_ssl_cert_key:
                 conda_config.cert = (
@@ -217,7 +212,6 @@ class BaseClient(requests.Session):
                 conda_config.cert = context.client_ssl_cert
 
         except ImportError:
-            print("Here we are the import has failed")
             pass
 
         return conda_config
