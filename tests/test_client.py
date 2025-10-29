@@ -561,7 +561,6 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_ssl_context(config_toml: Path) -> None:
-
     original_condarc = dedent(
         """\
         ssl_verify: truststore
@@ -580,7 +579,6 @@ def test_client_ssl_context(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc) as rc:
-
         client = BaseClient()
         assert client.config.ssl_verify == True
         assert isinstance(client.adapters["http://"], HTTPAdapter)
@@ -589,7 +587,6 @@ def test_client_ssl_context(config_toml: Path) -> None:
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_client_condarc_certs(config_toml: Path) -> None:
-
     original_condarc = dedent(
         """\
         ssl_verify: truststore
@@ -610,7 +607,6 @@ def test_client_condarc_certs(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc) as rc:
-
         client = BaseClient()
         assert client.cert == ("client_cert.pem", "client_cert_key")
 
