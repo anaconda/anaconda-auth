@@ -201,8 +201,6 @@ class BaseClient(requests.Session):
             conda_config.proxy_servers = context.proxy_servers
             conda_config.ssl_verify = context.ssl_verify
 
-            print(f"cert keys: {context.client_ssl_cert}")
-
             if context.client_ssl_cert_key:
                 conda_config.cert = (
                     context.client_ssl_cert,
