@@ -27,10 +27,7 @@ TOKEN_DOMAIN_MAP = {
     "repo.anaconda.com": "anaconda.com",
 }
 
-UNAUTHED_PATTERNS = [
-    "/repo.anaconda.com/",
-    "/repo.anaconda.cloud/repo/anaconda-tools/"
-]
+UNAUTHED_PATTERNS = ["/repo.anaconda.com/", "/repo.anaconda.cloud/repo/anaconda-tools/"]
 
 
 class AnacondaAuthError(CondaError):
