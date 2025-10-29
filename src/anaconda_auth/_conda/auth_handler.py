@@ -22,7 +22,10 @@ from anaconda_auth.token import TokenInfo
 URI_PREFIX = "/repo/"
 
 # If the channel netloc matches the key, we look for a token stored under the value
-TOKEN_DOMAIN_MAP = {"repo.anaconda.cloud": "anaconda.com"}
+TOKEN_DOMAIN_MAP = {
+    "repo.anaconda.com": "anaconda.com",
+    "repo.anaconda.cloud": "anaconda.com",
+}
 
 
 class AnacondaAuthError(CondaError):
@@ -94,7 +97,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return None
 
     @lru_cache
-    def _load_token(self, url: str) -> str:
+    def _load_token(self, url: str) -> Optional[str]:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
@@ -115,11 +118,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         elif token := self._load_token_via_conda_token(url):
             return token
-        else:
+
+    def handle_missing_token(self, response: Response, **_: Any) -> Response:
+        """Raise a nice error message if the authentication token is missing."""
+        if response.status_code == 403:
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
             )
+        return response
 
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
@@ -133,9 +140,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        request.register_hook("response", self.handle_invalid_token)
         token = self._load_token(request.url)
+        if not token:
+            request.register_hook("response", self.handle_missing_token)
+            return request
 
+        request.register_hook("response", self.handle_invalid_token)
         config = AnacondaAuthConfig()
         if config.use_unified_repo_api_key:
             request.headers["Authorization"] = f"Bearer {token}"
