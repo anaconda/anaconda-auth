@@ -77,23 +77,19 @@ def mock_do_auth_flow(mocker: MockerFixture) -> None:
 
 
 @pytest.fixture()
-def token_does_not_exist_in_service(
-    requests_mock: RequestMocker, org_name: str
-) -> None:
-    requests_mock.get(
+def token_does_not_exist_in_service(niquests_mock, org_name: str) -> None:
+    niquests_mock.get(
         f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
         status_code=404,
     )
 
 
 @pytest.fixture()
-def token_exists_in_service(
-    requests_mock: RequestMocker, org_name: str
-) -> TokenInfoResponse:
+def token_exists_in_service(niquests_mock, org_name: str) -> TokenInfoResponse:
     token_info = TokenInfoResponse(
         id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
     )
-    requests_mock.get(
+    niquests_mock.get(
         f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
         json=token_info.model_dump(mode="json"),
     )
@@ -101,12 +97,10 @@ def token_exists_in_service(
 
 
 @pytest.fixture()
-def token_created_in_service(
-    requests_mock: RequestMocker, org_name: str
-) -> TokenCreateResponse:
+def token_created_in_service(niquests_mock, org_name: str) -> TokenCreateResponse:
     test_token = "test-token"
     payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
-    requests_mock.put(
+    niquests_mock.put(
         f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
         json=payload,
     )
@@ -115,9 +109,9 @@ def token_created_in_service(
 
 @pytest.fixture()
 def user_has_one_org(
-    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+    niquests_mock, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
-    requests_mock.get(
+    niquests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[
             {
@@ -136,10 +130,10 @@ def user_has_one_org(
 
 @pytest.fixture()
 def user_has_multiple_orgs(
-    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+    niquests_mock, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
     first_id = uuid4()
-    requests_mock.get(
+    niquests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[
             {
@@ -164,9 +158,9 @@ def user_has_multiple_orgs(
 
 @pytest.fixture()
 def user_has_no_orgs(
-    requests_mock: RequestMocker, user_has_no_subscriptions: None
+    niquests_mock, user_has_no_subscriptions: None
 ) -> list[OrganizationData]:
-    requests_mock.get(
+    niquests_mock.get(
         "https://anaconda.com/api/organizations/my",
         json=[],
     )
@@ -177,9 +171,9 @@ def user_has_no_orgs(
     autouse=True, params=["security_subscription", "commercial_subscription"]
 )
 def user_has_business_subscription(
-    request, requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+    request, niquests_mock, org_name: str, business_org_id: UUID
 ) -> None:
-    requests_mock.get(
+    niquests_mock.get(
         "https://anaconda.com/api/account",
         json={
             "subscriptions": [
@@ -194,9 +188,9 @@ def user_has_business_subscription(
 
 @pytest.fixture()
 def user_has_starter_subscription(
-    request, requests_mock: RequestMocker, business_org_id: UUID
+    request, niquests_mock, business_org_id: UUID
 ) -> None:
-    requests_mock.get(
+    niquests_mock.get(
         "https://anaconda.com/api/account",
         json={
             "subscriptions": [
@@ -210,15 +204,15 @@ def user_has_starter_subscription(
 
 
 @pytest.fixture()
-def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
-    requests_mock.get("https://anaconda.com/api/account", json={})
+def user_has_no_subscriptions(niquests_mock: RequestMocker) -> None:
+    niquests_mock.get("https://anaconda.com/api/account", json={})
 
 
 @pytest.fixture(autouse=True)
 def repodata_json_available_with_token(
-    requests_mock: RequestMocker, token_created_in_service: TokenCreateResponse
+    niquests_mock: RequestMocker, token_created_in_service: TokenCreateResponse
 ) -> None:
-    requests_mock.head(
+    niquests_mock.head(
         f"https://repo.anaconda.cloud/t/{token_created_in_service.token}/repo/main/noarch/repodata.json",
         status_code=200,
     )
