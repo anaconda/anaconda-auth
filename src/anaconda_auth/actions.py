@@ -2,7 +2,8 @@ import logging
 import uuid
 import warnings
 import webbrowser
-from typing import Literal, Optional
+from typing import Literal
+from typing import Optional
 from typing import Union
 from urllib.parse import urlencode
 
