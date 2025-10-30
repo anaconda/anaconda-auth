@@ -55,6 +55,8 @@ class AnacondaAuthSite(BaseModel):
     use_unified_repo_api_key: bool = False
     hash_hostname: bool = True
     proxy_servers: Optional[MutableMapping[str, str]] = None
+    client_cert: Optional[str] = None
+    client_cert_key: Optional[str] = None
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:

@@ -101,6 +101,8 @@ class BaseClient(requests.Session):
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
         proxy_servers: Optional[MutableMapping[str, str]] = None,
+        client_cert: Optional[str] = None,
+        client_cert_key: Optional[str] = None,
     ):
         super().__init__()
 
@@ -129,6 +131,11 @@ class BaseClient(requests.Session):
             kwargs["hash_hostname"] = hash_hostname
         if proxy_servers is not None:
             kwargs["proxy_servers"] = proxy_servers
+        if client_cert_key is not None:
+            kwargs["client_cert"] = client_cert
+            kwargs["client_cert_key"] = client_cert_key
+        if client_cert is not None:
+            kwargs["client_cert"] = client_cert
 
         conda_config = self.retrieve_base_conda_ssl_config()
 
@@ -190,7 +197,13 @@ class BaseClient(requests.Session):
 
         self.mount("http://", http_adapter)
         self.mount("https://", http_adapter)
-        self.cert = cfg.cert
+
+        if self.config.client_cert_key and self.config.client_cert:
+            self.cert = (self.config.client_cert, self.config.client_cert_key)
+        elif self.config.client_cert:
+            self.cert = self.config.client_cert
+        else:
+            self.cert = cfg.cert
 
     def retrieve_base_conda_ssl_config(self) -> CondaConfig:
         conda_config = CondaConfig()

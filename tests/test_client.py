@@ -516,6 +516,10 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
                 ssl_verify = false
                 api_key = "foo"
 
+                [plugin.auth]
+                client_cert = "toml.pem"
+                client_cert_key = "toml_key.key"
+
 
                 [plugin.auth.proxy_servers]
                 http = "toml"
@@ -526,6 +530,8 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
 
     original_condarc = dedent(
         """\
+        client_cert: conda.pem
+        client_cert_key: conda.key
         ssl_verify: truststore
         proxy_servers:
           http: condarc
@@ -546,6 +552,7 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
         assert client.config.ssl_verify
         assert client.proxies["http"] == "toml"
         assert client.proxies["https"] == "toml"
+        assert client.cert == ("toml.pem", "toml_key.key")
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -562,6 +569,9 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
                 ssl_verify = false
                 api_key = "foo"
 
+                [plugin.auth]
+                client_cert = "toml.pem"
+                client_cert_key = "toml_key.key"
 
                 [plugin.auth.proxy_servers]
                 http = "toml"
@@ -588,10 +598,25 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc):
-        client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
+        client = BaseClient(
+            proxy_servers={"http": "kwargy", "https": "kwargy"},
+            client_cert="kwarg.cert",
+            client_cert_key="kwarg.key",
+        )
         assert client.config.ssl_verify
         assert client.proxies["http"] == "kwargy"
         assert client.proxies["https"] == "kwargy"
+        assert client.cert == ("kwarg.cert", "kwarg.key")
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_just_client_no_key(config_toml: Path) -> None:
+
+    client = BaseClient(
+        client_cert="kwarg.cert",
+    )
+    assert client.cert == "kwarg.cert"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
