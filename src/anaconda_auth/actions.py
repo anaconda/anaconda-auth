@@ -2,7 +2,7 @@ import logging
 import uuid
 import warnings
 import webbrowser
-from typing import Optional
+from typing import Literal, Optional
 from typing import Union
 from urllib.parse import urlencode
 
@@ -168,7 +168,7 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
 
 def get_api_key(
     access_token: str,
-    ssl_verify: Union[str, bool] = True,
+    ssl_verify: Union[Literal["truststore"], bool] = True,
     config: Optional[AnacondaAuthSite] = None,
 ) -> str:
     if isinstance(ssl_verify, str):
