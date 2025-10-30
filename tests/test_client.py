@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
-from tempfile import NamedTemporaryFile
 import warnings
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from textwrap import dedent
 from uuid import uuid4
 
@@ -13,7 +13,6 @@ from pytest_mock import MockerFixture
 from requests import Request
 from requests.exceptions import SSLError
 
-from anaconda_auth.adapters import HTTPAdapter
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
 from anaconda_auth.config import AnacondaAuthConfig
@@ -38,7 +37,6 @@ def is_conda_installed():
 def make_temp_condarc(text: str = ""):
     try:
         from conda.base.context import reset_context
-        from conda.gateways.disk.delete import rm_rf
         from conda.gateways.disk.delete import rm_rf
 
         tempfile = NamedTemporaryFile(suffix=".yml", delete=False)
@@ -498,7 +496,6 @@ def test_client_condarc_base_defaults() -> None:
     )
 
     with make_temp_condarc(original_condarc):
-
         client = BaseClient()
         assert client.config.ssl_verify
         assert client.proxies["http"] == "condarc"
@@ -545,7 +542,6 @@ def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc):
-
         client = BaseClient()
         assert client.config.ssl_verify
         assert client.proxies["http"] == "toml"
@@ -592,7 +588,6 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc):
-
         client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
         assert client.config.ssl_verify
         assert client.proxies["http"] == "kwargy"
@@ -622,7 +617,6 @@ def test_client_ssl_context(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc):
-
         import ssl
 
         import truststore  # type: ignore
@@ -667,7 +661,6 @@ def test_client_condarc_certs(config_toml: Path) -> None:
     )
 
     with make_temp_condarc(original_condarc):
-
         client = BaseClient()
         assert client.cert == ("client_cert.pem", "client_cert_key")
 
