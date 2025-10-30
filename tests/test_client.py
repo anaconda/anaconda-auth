@@ -28,7 +28,7 @@ HERE = os.path.dirname(__file__)
 
 def is_conda_installed():
     try:
-        import conda
+        import conda  # noqa: F401
 
         return True
     except ImportError:
