@@ -612,7 +612,6 @@ def test_client_kwargs_supremecy(config_toml: Path) -> None:
 @pytest.mark.usefixtures("disable_dot_env")
 @pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_just_client_no_key(config_toml: Path) -> None:
-
     client = BaseClient(
         client_cert="kwarg.cert",
     )
