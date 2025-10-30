@@ -170,13 +170,14 @@ class BaseClient(requests.Session):
 
         ssl_context = None
 
-        if self.config.ssl_verify == "truststore" or cfg.ssl_verify == "trustore":
+        if self.config.ssl_verify == "truststore" or cfg.ssl_verify == "truststore":
             try:
                 import ssl
 
                 import truststore  # type: ignore
 
                 ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
             except ImportError:
                 raise AnacondaConfigValidationError(
                     "The `ssl_verify: truststore` setting is only supported on Python 3.10 or later."
@@ -184,8 +185,6 @@ class BaseClient(requests.Session):
             self.verify = True
         else:
             self.verify = self.config.ssl_verify
-
-        # We need an http adapter
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
 

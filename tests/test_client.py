@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from tempfile import NamedTemporaryFile
 import warnings
 from pathlib import Path
 from textwrap import dedent
@@ -23,6 +24,34 @@ from anaconda_auth.token import TokenInfo
 from .conftest import MockedRequest
 
 HERE = os.path.dirname(__file__)
+
+
+def is_conda_installed():
+    try:
+        import conda
+
+        return True
+    except ImportError:
+        return False
+
+
+def make_temp_condarc(text: str = ""):
+    try:
+        from conda.base.context import reset_context
+        from conda.gateways.disk.delete import rm_rf
+        from conda.gateways.disk.delete import rm_rf
+
+        tempfile = NamedTemporaryFile(suffix=".yml", delete=False)
+        temp_path = tempfile.name
+        if text:
+            with open(temp_path, "w") as f:
+                f.write(text)
+        reset_context([temp_path])
+        yield temp_path
+    except ImportError:
+        return
+    finally:
+        rm_rf(temp_path)
 
 
 @pytest.mark.integration
@@ -447,200 +476,200 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_condarc_base_defaults() -> None:
-    try:
-        from tests.conda_token.test_condarc import make_temp_condarc
+    from tests.conda_token.test_condarc import make_temp_condarc
 
-        original_condarc = dedent(
-            """\
-            ssl_verify: truststore
-            proxy_servers:
-              http: condarc
-              https: condarc
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        proxy_servers:
+          http: condarc
+          https: condarc
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
-        )
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
 
-        with make_temp_condarc(original_condarc):
+    with make_temp_condarc(original_condarc):
 
-            client = BaseClient()
-            assert client.config.ssl_verify
-            assert client.proxies["http"] == "condarc"
-            assert client.proxies["https"] == "condarc"
-    except ImportError:
-        assert 1
+        client = BaseClient()
+        assert client.config.ssl_verify
+        assert client.proxies["http"] == "condarc"
+        assert client.proxies["https"] == "condarc"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_condarc_override_with_anaconda_toml(config_toml: Path) -> None:
-    try:
-        from tests.conda_token.test_condarc import make_temp_condarc
+    from tests.conda_token.test_condarc import make_temp_condarc
 
-        config_toml.write_text(
-            dedent(
-                """\
-                    [sites.local]
-                    domain = "localhost"
-                    auth_domain_override = "auth-local"
-                    ssl_verify = false
-                    api_key = "foo"
-
-
-                    [plugin.auth.proxy_servers]
-                    http = "toml"
-                    https = "toml"
-                    """
-            )
-        )
-
-        original_condarc = dedent(
+    config_toml.write_text(
+        dedent(
             """\
-            ssl_verify: truststore
-            proxy_servers:
-              http: condarc
-              https: condarc
+                [sites.local]
+                domain = "localhost"
+                auth_domain_override = "auth-local"
+                ssl_verify = false
+                api_key = "foo"
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
+                [plugin.auth.proxy_servers]
+                http = "toml"
+                https = "toml"
+                """
         )
+    )
 
-        with make_temp_condarc(original_condarc):
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        proxy_servers:
+          http: condarc
+          https: condarc
 
-            client = BaseClient()
-            assert client.config.ssl_verify
-            assert client.proxies["http"] == "toml"
-            assert client.proxies["https"] == "toml"
-    except ImportError:
-        assert 1
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
+
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
+
+    with make_temp_condarc(original_condarc):
+
+        client = BaseClient()
+        assert client.config.ssl_verify
+        assert client.proxies["http"] == "toml"
+        assert client.proxies["https"] == "toml"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_kwargs_supremecy(config_toml: Path) -> None:
-    try:
-        from tests.conda_token.test_condarc import make_temp_condarc
+    from tests.conda_token.test_condarc import make_temp_condarc
 
-        config_toml.write_text(
-            dedent(
-                """\
-                    [sites.local]
-                    domain = "localhost"
-                    auth_domain_override = "auth-local"
-                    ssl_verify = false
-                    api_key = "foo"
-
-
-                    [plugin.auth.proxy_servers]
-                    http = "toml"
-                    https = "toml"
-                    """
-            )
-        )
-
-        original_condarc = dedent(
+    config_toml.write_text(
+        dedent(
             """\
-            ssl_verify: truststore
-            proxy_servers:
-              http: condarc
-              https: condarc
+                [sites.local]
+                domain = "localhost"
+                auth_domain_override = "auth-local"
+                ssl_verify = false
+                api_key = "foo"
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
+                [plugin.auth.proxy_servers]
+                http = "toml"
+                https = "toml"
+                """
         )
+    )
 
-        with make_temp_condarc(original_condarc):
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        proxy_servers:
+          http: condarc
+          https: condarc
 
-            client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
-            assert client.config.ssl_verify
-            assert client.proxies["http"] == "kwargy"
-            assert client.proxies["https"] == "kwargy"
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
 
-    except ImportError:
-        assert 1
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
+
+    with make_temp_condarc(original_condarc):
+
+        client = BaseClient(proxy_servers={"http": "kwargy", "https": "kwargy"})
+        assert client.config.ssl_verify
+        assert client.proxies["http"] == "kwargy"
+        assert client.proxies["https"] == "kwargy"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_ssl_context(config_toml: Path) -> None:
-    try:
-        from tests.conda_token.test_condarc import make_temp_condarc
+    from tests.conda_token.test_condarc import make_temp_condarc
 
-        original_condarc = dedent(
-            """\
-            ssl_verify: truststore
-            proxy_servers:
-              http: condarc
-              https: condarc
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        proxy_servers:
+          http: condarc
+          https: condarc
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
+
+    with make_temp_condarc(original_condarc):
+
+        import ssl
+
+        import truststore  # type: ignore
+
+        ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+        client = BaseClient()
+        assert client.config.ssl_verify
+        # TODO change this to some type of equality operator
+        assert (
+            client.adapters["http://"]._ssl_context._ctx.protocol
+            == ssl_context._ctx.protocol
         )
-
-        with make_temp_condarc(original_condarc):
-
-            client = BaseClient()
-            assert client.config.ssl_verify
-            assert isinstance(client.adapters["http://"], HTTPAdapter)
-            assert isinstance(client.adapters["https://"], HTTPAdapter)
-
-    except ImportError:
-        assert 1
+        assert (
+            client.adapters["https://"]._ssl_context._ctx.protocol
+            == ssl_context._ctx.protocol
+        )
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
 def test_client_condarc_certs(config_toml: Path) -> None:
-    try:
-        from tests.conda_token.test_condarc import make_temp_condarc
+    from tests.conda_token.test_condarc import make_temp_condarc
 
-        original_condarc = dedent(
-            """\
-            ssl_verify: truststore
-            client_cert: client_cert.pem
-            client_cert_key: client_cert_key
-            proxy_servers:
-              http: condarc
-              https: condarc
+    original_condarc = dedent(
+        """\
+        ssl_verify: truststore
+        client_cert: client_cert.pem
+        client_cert_key: client_cert_key
+        proxy_servers:
+          http: condarc
+          https: condarc
 
-            default_channels:
-              - https://repo.anaconda.com/pkgs/main
-            channels:
-              - defaults
-              - conda-forge
+        default_channels:
+          - https://repo.anaconda.com/pkgs/main
+        channels:
+          - defaults
+          - conda-forge
 
-            channel_alias: https://conda.anaconda.org/
-            """
-        )
+        channel_alias: https://conda.anaconda.org/
+        """
+    )
 
-        with make_temp_condarc(original_condarc):
+    with make_temp_condarc(original_condarc):
 
-            client = BaseClient()
-            assert client.cert == ("client_cert.pem", "client_cert_key")
-
-    except ImportError:
-        assert 1
+        client = BaseClient()
+        assert client.cert == ("client_cert.pem", "client_cert_key")
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
