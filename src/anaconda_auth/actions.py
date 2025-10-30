@@ -2,6 +2,7 @@ import logging
 import uuid
 import warnings
 import webbrowser
+from typing import Literal
 from typing import Optional
 from typing import Union
 from urllib.parse import urlencode
@@ -155,16 +156,25 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
         access_token = _login_with_username(config=config)
     else:
         access_token = _do_auth_flow(config=config)
-    api_key = get_api_key(access_token, config.ssl_verify, config=config)
+
+    api_key = get_api_key(
+        access_token,
+        config.ssl_verify,
+        config=config,
+    )
+
     token_info = TokenInfo(api_key=api_key, domain=config.domain)
     token_info.save()
 
 
 def get_api_key(
     access_token: str,
-    ssl_verify: bool = True,
+    ssl_verify: Union[Literal["truststore"], bool] = True,
     config: Optional[AnacondaAuthSite] = None,
 ) -> str:
+    if isinstance(ssl_verify, str):
+        ssl_verify = True
+
     config = config or AnacondaAuthSitesConfig.load_site()
 
     headers = {"Authorization": f"Bearer {access_token}"}

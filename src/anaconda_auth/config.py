@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Any
 from typing import Dict
 from typing import Literal
+from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
@@ -43,7 +44,7 @@ class AnacondaAuthSite(BaseModel):
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
-    ssl_verify: bool = True
+    ssl_verify: Union[bool, Literal["truststore"]] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
@@ -53,6 +54,9 @@ class AnacondaAuthSite(BaseModel):
     login_error_path: str = "/app/local-login-error"
     use_unified_repo_api_key: bool = False
     hash_hostname: bool = True
+    proxy_servers: Optional[MutableMapping[str, str]] = None
+    client_cert: Optional[str] = None
+    client_cert_key: Optional[str] = None
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:

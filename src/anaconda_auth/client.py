@@ -4,23 +4,27 @@ from functools import cached_property
 from hashlib import md5
 from typing import Any
 from typing import Dict
+from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from typing import cast
 from urllib.parse import urljoin
 
 import requests
+from pydantic import BaseModel
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
+from anaconda_auth.adapters import HTTPAdapter
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
+from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
@@ -49,6 +53,12 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
                 )
 
     return response
+
+
+class CondaConfig(BaseModel):
+    proxy_servers: Optional[MutableMapping[str, str]] = None
+    ssl_verify: Optional[Union[bool, str]] = None
+    cert: Optional[Union[str, tuple[str, str]]] = None
 
 
 class BearerAuth(AuthBase):
@@ -87,9 +97,12 @@ class BaseClient(requests.Session):
         api_key: Optional[str] = None,
         user_agent: Optional[str] = None,
         api_version: Optional[str] = None,
-        ssl_verify: Optional[bool] = None,
+        ssl_verify: Optional[Union[bool, str]] = None,
         extra_headers: Optional[Union[str, dict]] = None,
         hash_hostname: Optional[bool] = None,
+        proxy_servers: Optional[MutableMapping[str, str]] = None,
+        client_cert: Optional[str] = None,
+        client_cert_key: Optional[str] = None,
     ):
         super().__init__()
 
@@ -116,8 +129,19 @@ class BaseClient(requests.Session):
             kwargs["extra_headers"] = extra_headers
         if hash_hostname is not None:
             kwargs["hash_hostname"] = hash_hostname
+        if proxy_servers is not None:
+            kwargs["proxy_servers"] = proxy_servers
+        if client_cert_key is not None:
+            kwargs["client_cert"] = client_cert
+            kwargs["client_cert_key"] = client_cert_key
+        if client_cert is not None:
+            kwargs["client_cert"] = client_cert
+
+        conda_config = self.retrieve_base_conda_ssl_config()
 
         self.config = config.model_copy(update=kwargs)
+
+        self.configure_ssl(conda_config)
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -144,6 +168,64 @@ class BaseClient(requests.Session):
 
         self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
+
+    def configure_ssl(self, cfg: CondaConfig) -> None:
+        if cfg.proxy_servers and self.config.proxy_servers is None:
+            self.proxies = cfg.proxy_servers
+        elif self.config.proxy_servers:
+            self.proxies = self.config.proxy_servers
+
+        ssl_context = None
+
+        if self.config.ssl_verify == "truststore" or cfg.ssl_verify == "truststore":
+            try:
+                import ssl
+
+                import truststore  # type: ignore
+
+                ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+            except ImportError:
+                raise AnacondaConfigValidationError(
+                    "The `ssl_verify: truststore` setting is only supported on Python 3.10 or later."
+                )
+            self.verify = True
+        else:
+            self.verify = self.config.ssl_verify
+
+        http_adapter = HTTPAdapter(ssl_context=ssl_context)
+
+        self.mount("http://", http_adapter)
+        self.mount("https://", http_adapter)
+
+        if self.config.client_cert_key and self.config.client_cert:
+            self.cert = (self.config.client_cert, self.config.client_cert_key)
+        elif self.config.client_cert:
+            self.cert = self.config.client_cert
+        else:
+            self.cert = cfg.cert
+
+    def retrieve_base_conda_ssl_config(self) -> CondaConfig:
+        conda_config = CondaConfig()
+        try:
+            from conda.base.context import context
+
+            conda_config.proxy_servers = context.proxy_servers
+            conda_config.ssl_verify = context.ssl_verify
+
+            if context.client_ssl_cert_key:
+                conda_config.cert = (
+                    context.client_ssl_cert,
+                    context.client_ssl_cert_key,
+                )
+            elif context.client_ssl_cert:
+                conda_config.cert = context.client_ssl_cert
+
+        except ImportError:
+            print("Here we are the import has failed")
+            pass
+
+        return conda_config
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
