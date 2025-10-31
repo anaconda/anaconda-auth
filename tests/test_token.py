@@ -113,6 +113,37 @@ def test_anaconda_keyring_save_delete(tmp_path: Path) -> None:
     assert anaconda_keyring.get_password("s3", "u4") is None
 
 
+def test_anaconda_file_priorities(tmp_path: Path) -> None:
+    fn1 = tmp_path / "keyring1"
+    fn2 = tmp_path / "keyring2"
+    fn1.touch()
+
+    from anaconda_auth.token import AnacondaKeyring
+    anaconda_keyring = AnacondaKeyring()
+
+    AnacondaKeyring.keyring_path = fn1
+    AnacondaKeyring.docker_path = fn2
+    assert fn1.exists() and not fn2.exists()
+    anaconda_keyring.set_password("s", "u", "p")
+    assert fn1.read_text() == '{"s": {"u": "p"}}'
+    assert anaconda_keyring._read() == {"s": {"u": "p"}}
+
+    AnacondaKeyring.keyring_path = fn2
+    AnacondaKeyring.docker_path = fn1
+    assert fn1.exists() and not fn2.exists()
+    assert anaconda_keyring._read() == {"s": {"u": "p"}}
+
+    fn2.write_text('')
+    assert anaconda_keyring._read() == {"s": {"u": "p"}}
+
+    fn2.write_text('{}')
+    assert anaconda_keyring._read() == {"s": {"u": "p"}}
+
+    anaconda_keyring.set_password("t", "v", "q")
+    assert fn2.read_text() == '{"t": {"v": "q"}}'
+    assert anaconda_keyring._read() == {"t": {"v": "q"}}
+
+
 def test_anaconda_keyring_empty(tmp_path: Path) -> None:
     fn = tmp_path / "keyring"
     fn.touch()

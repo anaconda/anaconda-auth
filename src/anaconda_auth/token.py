@@ -141,6 +141,7 @@ class NavigatorFallback(KeyringBackend):
 class AnacondaKeyring(KeyringBackend):
     name = "token AnacondaKeyring"  # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
     keyring_path = Path("~/.anaconda/keyring").expanduser()
+    docker_path = Path("/run/secrets/anaconda-keyring")
 
     @classproperty
     def priority(cls) -> float:
@@ -165,15 +166,18 @@ class AnacondaKeyring(KeyringBackend):
             return False
 
     def _read(self) -> LocalKeyringData:
-        if not self.keyring_path.exists():
-            return {}
-
-        try:
-            with self.keyring_path.open("r") as fp:
-                data = json.load(fp)
-            return data
-        except json.JSONDecodeError:
-            return {}
+        # The user keyring takes priority over a docker secret
+        # if it exists, is valid JSON, and not empty.
+        for p in (self.keyring_path, self.docker_path):
+            if p.exists:
+                try:
+                    with self.keyring_path.open("r") as fp:
+                        data = json.load(data)
+                    if data:
+                        return data
+                except Exception:
+                    pass
+        return {}
 
     def _save(self, data: LocalKeyringData) -> None:
         self.keyring_path.parent.mkdir(exist_ok=True, parents=True)
