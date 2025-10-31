@@ -150,7 +150,7 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         env_nested_delimiter="__",
         extra="ignore",
         ignored_types=(cached_property,),
-        secrets_dir=AnacondaAuthConfig.model_config.get("secrets_dir")
+        secrets_dir=AnacondaAuthConfig.model_config.get("secrets_dir"),
     )
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
 
