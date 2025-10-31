@@ -39,12 +39,6 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     )
 
 
-class AnacondaBaseSettingsWithDocker(AnacondaBaseSettings):
-    def __init_subclass__(cls, **kwargs: Any):
-        super().__init_subclass__(**kwargs)
-        cls.model_config["secrets_dir"] = "/run/secrets"
-
-
 class AnacondaAuthSite(BaseModel):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
@@ -130,7 +124,7 @@ class AnacondaAuthSite(BaseModel):
 
 
 class AnacondaAuthConfig(
-    AnacondaAuthSite, AnacondaBaseSettingsWithDocker, plugin_name="auth"
+    AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"
 ): ...
 
 
@@ -156,7 +150,7 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         env_nested_delimiter="__",
         extra="ignore",
         ignored_types=(cached_property,),
-        secrets_dir="/run/secrets",
+        secrets_dir=AnacondaAuthConfig.model_config.get("secrets_dir")
     )
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
 

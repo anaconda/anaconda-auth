@@ -44,8 +44,6 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
 def test_docker_secret_over_default(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    assert AnacondaAuthConfig.model_config.get("secrets_dir")
-    assert AnacondaCloudConfig.model_config.get("secrets_dir")
     monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
     monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_API_KEY"
@@ -59,8 +57,6 @@ def test_docker_secret_over_default(
 def test_docker_secret_no_match(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    assert AnacondaAuthConfig.model_config.get("secrets_dir")
-    assert AnacondaCloudConfig.model_config.get("secrets_dir")
     monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
     monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_NONEXISTENT"
@@ -81,8 +77,6 @@ def test_env_variable_over_default(monkeypatch: MonkeyPatch, prefix: str) -> Non
 def test_env_variable_over_docker(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    assert AnacondaAuthConfig.model_config.get("secrets_dir")
-    assert AnacondaCloudConfig.model_config.get("secrets_dir")
     monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
     monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_API_KEY"
@@ -97,8 +91,6 @@ def test_env_variable_over_docker(
 def test_init_arg_over_all(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    assert AnacondaAuthConfig.model_config.get("secrets_dir")
-    assert AnacondaCloudConfig.model_config.get("secrets_dir")
     monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
     monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_DOMAIN"
