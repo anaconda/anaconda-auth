@@ -119,6 +119,7 @@ def test_anaconda_file_priorities(tmp_path: Path) -> None:
     fn1.touch()
 
     from anaconda_auth.token import AnacondaKeyring
+
     anaconda_keyring = AnacondaKeyring()
 
     AnacondaKeyring.keyring_path = fn1
@@ -133,10 +134,10 @@ def test_anaconda_file_priorities(tmp_path: Path) -> None:
     assert fn1.exists() and not fn2.exists()
     assert anaconda_keyring._read() == {"s": {"u": "p"}}
 
-    fn2.write_text('')
+    fn2.write_text("")
     assert anaconda_keyring._read() == {"s": {"u": "p"}}
 
-    fn2.write_text('{}')
+    fn2.write_text("{}")
     assert anaconda_keyring._read() == {"s": {"u": "p"}}
 
     anaconda_keyring.set_password("t", "v", "q")
