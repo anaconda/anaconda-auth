@@ -10,6 +10,7 @@ from requests_mock import Mocker as RequestMocker
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
+from anaconda_auth.config import BaseModelWithDocker
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
@@ -40,6 +41,32 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
+def test_docker_secret_over_default(
+    tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
+) -> None:
+    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    key = f"{prefix}_API_KEY"
+    fname = key.lower().replace("_", "-")
+    with open(tmp_path / fname, "w") as fp:
+        fp.write("set-in-docker-secret")
+    config = AnacondaAuthConfig()
+    assert config.api_key == "set-in-docker-secret"
+
+
+@pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
+def test_docker_secret_no_match(
+    tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
+) -> None:
+    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    key = f"{prefix}_NONEXISTENT"
+    fname = key.lower().replace("_", "-")
+    with open(tmp_path / fname, "w") as fp:
+        fp.write("set-in-docker-secret")
+    config = AnacondaAuthConfig()
+    assert not hasattr(config, "nonexistent")
+
+
+@pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
 def test_env_variable_over_default(monkeypatch: MonkeyPatch, prefix: str) -> None:
     monkeypatch.setenv(f"{prefix}_DOMAIN", "set-in-env")
     config = AnacondaAuthConfig()
@@ -47,8 +74,29 @@ def test_env_variable_over_default(monkeypatch: MonkeyPatch, prefix: str) -> Non
 
 
 @pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
-def test_init_arg_over_env_variable(monkeypatch: MonkeyPatch, prefix: str) -> None:
-    monkeypatch.setenv(f"{prefix}_DOMAIN", "set-in-env")
+def test_env_variable_over_docker(
+    tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
+) -> None:
+    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    key = f"{prefix}_API_KEY"
+    fname = key.lower().replace("_", "-")
+    monkeypatch.setenv(key, "set-in-env")
+    with open(tmp_path / fname, "w") as fp:
+        fp.write("set-in-docker-secret")
+    config = AnacondaAuthConfig()
+    assert config.api_key == "set-in-env"
+
+
+@pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
+def test_init_arg_over_all(
+    tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
+) -> None:
+    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    key = f"{prefix}_DOMAIN"
+    fname = key.lower().replace("_", "-")
+    monkeypatch.setenv(key, "set-in-env")
+    with open(tmp_path / fname, "w") as fp:
+        fp.write("set-in-docker-secret")
     config = AnacondaAuthConfig(domain="set-in-init")
     assert config.domain == "set-in-init"
 

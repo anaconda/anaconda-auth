@@ -1,6 +1,8 @@
+import os
 import warnings
 from functools import cached_property
 from typing import Any
+from typing import ClassVar
 from typing import Dict
 from typing import Literal
 from typing import MutableMapping
@@ -39,7 +41,30 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
     )
 
 
-class AnacondaAuthSite(BaseModel):
+class BaseModelWithDocker(BaseModel):
+    secret_path: ClassVar[str] = "/run/secrets"
+
+    def __init__(self, **kwargs: Any):
+        prefix = self.model_config.get("env_prefix")
+        if prefix and os.path.isdir(self.secret_path):
+            prefix = prefix.lower().replace("_", "-")
+            with os.scandir(self.secret_path) as entries:
+                for entry in entries:
+                    if entry.name.startswith(prefix) and entry.is_file():
+                        key = entry.name.upper().replace("-", "_")
+                        var = key[len(prefix) :].lower()
+                        # environment variables and kwargs override docker secrets
+                        if (
+                            key not in os.environ
+                            and var not in kwargs
+                            and var in self.model_fields
+                        ):
+                            with open(entry.path) as fp:
+                                kwargs[var] = fp.read().strip()
+        super().__init__(**kwargs)
+
+
+class AnacondaAuthSite(BaseModelWithDocker):
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
