@@ -10,7 +10,7 @@ from requests_mock import Mocker as RequestMocker
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
-from anaconda_auth.config import BaseModelWithDocker
+from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
@@ -44,10 +44,12 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
 def test_docker_secret_over_default(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    assert AnacondaAuthConfig.model_config.get("secrets_dir")
+    assert AnacondaCloudConfig.model_config.get("secrets_dir")
+    monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
+    monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_API_KEY"
-    fname = key.lower().replace("_", "-")
-    with open(tmp_path / fname, "w") as fp:
+    with open(tmp_path / key.lower(), "w") as fp:
         fp.write("set-in-docker-secret")
     config = AnacondaAuthConfig()
     assert config.api_key == "set-in-docker-secret"
@@ -57,10 +59,12 @@ def test_docker_secret_over_default(
 def test_docker_secret_no_match(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    assert AnacondaAuthConfig.model_config.get("secrets_dir")
+    assert AnacondaCloudConfig.model_config.get("secrets_dir")
+    monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
+    monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_NONEXISTENT"
-    fname = key.lower().replace("_", "-")
-    with open(tmp_path / fname, "w") as fp:
+    with open(tmp_path / key.lower(), "w") as fp:
         fp.write("set-in-docker-secret")
     config = AnacondaAuthConfig()
     assert not hasattr(config, "nonexistent")
@@ -77,11 +81,13 @@ def test_env_variable_over_default(monkeypatch: MonkeyPatch, prefix: str) -> Non
 def test_env_variable_over_docker(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    assert AnacondaAuthConfig.model_config.get("secrets_dir")
+    assert AnacondaCloudConfig.model_config.get("secrets_dir")
+    monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
+    monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_API_KEY"
-    fname = key.lower().replace("_", "-")
     monkeypatch.setenv(key, "set-in-env")
-    with open(tmp_path / fname, "w") as fp:
+    with open(tmp_path / key.lower(), "w") as fp:
         fp.write("set-in-docker-secret")
     config = AnacondaAuthConfig()
     assert config.api_key == "set-in-env"
@@ -91,11 +97,13 @@ def test_env_variable_over_docker(
 def test_init_arg_over_all(
     tmp_path: Path, monkeypatch: MonkeyPatch, prefix: str
 ) -> None:
-    monkeypatch.setattr(BaseModelWithDocker, "secret_path", tmp_path)
+    assert AnacondaAuthConfig.model_config.get("secrets_dir")
+    assert AnacondaCloudConfig.model_config.get("secrets_dir")
+    monkeypatch.setitem(AnacondaAuthConfig.model_config, "secrets_dir", tmp_path)
+    monkeypatch.setitem(AnacondaCloudConfig.model_config, "secrets_dir", tmp_path)
     key = f"{prefix}_DOMAIN"
-    fname = key.lower().replace("_", "-")
     monkeypatch.setenv(key, "set-in-env")
-    with open(tmp_path / fname, "w") as fp:
+    with open(tmp_path / key.lower(), "w") as fp:
         fp.write("set-in-docker-secret")
     config = AnacondaAuthConfig(domain="set-in-init")
     assert config.domain == "set-in-init"
