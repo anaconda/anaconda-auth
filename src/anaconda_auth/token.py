@@ -141,7 +141,6 @@ class NavigatorFallback(KeyringBackend):
 class AnacondaKeyring(KeyringBackend):
     name = "token AnacondaKeyring"  # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
     keyring_path = Path("~/.anaconda/keyring").expanduser()
-    docker_path = Path("/run/secrets/anaconda-keyring")
 
     @classproperty
     def priority(cls) -> float:
@@ -166,18 +165,15 @@ class AnacondaKeyring(KeyringBackend):
             return False
 
     def _read(self) -> LocalKeyringData:
-        # The user keyring takes priority over a docker secret
-        # if it exists, is valid JSON, and not empty.
-        for p in (self.keyring_path, self.docker_path):
-            if p.exists:
-                try:
-                    with self.keyring_path.open("r") as fp:
-                        data = json.load(data)
-                    if data:
-                        return data
-                except Exception:
-                    pass
-        return {}
+        if not self.keyring_path.exists():
+            return {}
+
+        try:
+            with self.keyring_path.open("r") as fp:
+                data = json.load(fp)
+            return data
+        except json.JSONDecodeError:
+            return {}
 
     def _save(self, data: LocalKeyringData) -> None:
         self.keyring_path.parent.mkdir(exist_ok=True, parents=True)
@@ -206,6 +202,24 @@ class AnacondaKeyring(KeyringBackend):
             self._save(data)
         except KeyError:
             raise PasswordDeleteError
+
+
+class ConfigKeyring(AnacondaKeyring):
+    name = "token ConfigKeyring"
+
+    @classproperty
+    def priority(cls) -> float:
+        data = AnacondaAuthSitesConfig.load_site().keyring
+        return 100.0 if data else 0.0
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise PasswordSetError("This keyring cannot set passwords")
+
+    def delete_password(self, service: str, username: str) -> None:
+        raise PasswordSetError("This keyring cannot delete passwords")
+
+    def _read(self) -> LocalKeyringData:
+        return AnacondaAuthSitesConfig.load_site().keyring or {}
 
 
 class RepoToken(BaseModel):

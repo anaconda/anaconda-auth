@@ -44,6 +44,7 @@ class AnacondaAuthSite(BaseModel):
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
+    keyring: Optional[Dict[str, Dict[str, str]]] = None
     ssl_verify: Union[bool, Literal["truststore"]] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
