@@ -19,7 +19,6 @@ from urllib.parse import urljoin
 import conda
 import conda.gateways.logging  # noqa: F401
 from conda.base import context as context_module
-from conda.base.context import context
 from conda.cli import main as conda_main
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
@@ -110,7 +109,7 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
 
     # Force ssl_verify: false
     if no_ssl_verify:
-        context.ssl_verify = False  # type: ignore
+        context_module.context.ssl_verify = False  # type: ignore
 
     # Use CondaSession to be compatible with ssl_verify: truststore
     # https://conda.io/projects/conda/en/latest/user-guide/configuration/settings.html#ssl-verify-ssl-verification
