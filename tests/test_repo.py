@@ -43,6 +43,11 @@ def valid_api_key():
     return token_info
 
 
+@pytest.fixture()
+def token_validates(mocker: MockerFixture):
+    mocker.patch("anaconda_auth._conda.repo_config.validate_token", return_value=None)
+
+
 @pytest.fixture(params=[True, False])
 def no_tokens_installed(
     request, mocker: MockerFixture, valid_api_key: TokenInfo
@@ -272,6 +277,7 @@ def test_token_install_exists_already_accept(
     org_name: str,
     token_exists_in_service: None,
     token_created_in_service: TokenCreateResponse,
+    token_validates,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
@@ -447,6 +453,7 @@ def test_issue_new_token_prints_success_message_via_cli(
     token_exists_in_service,
     token_created_in_service,
     invoke_cli,
+    token_validates,
 ) -> None:
     result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
 

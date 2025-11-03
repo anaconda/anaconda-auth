@@ -260,7 +260,7 @@ def _niquests_mock_send(registry: dict, request, **kwargs: Any) -> MockResponse:
     return MockResponse(status_code=404)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def niquests_mock(mocker: MockerFixture) -> NiquestsMock:
     mymock = NiquestsMock()
     mock_send = partial(_niquests_mock_send, mymock.registry)
