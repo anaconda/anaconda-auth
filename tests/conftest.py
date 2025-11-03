@@ -17,17 +17,30 @@ from typing import cast
 import pytest
 import typer
 from click.testing import Result
+from conda.base import context as conda_context
+from conda.base.context import reset_context
 from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
+from anaconda_auth._conda import condarc as condarc_module
+from anaconda_auth._conda import repo_config
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
 
 load_dotenv()
+
+
+def is_conda_installed():
+    try:
+        import conda  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 class MockedKeyring(KeyringBackend):
@@ -280,3 +293,37 @@ def config_toml(
     config_file = tmp_path / "config.toml"
     monkeypatch.setenv("ANACONDA_CONFIG_TOML", str(config_file))
     yield config_file
+
+
+@pytest.fixture()
+def condarc_path(tmp_path):
+    """Returns the path of a temporary, empty .condarc file."""
+    condarc_path = tmp_path / ".condarc"
+    condarc_path.touch()
+    yield condarc_path
+
+
+@pytest.fixture(autouse=is_conda_installed())
+def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
+    """Patch operations that modify .condarc to prevent modifying
+    the ~/.condarc of the user running the tests.
+    """
+    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
+
+    # Patch the handling of conda CLI arguments to pass the path to the condarc file
+    orig_get_condarc_args = repo_config._get_condarc_args
+
+    def _new_get_condarc_args(*args, **kwargs) -> None:
+        return orig_get_condarc_args(condarc_file=str(condarc_path))
+
+    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
+
+    # Patch reset_context function such that it only loads config from our temp file
+    orig_reset_context = reset_context
+
+    def _new_reset_context(*args, **kwargs):
+        return orig_reset_context([condarc_path])
+
+    monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
+    reset_context()
+    yield condarc_path

@@ -6,11 +6,6 @@ import pytest
 
 conda = pytest.importorskip("conda")
 
-from conda.base import context as conda_context  # noqa: E402
-from conda.base.context import reset_context  # noqa: E402
-
-from anaconda_auth._conda import condarc as condarc_module  # noqa: E402
-from anaconda_auth._conda import repo_config  # noqa: E402
 from anaconda_auth._conda.conda_api import Commands  # noqa: E402
 from anaconda_auth._conda.conda_api import run_command  # noqa: E402
 from anaconda_auth._conda.repo_config import token_remove  # noqa: E402
@@ -19,40 +14,6 @@ from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
 def pytest_configure(config):
     warnings.filterwarnings("always")
-
-
-@pytest.fixture()
-def condarc_path(tmp_path):
-    """Returns the path of a temporary, empty .condarc file."""
-    condarc_path = tmp_path / ".condarc"
-    condarc_path.touch()
-    yield condarc_path
-
-
-@pytest.fixture(autouse=True)
-def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
-    """Patch operations that modify .condarc to prevent modifying
-    the ~/.condarc of the user running the tests.
-    """
-    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
-
-    # Patch the handling of conda CLI arguments to pass the path to the condarc file
-    orig_get_condarc_args = repo_config._get_condarc_args
-
-    def _new_get_condarc_args(*args, **kwargs) -> None:
-        return orig_get_condarc_args(condarc_file=str(condarc_path))
-
-    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
-
-    # Patch reset_context function such that it only loads config from our temp file
-    orig_reset_context = reset_context
-
-    def _new_reset_context(*args, **kwargs):
-        return orig_reset_context([condarc_path])
-
-    monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
-    reset_context()
-    yield condarc_path
 
 
 @pytest.fixture(scope="session")

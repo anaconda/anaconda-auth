@@ -21,17 +21,9 @@ from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
+from .conftest import is_conda_installed
 
 HERE = os.path.dirname(__file__)
-
-
-def is_conda_installed():
-    try:
-        import conda  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
 
 
 def make_temp_condarc(text: str = ""):
