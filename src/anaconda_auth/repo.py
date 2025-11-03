@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
 
+from anaconda_auth._conda import repo_config
+from anaconda_auth._conda.conda_token import token_remove
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import RepoToken
@@ -272,3 +274,38 @@ def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
     console.print(
         f"Successfully deleted token for organization: [cyan]{org_name}[/cyan]"
     )
+
+
+@app.command(name="set")
+def set_token(
+    token: str = typer.Argument(
+        ..., help="Optionally, provide the token received via email or web interface."
+    ),
+    org_name: str = typer.Option("", "-o", "--org", help="Organization name (slug)."),
+    set_default_channels: bool = typer.Option(
+        True, help="Automatically configure default channels."
+    ),
+) -> None:
+    """Alias the `conda token set` command, but replace logic with updated `TokenInfo` logic."""
+    install_token(
+        token=token, org_name=org_name, set_default_channels=set_default_channels
+    )
+
+
+@app.command(name="remove")
+def remove_token(
+    file: str = typer.Option(
+        None, "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
+) -> None:
+    """Alias the conda token remove command and employ the same logic."""
+    repo_config.token_remove(file=file, env=env, system=system)

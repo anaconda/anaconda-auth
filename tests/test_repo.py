@@ -7,12 +7,14 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
+from anaconda_auth._conda import repo_config
+
 from .conftest import CLIInvoker
 
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
-from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth._conda.repo_config import REPO_URL, token_list, token_set
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
@@ -372,6 +374,25 @@ def test_token_uninstall(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
+def test_token_remove(
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+
+    token_set("superSecretToken", force=True)
+    assert token_list() == {
+        "https://repo.anaconda.cloud/repo/": "superSecretToken"
+    }, token_list()
+    result = invoke_cli(
+        [
+            "token",
+            "remove",
+        ]
+    )
+    assert result.exit_code == 0, result.stdout
+    assert token_list() == {}, token_list()
+
+
 def test_get_repo_token_info_no_token(
     org_name: str, token_does_not_exist_in_service: None
 ) -> None:
@@ -459,3 +480,40 @@ def test_issue_new_token_prints_success_message_via_cli(
     expected_msg = "Your conda token has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
     assert result.exit_code == 0, result.stdout
     assert expected_msg in result.stdout
+
+
+def test_set_token_prints_success_message_via_cli(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(
+        ["token", "set", "--org", org_name, token_created_in_service.token],
+        input="y\nn\n",
+    )
+
+    expected_msg = "Backing up config to /Users/zfralish/.condarc.bak\nConfiguring your .condarc file\nDefault channels already configured, nothing to do.\nSuccess! Your token has been installed and validated, and conda has been configured.\n"
+    assert result.exit_code == 0, result.stdout
+    assert expected_msg in result.stdout
+
+
+def test_set_token_failure_without_token(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(
+        [
+            "token",
+            "set",
+        ],
+        input="y\nn\n",
+    )
+
+    assert result.exit_code == 2, result.stdout
