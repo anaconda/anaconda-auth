@@ -374,6 +374,19 @@ def test_token_uninstall(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
+def test_token_uninstall_all(
+    token_is_installed: TokenInfo,
+    *,
+    invoke_cli: CLIInvoker,
+) -> None:
+    result = invoke_cli(["token", "uninstall", "-all"])
+    assert result.exit_code == 0, result.stdout
+
+    token_info = TokenInfo.load()
+    with pytest.raises(TokenNotFoundError):
+        _ = token_info.get_repo_token(org_name=org_name)
+
+
 def test_token_remove(
     *,
     invoke_cli: CLIInvoker,

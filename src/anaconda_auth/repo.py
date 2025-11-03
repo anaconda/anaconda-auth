@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 import typer
@@ -259,15 +260,23 @@ def configure_conda(
 
 
 @app.command(name="uninstall")
-def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
+def uninstall_token(
+    org_name: Optional[str] = typer.Option(None, "-o", "--org"),
+    all: bool = typer.Option(False, "-all", "--all"),
+) -> None:
     """Uninstall a repository token for a specific organization."""
-    # TODO: Add --all option
+
+    token_info = TokenInfo.load()
+    if all:
+        token_info.delete_all_repo_token()
+        console.print(f"Successfully deleted [cyan]all[/cyan] repo tokens.")
+        return
+
     if not org_name:
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org[/cyan] option")
         raise typer.Abort()
 
-    token_info = TokenInfo.load()
     token_info.delete_repo_token(org_name=org_name)
     token_info.save()
 
