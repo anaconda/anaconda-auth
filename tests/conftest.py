@@ -17,16 +17,12 @@ from typing import cast
 import pytest
 import typer
 from click.testing import Result
-from conda.base import context as conda_context
-from conda.base.context import reset_context
 from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
-from anaconda_auth._conda import condarc as condarc_module
-from anaconda_auth._conda import repo_config
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
@@ -308,6 +304,12 @@ def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
     """Patch operations that modify .condarc to prevent modifying
     the ~/.condarc of the user running the tests.
     """
+    from conda.base import context as conda_context
+    from conda.base.context import reset_context
+
+    from anaconda_auth._conda import condarc as condarc_module
+    from anaconda_auth._conda import repo_config
+
     monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
 
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
