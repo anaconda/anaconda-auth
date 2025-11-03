@@ -268,7 +268,7 @@ def uninstall_token(
     token_info = TokenInfo.load()
     if all:
         token_info.delete_all_repo_token()
-        console.print(f"Successfully deleted [cyan]all[/cyan] repo tokens.")
+        console.print("Successfully deleted [cyan]all[/cyan] repo tokens.")
         return
 
     if not org_name:
