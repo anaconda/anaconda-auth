@@ -260,7 +260,7 @@ def configure_conda(
 
 @app.command(name="uninstall")
 def uninstall_token(
-    org_name: Optional[str] = typer.Option(None, "-o", "--org"),
+    org_name: str = typer.Option("", "-o", "--org"),  # type: ignore
     all: bool = typer.Option(False, "-all", "--all"),
 ) -> None:
     """Uninstall a repository token for a specific organization."""
@@ -302,7 +302,7 @@ def set_token(
 
 @app.command(name="remove")
 def remove_token(
-    file: str = typer.Option(
+    file: str | None = typer.Option(
         None, "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
     ),
     env: bool = typer.Option(
