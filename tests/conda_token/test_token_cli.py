@@ -12,10 +12,9 @@ from ..conftest import CLIInvoker
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
-from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth._conda import repo_config
 from anaconda_auth._conda.repo_config import token_list
 from anaconda_auth._conda.repo_config import token_set
-from anaconda_auth._conda import repo_config
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
