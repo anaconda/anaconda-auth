@@ -161,6 +161,7 @@ def test_client_min_api_version_header(
 ) -> None:
     client = BaseClient(user_agent="client/0.1.0", api_version=api_version)
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("default")
         response = client.get("/api/something")
 
     assert response.status_code == 200

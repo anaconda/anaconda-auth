@@ -154,6 +154,20 @@ addopts = [
   "--durations=5",
   "-vv"
 ]
+filterwarnings = [
+  # Treat all warnings errors: https://til.simonwillison.net/pytest/treat-warnings-as-errors
+  "error",
+  # Ignore our own intended deprecation warnings
+  "ignore:Please use `anaconda org auth` instead:DeprecationWarning",
+  "ignore:Client API version is:DeprecationWarning",
+  "ignore:The following fields have been set using legacy environment variables:DeprecationWarning",
+  "ignore:AnacondaCloudConfig is deprecated, please use AnacondaAuthConfig instead:DeprecationWarning",
+  "ignore:Please replace imports from `import anaconda_cloud_auth` to `import anaconda_auth`:DeprecationWarning",
+  # TODO(mattkram): This is something we need to fix in anaconda-cli-base
+  "ignore:pkg_resources is deprecated as an API:UserWarning",
+  # Ignore conda's PendingDeprecationWarning
+  "ignore::PendingDeprecationWarning"
+]
 markers = [
   "integration: Integration tests requiring a browser"
 ]
@@ -190,7 +204,8 @@ envlist =
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
     py311-{conda}
     py312-{conda}
-    py313-{conda}
+    py313-{no-conda,conda}
+    pendingdeprecations
     mypy
     report
 isolated_build = True
