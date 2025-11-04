@@ -75,13 +75,13 @@ def _continue_with_login() -> int:
             console.print(
                 dedent(
                     """
-                To configure your credentials you can run
-                  [green]anaconda login --at anaconda.com[/green]
+                    To configure your credentials you can run
+                      [green]anaconda login --at anaconda.com[/green]
 
-                or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
+                    or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
-                or set
-                """
+                    or set
+                    """
                 )
             )
             console.print(
