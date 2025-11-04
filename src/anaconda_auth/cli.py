@@ -39,36 +39,28 @@ def anaconda_span_details_callback(session, request):
     custom attributes to the span if it is.
     """
 
-    # Check if the session object is an instance of your BaseClient
     if isinstance(session, BaseClient):
-        # Use getattr for safety, in case config isn't fully set
         attributes = {
             "client.domain": getattr(session.config, "domain", "unknown"),
             "client.base_uri": getattr(session, "_base_uri", "unknown"),
             "client.api_version": getattr(session, "api_version", "unknown"),
         }
 
-        # Return a (span_name, attributes) tuple
         return None, attributes
 
-    # For any other session type, add no special attributes
     return None, {}
 
 
 def setup_opentelemetry() -> TracerProvider:
     """Configures OTel and instruments the requests library."""
 
-    # Standard OTel SDK Setup
     provider = TracerProvider()
 
-    # We use a simple processor and console exporter for this example
     processor = BatchSpanProcessor(ConsoleSpanExporter())
     provider.add_span_processor(processor)
 
-    # Set the global TracerProvider
     trace.set_tracer_provider(provider)
 
-    # Instrument the requests library globally and pass your callback
     RequestsInstrumentor().instrument(
         span_details_callback=anaconda_span_details_callback
     )
