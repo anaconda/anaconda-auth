@@ -328,7 +328,7 @@ def test_token_install_select_first_if_only_org(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install"])
+    result = invoke_cli(["token", "install"], input="y")
     assert result.exit_code == 0, result.stdout
     assert (
         f"Only one organization found, automatically selecting: {org_name}"
@@ -350,7 +350,7 @@ def test_token_install_select_second_of_multiple_orgs(
 ) -> None:
     # TODO: This uses the "j" key binding. I can't figure out how to send the right
     #       escape code for down arrow.
-    result = invoke_cli(["token", "install"], input="j\n")
+    result = invoke_cli(["token", "install"], input="j\ny\n")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
