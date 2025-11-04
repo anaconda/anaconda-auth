@@ -300,8 +300,8 @@ def set_token(
 
 @app.command(name="remove")
 def remove_token(
-    file: str | None = typer.Option(
-        None, "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
     ),
     env: bool = typer.Option(
         False,
@@ -316,4 +316,4 @@ def remove_token(
     """Alias the conda token remove command and employ the same logic."""
     from anaconda_auth._conda import repo_config
 
-    repo_config.token_remove(file=file, env=env, system=system)
+    repo_config.token_remove(file=file if file else None, env=env, system=system)
