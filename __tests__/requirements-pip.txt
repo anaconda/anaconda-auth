@@ -1,0 +1,7 @@
+# This file may be used to install packages not present in conda using pip:
+# $ pip install -r <this file>
+pytest-bdd==7.1.2
+pytest-playwright
+allure-pytest-bdd
+pytest-xdist==3.6.1
+urllib3>=2.2.2 # not directly required, pinned by Snyk to avoid a vulnerability

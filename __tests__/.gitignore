@@ -1,0 +1,14 @@
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/
+.env
+.vscode
+.idea
+.DS_Store
+allure*
+dist
+.venv
+__pycache__/
+*.pyc
