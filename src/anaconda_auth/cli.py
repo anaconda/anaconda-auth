@@ -5,6 +5,11 @@ from typing import List
 from typing import Optional
 
 import typer
+from opentelemetry import trace
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from requests.exceptions import HTTPError
 from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
@@ -23,14 +28,6 @@ from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
-
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    ConsoleSpanExporter,
-    BatchSpanProcessor,
-)
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 
 def anaconda_span_details_callback(session, request):
@@ -283,11 +280,9 @@ def main(
         subcommands_dict = getattr(ctx.command, "commands", {})
 
         if cmd := subcommands_dict.get(subcommand_name):
-
             with tracer.start_as_current_span(
                 f"cmd.{subcommand_name}",
             ) as span:
-
                 span.set_attribute("command.name", subcommand_name)
                 span.set_attribute("command.args", " ".join(extra_args[1:]))
 
@@ -358,7 +353,6 @@ def main(
         # No subcommand was given, so we print help
         console.print(ctx.get_help())
     finally:
-
         if provider:
             provider.shutdown()
 
