@@ -6,8 +6,6 @@ import pytest
 
 conda = pytest.importorskip("conda")
 
-from anaconda_auth._conda.conda_api import Commands  # noqa: E402
-from anaconda_auth._conda.conda_api import run_command  # noqa: E402
 from anaconda_auth._conda.repo_config import token_remove  # noqa: E402
 from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
@@ -94,27 +92,6 @@ def set_secret_token_with_signing():
 def secret_token():
     token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     yield token
-
-
-@pytest.fixture(scope="function")
-def uninstall_rope(condarc_path):
-    run_command(
-        Commands.REMOVE,
-        "rope",
-        "-y",
-        "--force",
-        f"--file={condarc_path}",
-        use_exception_handler=True,
-    )
-    yield
-    run_command(
-        Commands.REMOVE,
-        "rope",
-        "-y",
-        "--force",
-        f"--file={condarc_path}",
-        use_exception_handler=True,
-    )
 
 
 @pytest.fixture
