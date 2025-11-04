@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
 
-from anaconda_auth._conda import repo_config
 from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import RepoToken
@@ -315,4 +314,6 @@ def remove_token(
     ),
 ) -> None:
     """Alias the conda token remove command and employ the same logic."""
+    from anaconda_auth._conda import repo_config
+
     repo_config.token_remove(file=file, env=env, system=system)

@@ -7,7 +7,7 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from .conftest import CLIInvoker
+from .conftest import CLIInvoker, is_conda_installed
 
 pytest.importorskip("conda")
 
@@ -387,14 +387,15 @@ def test_token_uninstall_all(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
+@pytest.mark.skipif(is_conda_installed(), reason="Conda not available")
 def test_token_remove(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
     token_set("superSecretToken", force=True)
-    assert token_list() == {"https://repo.anaconda.cloud/repo/": "superSecretToken"}, (
-        token_list()
-    )
+    assert token_list() == {
+        "https://repo.anaconda.cloud/repo/": "superSecretToken"
+    }, token_list()
     result = invoke_cli(
         [
             "token",
