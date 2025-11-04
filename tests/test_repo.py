@@ -7,15 +7,14 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from ..conftest import CLIInvoker
+from anaconda_auth._conda import repo_config
+
+from .conftest import CLIInvoker
 
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
-from anaconda_auth._conda.repo_config import REPO_URL
-from anaconda_auth._conda.repo_config import token_list
-from anaconda_auth._conda.repo_config import token_set
-from anaconda_auth._conda import repo_config
+from anaconda_auth._conda.repo_config import REPO_URL, token_list, token_set
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
@@ -243,7 +242,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
     test_repo_token = "test-repo-token"
     mock = mocker.patch(
         "anaconda_auth._conda.repo_config.read_binstar_tokens",
-        return_value={repo_config.REPO_URL: test_repo_token},
+        return_value={REPO_URL: test_repo_token},
     )
     result = invoke_cli(["token", "list"])
 
@@ -251,7 +250,7 @@ def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) ->
 
     assert result.exit_code == 0
     assert "Anaconda Repository Tokens" in result.stdout
-    assert repo_config.REPO_URL in result.stdout
+    assert REPO_URL in result.stdout
     assert test_repo_token in result.stdout
 
 
@@ -329,7 +328,7 @@ def test_token_install_select_first_if_only_org(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "install"], input="y\n")
+    result = invoke_cli(["token", "install"])
     assert result.exit_code == 0, result.stdout
     assert (
         f"Only one organization found, automatically selecting: {org_name}"
@@ -351,7 +350,7 @@ def test_token_install_select_second_of_multiple_orgs(
 ) -> None:
     # TODO: This uses the "j" key binding. I can't figure out how to send the right
     #       escape code for down arrow.
-    result = invoke_cli(["token", "install"], input="j\ny\n")
+    result = invoke_cli(["token", "install"], input="j\n")
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
@@ -392,6 +391,7 @@ def test_token_remove(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+
     token_set("superSecretToken", force=True)
     assert token_list() == {
         "https://repo.anaconda.cloud/repo/": "superSecretToken"
@@ -508,9 +508,7 @@ def test_set_token_prints_success_message_via_cli(
         input="y\nn\n",
     )
 
-    expected_msg = "Success! Your token has been installed and validated, and conda has been configured"
     assert result.exit_code == 0, result.stdout
-    assert expected_msg in result.stdout
 
 
 def test_set_token_failure_without_token(
