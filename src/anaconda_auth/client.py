@@ -208,7 +208,9 @@ class BaseClient(requests.Session):
     def retrieve_base_conda_ssl_config(self) -> CondaConfig:
         conda_config = CondaConfig()
         try:
-            from conda.base.context import context
+            from anaconda_auth._conda.repo_config import get_conda_context
+
+            context = get_conda_context()
 
             conda_config.proxy_servers = context.proxy_servers
             conda_config.ssl_verify = context.ssl_verify

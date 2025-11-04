@@ -18,8 +18,7 @@ from urllib.parse import urljoin
 
 import conda
 import conda.gateways.logging  # noqa: F401
-from conda.base.context import context
-from conda.base.context import reset_context
+from conda.base import context as context_module
 from conda.cli import main as conda_main
 from conda.exceptions import CondaKeyError
 from conda.gateways.anaconda_client import read_binstar_tokens
@@ -61,6 +60,24 @@ class CondaVersionWarning(UserWarning):
     pass
 
 
+def _get_condarc_args(
+    condarc_system: bool = False,
+    condarc_env: bool = False,
+    condarc_file: str | None = None,
+) -> list[str]:
+    """Construct conda CLI args related to condarc location."""
+    config_args = []
+
+    if condarc_system:
+        config_args.append("--system")
+    elif condarc_env:
+        config_args.append("--env")
+    elif condarc_file:
+        config_args.append(f"--file={condarc_file}")
+
+    return config_args
+
+
 def can_restore_free_channel() -> bool:
     # restore_free_channel was removed in conda 25.9.0
     return CONDA_VERSION >= version.parse("4.7.0") and CONDA_VERSION < version.parse(
@@ -68,8 +85,12 @@ def can_restore_free_channel() -> bool:
     )
 
 
+def get_conda_context() -> context_module.Context:
+    return context_module.reset_context()
+
+
 def get_ssl_verify() -> bool:
-    context = reset_context()
+    context = get_conda_context()
     return context.ssl_verify
 
 
@@ -88,7 +109,7 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
 
     # Force ssl_verify: false
     if no_ssl_verify:
-        context.ssl_verify = False  # type: ignore
+        context_module.context.ssl_verify = False  # type: ignore
 
     # Use CondaSession to be compatible with ssl_verify: truststore
     # https://conda.io/projects/conda/en/latest/user-guide/configuration/settings.html#ssl-verify-ssl-verification
@@ -152,13 +173,11 @@ def enable_extra_safety_checks(
         )
         return
 
-    condarc_file_args = []
-    if condarc_system:
-        condarc_file_args.append("--system")
-    elif condarc_env:
-        condarc_file_args.append("--env")
-    elif condarc_file:
-        condarc_file_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
 
     safety_check_args = ["--set", "extra_safety_checks", "true"]
     safety_check_args.extend(condarc_file_args)
@@ -183,13 +202,11 @@ def disable_extra_safety_checks(
     if CONDA_VERSION < version.parse("4.10.1"):
         return
 
-    condarc_file_args = []
-    if condarc_system:
-        condarc_file_args.append("--system")
-    elif condarc_env:
-        condarc_file_args.append("--env")
-    elif condarc_file:
-        condarc_file_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
 
     safety_check_args = ["--set", "extra_safety_checks", "false"]
     safety_check_args.extend(condarc_file_args)
@@ -218,12 +235,12 @@ def _set_add_anaconda_token(
     """
     config_args = ["--set", "add_anaconda_token", "true"]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     run_command(Commands.CONFIG, *config_args)
 
@@ -240,12 +257,12 @@ def _set_ssl_verify_false(
     """
     config_args = ["--set", "ssl_verify", "false"]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     run_command(Commands.CONFIG, *config_args)
 
@@ -261,12 +278,12 @@ def _unset_restore_free_channel(
     and should be added directly."""
     config_args = ["--set", "restore_free_channel", "false"]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     run_command(Commands.CONFIG, *config_args, use_exception_handler=True)
 
@@ -287,12 +304,12 @@ def _set_channel(
         channel_url,
     ]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     run_command(Commands.CONFIG, *config_args)
 
@@ -311,12 +328,12 @@ def _get_from_condarc(
     """
     config_args = ["--get", key, "--json"]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     # Capture the JSON output from stdout
     string_io = io.StringIO()
@@ -363,12 +380,12 @@ def _remove_default_channels(
     """
     config_args = ["--remove-key", "default_channels"]
 
-    if condarc_system:
-        config_args.append("--system")
-    elif condarc_env:
-        config_args.append("--env")
-    elif condarc_file:
-        config_args.append(f"--file={condarc_file}")
+    condarc_file_args = _get_condarc_args(
+        condarc_system=condarc_system,
+        condarc_env=condarc_env,
+        condarc_file=condarc_file,
+    )
+    config_args.extend(condarc_file_args)
 
     # We suppress a CondaKeyError below to prevent logging an internal conda error
     # to the terminal.
