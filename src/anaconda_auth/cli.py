@@ -24,6 +24,57 @@ from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    ConsoleSpanExporter,
+    BatchSpanProcessor,
+)
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+
+
+def anaconda_span_details_callback(session, request):
+    """
+    Checks if the session is a BaseClient and adds
+    custom attributes to the span if it is.
+    """
+
+    # Check if the session object is an instance of your BaseClient
+    if isinstance(session, BaseClient):
+        # Use getattr for safety, in case config isn't fully set
+        attributes = {
+            "client.domain": getattr(session.config, "domain", "unknown"),
+            "client.base_uri": getattr(session, "_base_uri", "unknown"),
+            "client.api_version": getattr(session, "api_version", "unknown"),
+        }
+
+        # Return a (span_name, attributes) tuple
+        return None, attributes
+
+    # For any other session type, add no special attributes
+    return None, {}
+
+
+def setup_opentelemetry() -> TracerProvider:
+    """Configures OTel and instruments the requests library."""
+
+    # Standard OTel SDK Setup
+    provider = TracerProvider()
+
+    # We use a simple processor and console exporter for this example
+    processor = BatchSpanProcessor(ConsoleSpanExporter())
+    provider.add_span_processor(processor)
+
+    # Set the global TracerProvider
+    trace.set_tracer_provider(provider)
+
+    # Instrument the requests library globally and pass your callback
+    RequestsInstrumentor().instrument(
+        span_details_callback=anaconda_span_details_callback
+    )
+
+    return provider
+
 
 def _continue_with_login() -> int:
     if sys.stdout.isatty():
@@ -33,14 +84,16 @@ def _continue_with_login() -> int:
             return -1
         else:
             console.print(
-                dedent("""
+                dedent(
+                    """
                 To configure your credentials you can run
                   [green]anaconda login --at anaconda.com[/green]
 
                 or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
                 or set
-                """)
+                """
+                )
             )
             console.print(
                 Syntax(
@@ -212,72 +265,110 @@ def main(
         default=None, hidden=True, metavar=""
     ),
 ) -> None:
-    if version:
-        console.print(
-            f"anaconda-auth, version [cyan]{__version__}[/cyan]",
-            style="bold green",
-        )
-        raise typer.Exit()
+    provider = None
+    try:
+        provider = setup_opentelemetry()
 
-    # We have to manually handle subcommands due the the handling of the auth subcommand
-    # as a top-level subcommand in anaconda-client
-    extra_args = extra_args or []
-    if extra_args:
-        subcommand_name = extra_args[0]
-    else:
-        subcommand_name = None
+        tracer = trace.get_tracer("anaconda-auth.cli")
 
-    # Extract the subcommands attached to the app. Use dynamic loading just to be safe,
-    # because static typing shows this to be invalid.
-    subcommands_dict = getattr(ctx.command, "commands", {})
+        if version:
+            console.print(
+                f"anaconda-auth, version [cyan]{__version__}[/cyan]",
+                style="bold green",
+            )
+            raise typer.Exit()
 
-    # If the subcommand is known, then we delegate to the actual functions defined in this module
-    if cmd := subcommands_dict.get(subcommand_name):
-        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
-        return
+        # We have to manually handle subcommands due the the handling of the auth subcommand
+        # as a top-level subcommand in anaconda-client
+        extra_args = extra_args or []
+        if extra_args:
+            subcommand_name = extra_args[0]
+        else:
+            subcommand_name = None
 
-    has_legacy_options = any(
-        value is not None
-        for value in (
-            name,
-            organization,
-            strength,
-            strong,
-            weak,
-            url,
-            max_age,
-            scopes,
-            out,
-            list_scopes,
-            list_tokens,
-            remove,
-            create,
-            info,
-        )
-    )
+        # Extract the subcommands attached to the app. Use dynamic loading just to be safe,
+        # because static typing shows this to be invalid.
+        subcommands_dict = getattr(ctx.command, "commands", {})
 
-    if has_legacy_options or subcommand_name:
-        # If any of the anaconda-client options are passed, try to delegate to
-        # binstar_main if it exists. Otherwise, we just exit gracefully.
+        if cmd := subcommands_dict.get(subcommand_name):
 
-        try:
-            from binstar_client.scripts.cli import main as binstar_main
-        except (ImportError, ModuleNotFoundError):
+            with tracer.start_as_current_span(
+                f"cmd.{subcommand_name}",
+            ) as span:
+
+                span.set_attribute("command.name", subcommand_name)
+                span.set_attribute("command.args", " ".join(extra_args[1:]))
+
+                if ctx.params:
+                    for key, value in ctx.params.items():
+                        # Only log non-None values
+                        if value is not None:
+                            # We must convert all values to str, int, float, or bool
+                            # str() is a safe fallback for most simple types
+                            if not isinstance(value, (str, int, float, bool)):
+                                value = str(value)
+
+                            span.set_attribute(f"command.param.{key}", value)
+
+                try:
+                    cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+
+                    span.set_status(trace.StatusCode.OK)
+
+                except Exception as e:
+                    span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+
+                    raise e
+
             return
 
-        console.print(
-            "[yellow]DeprecationWarning[/yellow]: Please use [cyan]anaconda org auth[/cyan] instead for explicit management of anaconda.org auth tokens\n"
-        )
-        warnings.warn(
-            "Please use `anaconda org auth` instead for explicit management of anaconda.org auth tokens",
-            DeprecationWarning,
+        has_legacy_options = any(
+            value is not None
+            for value in (
+                name,
+                organization,
+                strength,
+                strong,
+                weak,
+                url,
+                max_age,
+                scopes,
+                out,
+                list_scopes,
+                list_tokens,
+                remove,
+                create,
+                info,
+            )
         )
 
-        binstar_main(sys.argv[1:], allow_plugin_main=False)
-        return
+        if has_legacy_options or subcommand_name:
+            # If any of the anaconda-client options are passed, try to delegate to
+            # binstar_main if it exists. Otherwise, we just exit gracefully.
 
-    # No subcommand was given, so we print help
-    console.print(ctx.get_help())
+            try:
+                from binstar_client.scripts.cli import main as binstar_main
+            except (ImportError, ModuleNotFoundError):
+                return
+
+            console.print(
+                "[yellow]DeprecationWarning[/yellow]: Please use [cyan]anaconda org auth[/cyan] instead for explicit management of anaconda.org auth tokens\n"
+            )
+            warnings.warn(
+                "Please use `anaconda org auth` instead for explicit management of anaconda.org auth tokens",
+                DeprecationWarning,
+            )
+
+            binstar_main(sys.argv[1:], allow_plugin_main=False)
+            return
+
+        # No subcommand was given, so we print help
+        console.print(ctx.get_help())
+    finally:
+
+        if provider:
+            provider.shutdown()
 
 
 @app.command("login")

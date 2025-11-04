@@ -26,6 +26,10 @@ from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
+from opentelemetry.instrumentation.requests import (
+    RequestsInstrumentor,
+)
+
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
     from semver.version import Version
