@@ -224,7 +224,6 @@ class BaseClient(requests.Session):
                 conda_config.cert = context.client_ssl_cert
 
         except ImportError:
-            print("Here we are the import has failed")
             pass
 
         return conda_config
