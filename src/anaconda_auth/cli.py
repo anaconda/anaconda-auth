@@ -1,3 +1,4 @@
+from datetime import datetime
 import sys
 import warnings
 from textwrap import dedent
@@ -18,11 +19,17 @@ from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
+from anaconda_auth.telemetry import (
+    get_telemetry_logger,
+    record_command_duration,
+    setup_telemetry,
+)
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+from anaconda_opentelemetry.signals import increment_counter, record_histogram
 
 
 def _continue_with_login() -> int:
@@ -33,14 +40,16 @@ def _continue_with_login() -> int:
             return -1
         else:
             console.print(
-                dedent("""
+                dedent(
+                    """
                 To configure your credentials you can run
                   [green]anaconda login --at anaconda.com[/green]
 
                 or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
                 or set
-                """)
+                """
+                )
             )
             console.print(
                 Syntax(
@@ -85,6 +94,12 @@ def http_error(e: HTTPError) -> int:
         error_code = e.response.json().get("error", {}).get("code", "")
     except JSONDecodeError:
         error_code = ""
+
+    increment_counter(
+        "http_error",
+        by=1,
+        attributes={"name": e.__class__.__name__, "error_code": error_code},
+    )
 
     if error_code == "auth_required":
         if "Authorization" in e.request.headers:
@@ -212,6 +227,10 @@ def main(
         default=None, hidden=True, metavar=""
     ),
 ) -> None:
+    cmd_start_time = datetime.now()
+    setup_telemetry(_obtain_site_config(), __version__)
+    log = get_telemetry_logger(__name__)
+
     if version:
         console.print(
             f"anaconda-auth, version [cyan]{__version__}[/cyan]",
@@ -233,7 +252,11 @@ def main(
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
     if cmd := subcommands_dict.get(subcommand_name):
+        log.info(
+            "command: %r subcommands: %r args: %r", cmd, subcommands_dict, ctx.args
+        )
         cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+        record_command_duration(cmd_start_time, cmd)
         return
 
     has_legacy_options = any(
@@ -260,6 +283,12 @@ def main(
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
+        log.info(
+            "has_legacy_options: %r subcommand_name: %r",
+            has_legacy_options,
+            subcommand_name,
+        )
+
         try:
             from binstar_client.scripts.cli import main as binstar_main
         except (ImportError, ModuleNotFoundError):
@@ -274,6 +303,7 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
+        record_command_duration(cmd_start_time, ", ".join(sys.argv[1:]))
         return
 
     # No subcommand was given, so we print help

@@ -6,6 +6,7 @@ dependencies:
 - conda
 - python=3.10
 - anaconda-anon-usage
+- anaconda-opentelemetry
 - anaconda-cli-base >=0.4.0
 - anaconda-client >=1.13.0
 - tox=3
