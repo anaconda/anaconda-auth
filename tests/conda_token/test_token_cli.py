@@ -672,7 +672,6 @@ def test_token_uninstall(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-
     result = invoke_cli(["token", "uninstall", option_flag, org_name])
     assert result.exit_code == 0, result.stdout
 
