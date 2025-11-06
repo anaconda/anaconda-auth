@@ -259,13 +259,14 @@ def configure_conda(
 @app.command(name="uninstall")
 def uninstall_token(
     org_name: str = typer.Option("", "-o", "--org"),  # type: ignore
-    all: bool = typer.Option(False, "-all", "--all"),
+    all: bool = typer.Option(False, "-a", "--all"),
 ) -> None:
     """Uninstall a repository token for a specific organization."""
 
     token_info = TokenInfo.load()
     if all:
         token_info.delete_all_repo_token()
+        token_info.save()
         console.print("Successfully deleted [cyan]all[/cyan] repo tokens.")
         return
 

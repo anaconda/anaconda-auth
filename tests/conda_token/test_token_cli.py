@@ -673,6 +673,7 @@ def test_token_uninstall(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+
     result = invoke_cli(["token", "uninstall", option_flag, org_name])
     assert result.exit_code == 0, result.stdout
 
@@ -681,17 +682,23 @@ def test_token_uninstall(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
+@pytest.mark.parametrize("option_flag", ["-a", "--all"])
 def test_token_uninstall_all(
+    option_flag,
     token_is_installed: TokenInfo,
+    org_name: str,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    result = invoke_cli(["token", "uninstall", "-all"])
+    token_info = TokenInfo.load()
+
+    result = invoke_cli(["token", "uninstall", option_flag])
     assert result.exit_code == 0, result.stdout
 
     token_info = TokenInfo.load()
+
     with pytest.raises(TokenNotFoundError):
-        _ = token_info.get_repo_token(org_name="non-existant")
+        _ = token_info.get_repo_token(org_name=org_name)
 
 
 @pytest.mark.skipif(is_conda_installed(), reason="Conda not available")
