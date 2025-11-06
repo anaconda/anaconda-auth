@@ -392,9 +392,9 @@ def test_token_remove(
     invoke_cli: CLIInvoker,
 ) -> None:
     token_set("superSecretToken", force=True)
-    assert token_list() == {
-        "https://repo.anaconda.cloud/repo/": "superSecretToken"
-    }, token_list()
+    assert token_list() == {"https://repo.anaconda.cloud/repo/": "superSecretToken"}, (
+        token_list()
+    )
     result = invoke_cli(
         [
             "token",
