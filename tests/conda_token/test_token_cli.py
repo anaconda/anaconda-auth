@@ -1,8 +1,6 @@
 from datetime import datetime
 from uuid import UUID
-from uuid import uuid4
 
-import jwt
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker

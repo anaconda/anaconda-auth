@@ -14,7 +14,8 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import cast
-from uuid import UUID, uuid4
+from uuid import UUID
+from uuid import uuid4
 
 import jwt
 import pytest

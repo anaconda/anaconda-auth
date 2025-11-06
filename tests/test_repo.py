@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
@@ -11,7 +12,6 @@ from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.repo import TokenInfoResponse
-from anaconda_auth.token import TokenInfo
 
 
 @pytest.fixture(autouse=True)
