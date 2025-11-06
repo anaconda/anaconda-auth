@@ -37,8 +37,6 @@ def business_org_id() -> UUID:
 @pytest.fixture()
 def valid_api_key():
     token_info = TokenInfo.load(create=True)
-    # The important part is that the key is not expired. If this still exists in
-    # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
     token_info.api_key = jwt.encode(
         {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
     )
@@ -394,9 +392,9 @@ def test_token_remove(
     invoke_cli: CLIInvoker,
 ) -> None:
     token_set("superSecretToken", force=True)
-    assert token_list() == {"https://repo.anaconda.cloud/repo/": "superSecretToken"}, (
-        token_list()
-    )
+    assert token_list() == {
+        "https://repo.anaconda.cloud/repo/": "superSecretToken"
+    }, token_list()
     result = invoke_cli(
         [
             "token",
