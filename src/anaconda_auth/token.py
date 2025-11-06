@@ -393,6 +393,5 @@ class TokenInfo(BaseModel):
 
     def delete_all_repo_token(self) -> None:
         """Delete all repo tokens"""
-        # TODO: Confirm whether we should raise an exception or not if token doesn't exist for specified organization
 
         self.repo_tokens[:] = []
