@@ -352,10 +352,14 @@ def test_token_uninstall_all(
 
 @pytest.mark.skipif(is_conda_installed(), reason="Conda not available")
 def test_token_remove(
+    token_is_installed: TokenInfo,
+    org_name,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
-    repo_config.token_set("superSecretToken", force=True)
+    repo_config.token_set(
+        token_is_installed.get_repo_token(org_name=org_name), force=True
+    )
     assert repo_config.token_list() == {
         "https://repo.anaconda.cloud/repo/": "superSecretToken"
     }, repo_config.token_list()
@@ -367,3 +371,6 @@ def test_token_remove(
     )
     assert result.exit_code == 0, result.stdout
     assert repo_config.token_list() == {}, repo_config.token_list()
+    token_info = TokenInfo.load()
+    with pytest.raises(TokenNotFoundError):
+        _ = token_info.get_repo_token(org_name=org_name)
