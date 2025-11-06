@@ -68,14 +68,6 @@ def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
     return valid_api_key
 
 
-@pytest.fixture(autouse=True)
-def mock_do_auth_flow(mocker: MockerFixture) -> None:
-    mocker.patch(
-        "anaconda_auth.repo._do_auth_flow",
-        return_value="test-access-token",
-    )
-
-
 @pytest.fixture()
 def token_does_not_exist_in_service(
     requests_mock: RequestMocker, org_name: str
