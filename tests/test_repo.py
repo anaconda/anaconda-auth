@@ -1,8 +1,5 @@
 from datetime import datetime
 from uuid import UUID
-from uuid import uuid4
-
-import jwt
 import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
@@ -15,21 +12,6 @@ from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
-
-
-@pytest.fixture()
-def business_org_id() -> UUID:
-    return uuid4()
-
-
-@pytest.fixture()
-def valid_api_key():
-    token_info = TokenInfo.load(create=True)
-    token_info.api_key = jwt.encode(
-        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
-    )
-    token_info.save()
-    return token_info
 
 
 @pytest.fixture(autouse=True)
@@ -57,28 +39,6 @@ def user_has_business_subscription(
             ]
         },
     )
-
-
-@pytest.fixture()
-def user_has_starter_subscription(
-    request, requests_mock: RequestMocker, business_org_id: UUID
-) -> None:
-    requests_mock.get(
-        "https://anaconda.com/api/account",
-        json={
-            "subscriptions": [
-                {
-                    "org_id": str(business_org_id),
-                    "product_code": "starter_subscription",
-                }
-            ]
-        },
-    )
-
-
-@pytest.fixture()
-def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
-    requests_mock.get("https://anaconda.com/api/account", json={})
 
 
 @pytest.fixture(autouse=True)

@@ -22,23 +22,6 @@ from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 
 
-@pytest.fixture()
-def business_org_id() -> UUID:
-    return uuid4()
-
-
-@pytest.fixture()
-def valid_api_key():
-    token_info = TokenInfo.load(create=True)
-    # The important part is that the key is not expired. If this still exists in
-    # 2099, Trump hasn't blown up the world and it has far exceeded my expectations.
-    token_info.api_key = jwt.encode(
-        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
-    )
-    token_info.save()
-    return token_info
-
-
 @pytest.fixture(autouse=True)
 def mock_do_auth_flow(mocker: MockerFixture) -> None:
     mocker.patch(
@@ -64,28 +47,6 @@ def user_has_business_subscription(
             ]
         },
     )
-
-
-@pytest.fixture()
-def user_has_starter_subscription(
-    request, requests_mock: RequestMocker, business_org_id: UUID
-) -> None:
-    requests_mock.get(
-        "https://anaconda.com/api/account",
-        json={
-            "subscriptions": [
-                {
-                    "org_id": str(business_org_id),
-                    "product_code": "starter_subscription",
-                }
-            ]
-        },
-    )
-
-
-@pytest.fixture()
-def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
-    requests_mock.get("https://anaconda.com/api/account", json={})
 
 
 @pytest.fixture(autouse=True)

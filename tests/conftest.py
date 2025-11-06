@@ -14,8 +14,9 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
+import jwt
 import pytest
 import typer
 from click.testing import Result
@@ -462,3 +463,40 @@ def user_has_no_orgs(
         json=[],
     )
     return []
+
+
+@pytest.fixture()
+def business_org_id() -> UUID:
+    return uuid4()
+
+
+@pytest.fixture()
+def user_has_starter_subscription(
+    request, requests_mock: RequestMocker, business_org_id: UUID
+) -> None:
+    requests_mock.get(
+        "https://anaconda.com/api/account",
+        json={
+            "subscriptions": [
+                {
+                    "org_id": str(business_org_id),
+                    "product_code": "starter_subscription",
+                }
+            ]
+        },
+    )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
+
+
+@pytest.fixture()
+def valid_api_key():
+    token_info = TokenInfo.load(create=True)
+    token_info.api_key = jwt.encode(
+        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+    )
+    token_info.save()
+    return token_info
