@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 
@@ -138,11 +139,12 @@ class NavigatorFallback(KeyringBackend):
 
 
 class AnacondaKeyring(KeyringBackend):
+    name = "token AnacondaKeyring"  # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
     keyring_path = Path("~/.anaconda/keyring").expanduser()
 
     @classproperty
     def priority(cls) -> float:
-        config = AnacondaAuthConfig()
+        config = AnacondaAuthSitesConfig.load_site()
         if config.preferred_token_storage == "system":
             return 0.2
         elif config.preferred_token_storage == "anaconda-keyring":
@@ -202,6 +204,24 @@ class AnacondaKeyring(KeyringBackend):
             raise PasswordDeleteError
 
 
+class ConfigKeyring(AnacondaKeyring):
+    name = "token ConfigKeyring"
+
+    @classproperty
+    def priority(cls) -> float:
+        data = AnacondaAuthSitesConfig.load_site().keyring
+        return 100.0 if data else 0.0
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise PasswordSetError("This keyring cannot set passwords")
+
+    def delete_password(self, service: str, username: str) -> None:
+        raise PasswordSetError("This keyring cannot delete passwords")
+
+    def _read(self) -> LocalKeyringData:
+        return AnacondaAuthSitesConfig.load_site().keyring or {}
+
+
 class RepoToken(BaseModel):
     token: TokenString
     org_name: Union[OrgName, None] = None
@@ -217,7 +237,9 @@ TOKEN_INFO_VERSION = 2
 
 
 class TokenInfo(BaseModel):
-    domain: str = Field(default_factory=lambda: AnacondaAuthConfig().domain)
+    domain: str = Field(
+        default_factory=lambda: AnacondaAuthSitesConfig.load_site().domain
+    )
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
@@ -258,7 +280,7 @@ class TokenInfo(BaseModel):
             The token information.
 
         """
-        domain = domain or AnacondaAuthConfig().domain
+        domain = domain or AnacondaAuthSitesConfig.load_site().domain
 
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
         if keyring_data is not None:

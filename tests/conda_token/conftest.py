@@ -6,10 +6,6 @@ import pytest
 
 conda = pytest.importorskip("conda")
 
-from conda.cli.python_api import Commands  # noqa: E402
-from conda.cli.python_api import run_command  # noqa: E402
-
-from anaconda_auth._conda.repo_config import clean_index  # noqa: E402
 from anaconda_auth._conda.repo_config import token_remove  # noqa: E402
 from anaconda_auth._conda.repo_config import token_set  # noqa: E402
 
@@ -34,33 +30,6 @@ def repo_url(test_server_url: str) -> str:
             yield repo_url
 
 
-@pytest.fixture(scope="session", autouse=True)
-def reset_channels_alias():
-    clean_index()
-    run_command(Commands.CONFIG, "--remove-key", "channels", use_exception_handler=True)
-    run_command(
-        Commands.CONFIG, "--prepend", "channels", "defaults", use_exception_handler=True
-    )
-    run_command(
-        Commands.CONFIG,
-        "--set",
-        "channel_alias",
-        "https://conda.anaconda.org",
-        use_exception_handler=True,
-    )
-
-
-@pytest.fixture(scope="function", autouse=True)
-def set_ssl_verify_true():
-    run_command(
-        Commands.CONFIG, "--set", "ssl_verify", "true", use_exception_handler=True
-    )
-    yield
-    run_command(
-        Commands.CONFIG, "--set", "ssl_verify", "true", use_exception_handler=True
-    )
-
-
 @pytest.fixture(scope="function")
 def remove_token(repo_url):
     token_remove()
@@ -68,7 +37,7 @@ def remove_token(repo_url):
     token_remove()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def remove_token_end_of_session():
     yield
     token_remove()
@@ -123,13 +92,6 @@ def set_secret_token_with_signing():
 def secret_token():
     token = os.environ.get("CE_TOKEN", "SECRET_TOKEN")
     yield token
-
-
-@pytest.fixture(scope="function")
-def uninstall_rope():
-    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
-    yield
-    run_command(Commands.REMOVE, "rope", "-y", "--force", use_exception_handler=True)
 
 
 @pytest.fixture

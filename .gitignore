@@ -48,3 +48,6 @@ src/*/_version.py
 /tokens.json
 
 .DS_Store
+
+# Pyright
+pyrightconfig.json

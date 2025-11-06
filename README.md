@@ -61,6 +61,7 @@ The following parameters in the `plugin.auth` section control the login actions 
 | `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token; can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
 | `api_key` | `ANACONDA_AUTH_API_KEY` | API key; if `None`, defaults to keyring storage | `None` |
 | `extra_headers` | `ANACONDA_AUTH_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
+| `use_unified_repo_api_key` | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY` | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False` |
 
 ### Example
 

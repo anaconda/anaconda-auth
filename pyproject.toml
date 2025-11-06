@@ -12,7 +12,7 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.5.2"
+  "anaconda-cli-base >=0.5.4"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
@@ -154,6 +154,20 @@ addopts = [
   "--durations=5",
   "-vv"
 ]
+filterwarnings = [
+  # Treat all warnings errors: https://til.simonwillison.net/pytest/treat-warnings-as-errors
+  "error",
+  # Ignore our own intended deprecation warnings
+  "ignore:Please use `anaconda org auth` instead:DeprecationWarning",
+  "ignore:Client API version is:DeprecationWarning",
+  "ignore:The following fields have been set using legacy environment variables:DeprecationWarning",
+  "ignore:AnacondaCloudConfig is deprecated, please use AnacondaAuthConfig instead:DeprecationWarning",
+  "ignore:Please replace imports from `import anaconda_cloud_auth` to `import anaconda_auth`:DeprecationWarning",
+  # TODO(mattkram): This is something we need to fix in anaconda-cli-base
+  "ignore:pkg_resources is deprecated as an API:UserWarning",
+  # Ignore conda's PendingDeprecationWarning
+  "ignore::PendingDeprecationWarning"
+]
 markers = [
   "integration: Integration tests requiring a browser"
 ]
@@ -188,8 +202,10 @@ legacy_tox_ini = """
 envlist =
     py39
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
-    py311
-    py312
+    py311-{conda}
+    py312-{conda}
+    py313-{no-conda,conda}
+    pendingdeprecations
     mypy
     report
 isolated_build = True
@@ -203,6 +219,7 @@ python =
     3.10: py310, mypy
     3.11: py311, mypy
     3.12: py312, mypy
+    3.13: py313, mypy
 
 [testenv]
 passenv =
@@ -210,6 +227,7 @@ passenv =
     CE_TOKEN
     ANACONDA_AUTH_DOMAIN
     ANACONDA_AUTH_CLIENT_ID
+    ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY
 deps =
     mypy
     pytest

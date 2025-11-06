@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import warnings
+from pathlib import Path
+from textwrap import dedent
 from uuid import uuid4
 
 import pytest
@@ -12,9 +14,13 @@ from requests.exceptions import SSLError
 
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
+from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
+from .conftest import is_conda_installed
 
 HERE = os.path.dirname(__file__)
 
@@ -128,6 +134,7 @@ def test_client_min_api_version_header(
 ) -> None:
     client = BaseClient(user_agent="client/0.1.0", api_version=api_version)
     with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("default")
         response = client.get("/api/something")
 
     assert response.status_code == 200
@@ -349,3 +356,328 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
     client = BaseClient(ssl_verify=False)
     res = client.get("api/account")
     assert res.ok
+
+
+@pytest.mark.parametrize(
+    "hash,hostname,expected_result",
+    [
+        (False, "test-hostname", "test-hostname"),
+        (True, "test-hostname", "gQ3w7KzEFT543NdWZR-TVg"),
+    ],
+)
+def test_hostname_header(
+    mocker: MockerFixture, hash: bool, hostname: str, expected_result: str
+) -> None:
+    mocker.patch("anaconda_auth.utils.gethostname", return_value=hostname)
+
+    client = BaseClient(hash_hostname=hash)
+
+    assert client.headers.get("X-Client-Hostname") == expected_result
+
+
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
+def test_anaconda_com_default_site_config() -> None:
+    """Test that without external modifiers the config matches the coded parameters"""
+
+    client = BaseClient()
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
+
+    client = BaseClient(site="anaconda.com")
+    assert client.config.model_dump() == AnacondaAuthSite().model_dump()
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [plugin.auth]
+            ssl_verify = false
+            """
+        )
+    )
+
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+    assert not client.config.ssl_verify
+    assert client.config.api_key is None
+
+    # specific overrides by kwargs
+    client = BaseClient(api_key="bar")
+    assert client.config != AnacondaAuthConfig()
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_client_site_selection_by_name(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            api_key = "foo"
+            """
+        )
+    )
+
+    # make sure the default hasn't changed
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+
+    # load configured site
+    client = BaseClient(site="local")
+    assert client.config.domain == "localhost"
+    assert client.config.auth_domain_override == "auth-local"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "foo"
+    assert client.config.extra_headers is None
+
+    # load configured site and override
+    client = BaseClient(site="local", api_key="bar", extra_headers='{"key": "value"}')
+    assert client.config.domain == "localhost"
+    assert client.config.auth_domain_override == "auth-local"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+    assert client.config.extra_headers == {"key": "value"}
+
+    with pytest.raises(UnknownSiteName):
+        _ = BaseClient(site="unknown")
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_condarc_base_defaults(condarc_path: Path) -> None:
+    condarc_path.write_text(
+        dedent(
+            """\
+            ssl_verify: truststore
+            proxy_servers:
+              http: condarc
+              https: condarc
+
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
+
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
+    )
+
+    client = BaseClient()
+    assert client.config.ssl_verify
+    assert client.proxies["http"] == "condarc"
+    assert client.proxies["https"] == "condarc"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_condarc_override_with_anaconda_toml(
+    config_toml: Path, condarc_path: Path
+) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            api_key = "foo"
+
+            [plugin.auth]
+            client_cert = "toml.pem"
+            client_cert_key = "toml_key.key"
+
+
+            [plugin.auth.proxy_servers]
+            http = "toml"
+            https = "toml"
+            """
+        )
+    )
+
+    condarc_path.write_text(
+        dedent(
+            """\
+            client_cert: conda.pem
+            client_cert_key: conda.key
+            ssl_verify: truststore
+            proxy_servers:
+              http: condarc
+              https: condarc
+
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
+
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
+    )
+
+    client = BaseClient()
+    assert client.config.ssl_verify
+    assert client.proxies["http"] == "toml"
+    assert client.proxies["https"] == "toml"
+    assert client.cert == ("toml.pem", "toml_key.key")
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_kwargs_supremecy(config_toml: Path, condarc_path: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+                [sites.local]
+                domain = "localhost"
+                auth_domain_override = "auth-local"
+                ssl_verify = false
+                api_key = "foo"
+
+                [plugin.auth]
+                client_cert = "toml.pem"
+                client_cert_key = "toml_key.key"
+
+                [plugin.auth.proxy_servers]
+                http = "toml"
+                https = "toml"
+                """
+        )
+    )
+
+    condarc_path.write_text(
+        dedent(
+            """\
+            ssl_verify: truststore
+            proxy_servers:
+              http: condarc
+              https: condarc
+
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
+
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
+    )
+
+    client = BaseClient(
+        proxy_servers={"http": "kwargy", "https": "kwargy"},
+        client_cert="kwarg.cert",
+        client_cert_key="kwarg.key",
+    )
+    assert client.config.ssl_verify
+    assert client.proxies["http"] == "kwargy"
+    assert client.proxies["https"] == "kwargy"
+    assert client.cert == ("kwarg.cert", "kwarg.key")
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_just_client_no_key(config_toml: Path) -> None:
+    client = BaseClient(
+        client_cert="kwarg.cert",
+    )
+    assert client.cert == "kwarg.cert"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_ssl_context(config_toml: Path, condarc_path: Path) -> None:
+    condarc_path.write_text(
+        dedent(
+            """\
+            ssl_verify: truststore
+            proxy_servers:
+              http: condarc
+              https: condarc
+
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
+
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
+    )
+
+    import ssl
+
+    import truststore  # type: ignore
+
+    ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    client = BaseClient()
+    assert client.config.ssl_verify
+    # TODO change this to some type of equality operator
+    assert (
+        client.adapters["http://"]._ssl_context._ctx.protocol
+        == ssl_context._ctx.protocol
+    )
+    assert (
+        client.adapters["https://"]._ssl_context._ctx.protocol
+        == ssl_context._ctx.protocol
+    )
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+@pytest.mark.skipif(not is_conda_installed(), reason="Conda module not available")
+def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
+    condarc_path.write_text(
+        dedent(
+            """\
+            ssl_verify: truststore
+            client_cert: client_cert.pem
+            client_cert_key: client_cert_key
+            proxy_servers:
+              http: condarc
+              https: condarc
+
+            default_channels:
+              - https://repo.anaconda.com/pkgs/main
+            channels:
+              - defaults
+              - conda-forge
+
+            channel_alias: https://conda.anaconda.org/
+            """
+        )
+    )
+    client = BaseClient()
+    assert client.cert == ("client_cert.pem", "client_cert_key")
+
+
+@pytest.mark.usefixtures("disable_dot_env", "config_toml")
+def test_client_site_selection_with_config() -> None:
+    # make sure the default hasn't changed
+    client = BaseClient()
+    assert client.config == AnacondaAuthConfig()
+
+    site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
+
+    # load configured site
+    client = BaseClient(site=site)
+    assert client.config.domain == "example.com"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "foo"
+
+    # load configured site and override
+    client = BaseClient(site=site, api_key="bar")
+    assert client.config.domain == "example.com"
+    assert not client.config.ssl_verify
+    assert client.config.api_key == "bar"
+
+    with pytest.raises(UnknownSiteName):
+        _ = BaseClient(site=1)  # type: ignore
