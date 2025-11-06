@@ -7,13 +7,16 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
-from ..conftest import CLIInvoker, is_conda_installed
+from ..conftest import CLIInvoker
+from ..conftest import is_conda_installed
 
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
 from anaconda_auth._conda import repo_config
-from anaconda_auth._conda.repo_config import REPO_URL, token_list, token_set
+from anaconda_auth._conda.repo_config import REPO_URL
+from anaconda_auth._conda.repo_config import token_list
+from anaconda_auth._conda.repo_config import token_set
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
@@ -393,9 +396,9 @@ def test_token_remove(
     invoke_cli: CLIInvoker,
 ) -> None:
     token_set("superSecretToken", force=True)
-    assert token_list() == {
-        "https://repo.anaconda.cloud/repo/": "superSecretToken"
-    }, token_list()
+    assert token_list() == {"https://repo.anaconda.cloud/repo/": "superSecretToken"}, (
+        token_list()
+    )
     result = invoke_cli(
         [
             "token",
@@ -705,9 +708,9 @@ def test_token_remove(
     invoke_cli: CLIInvoker,
 ) -> None:
     token_set("superSecretToken", force=True)
-    assert token_list() == {
-        "https://repo.anaconda.cloud/repo/": "superSecretToken"
-    }, token_list()
+    assert token_list() == {"https://repo.anaconda.cloud/repo/": "superSecretToken"}, (
+        token_list()
+    )
     result = invoke_cli(
         [
             "token",
