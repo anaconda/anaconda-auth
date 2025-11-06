@@ -258,7 +258,7 @@ def configure_conda(
 
 @app.command(name="uninstall")
 def uninstall_token(
-    org_name: str = typer.Option("", "-o", "--org"),  # type: ignore
+    org_name: str = typer.Option("", "-o", "--org"),
     all: bool = typer.Option(False, "-a", "--all"),
 ) -> None:
     """Uninstall a repository token for a specific organization."""
