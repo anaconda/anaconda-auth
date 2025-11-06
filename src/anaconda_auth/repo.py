@@ -315,7 +315,7 @@ def remove_token(
         True, "-s", "--system", help="Organization name (slug)."
     ),
 ) -> None:
-    """Alias the conda token remove command and employ the same logic."""
+    """Remove binstar token and data from Keyring."""
     from anaconda_auth._conda import repo_config
 
     repo_config.token_remove(file=file if file else None, env=env, system=system)
