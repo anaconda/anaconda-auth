@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 import os
 import traceback
-from uuid import uuid4
 import warnings
 from collections import defaultdict
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import IO
@@ -15,6 +14,7 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import cast
+from uuid import uuid4
 
 import pytest
 import typer
@@ -23,15 +23,15 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
 from anaconda_auth.client import BaseClient
-from anaconda_auth.repo import OrganizationData, TokenCreateResponse, TokenInfoResponse
+from anaconda_auth.repo import OrganizationData
+from anaconda_auth.repo import TokenCreateResponse
+from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
-
-
-from requests_mock import Mocker as RequestMocker
 
 load_dotenv()
 
