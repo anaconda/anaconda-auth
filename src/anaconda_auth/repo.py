@@ -293,7 +293,7 @@ def set_token(
         True, help="Automatically configure default channels."
     ),
 ) -> None:
-    """Alias the `conda token set` command, but replace logic with updated `TokenInfo` logic."""
+    """Install a new repository token."""
     install_token(
         token=token, org_name=org_name, set_default_channels=set_default_channels
     )
