@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
 
-from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import RepoToken
 from anaconda_auth.token import TokenInfo
