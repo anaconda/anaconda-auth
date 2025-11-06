@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
 
-from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import RepoToken
 from anaconda_auth.token import TokenInfo
@@ -41,19 +40,6 @@ class SubscriptionData(BaseModel):
 
 
 class RepoAPIClient(BaseClient):
-    def __init__(self) -> None:
-        super().__init__()
-        self._access_token: str | None = None
-
-    def _ensure_access_token(self) -> None:
-        """Some endpoints do not accept API keys, so this method ensures we perform
-        an interactive authentication and then cache the access token.
-        """
-        if self._access_token is not None:
-            return
-        self._access_token = _do_auth_flow()
-        self.auth.api_key = self._access_token  # type: ignore
-
     def _get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
         """Return the token information, if it exists.
 
@@ -64,7 +50,6 @@ class RepoAPIClient(BaseClient):
             The token information, including its id and expiration date, or
             None if a token doesn't exist.
         """
-        self._ensure_access_token()
         response = self.get(
             f"/api/organizations/{org_name}/ce/current-token",
         )
@@ -82,18 +67,17 @@ class RepoAPIClient(BaseClient):
         Returns:
             The token information, including its value and expiration date.
         """
-        self._ensure_access_token()
         response = self.put(
             f"/api/organizations/{org_name}/ce/current-token",
             json={"confirm": "yes"},
         )
         return TokenCreateResponse(**response.json())
 
-    def issue_new_token(self, org_name: str) -> str:
+    def issue_new_token(self, org_name: str, yes: bool = False) -> str:
         """Issue a new repository token from anaconda.com."""
         existing_token_info = self._get_repo_token_info(org_name=org_name)
 
-        if existing_token_info is not None:
+        if existing_token_info is not None and not yes:
             console.print(
                 f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
             )
@@ -212,6 +196,7 @@ def install_token(
     set_default_channels: bool = typer.Option(
         True, help="Automatically configure default channels."
     ),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Accept all prompts"),
 ) -> None:
     """Create and install a new repository token."""
     client = RepoAPIClient()
@@ -220,7 +205,7 @@ def install_token(
         org_name = _select_org_name(client)
 
     if not token:
-        token = client.issue_new_token(org_name=org_name)
+        token = client.issue_new_token(org_name=org_name, yes=yes)
 
     from anaconda_auth._conda import repo_config
 
@@ -238,7 +223,7 @@ def install_token(
     repo_config.configure_plugin()
 
     if set_default_channels:
-        repo_config.configure_default_channels()
+        repo_config.configure_default_channels(force=yes)
         msg += ", and conda has been configured"
 
     console.print(f"Success! {msg}.")
