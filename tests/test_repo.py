@@ -17,7 +17,7 @@ from anaconda_auth.repo import TokenInfoResponse
 @pytest.fixture(autouse=True)
 def mock_do_auth_flow(mocker: MockerFixture) -> None:
     mocker.patch(
-        "anaconda_auth.repo._do_auth_flow",
+        "anaconda_auth.actions._do_auth_flow",
         return_value="test-access-token",
     )
 
