@@ -204,6 +204,24 @@ class AnacondaKeyring(KeyringBackend):
             raise PasswordDeleteError
 
 
+class ConfigKeyring(AnacondaKeyring):
+    name = "token ConfigKeyring"
+
+    @classproperty
+    def priority(cls) -> float:
+        data = AnacondaAuthSitesConfig.load_site().keyring
+        return 100.0 if data else 0.0
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise PasswordSetError("This keyring cannot set passwords")
+
+    def delete_password(self, service: str, username: str) -> None:
+        raise PasswordSetError("This keyring cannot delete passwords")
+
+    def _read(self) -> LocalKeyringData:
+        return AnacondaAuthSitesConfig.load_site().keyring or {}
+
+
 class RepoToken(BaseModel):
     token: TokenString
     org_name: Union[OrgName, None] = None
