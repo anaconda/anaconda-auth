@@ -58,6 +58,9 @@ class DeviceCodeFlow:
 
         data = {"client_id": self.config.client_id, "scope": "openid"}
 
+        if self.config.oidc.device_authorization_endpoint is None:
+            raise DeviceFlowError("Server does not support device authorization")
+
         try:
             response = requests.post(
                 self.config.oidc.device_authorization_endpoint,
