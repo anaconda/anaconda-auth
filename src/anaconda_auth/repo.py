@@ -277,11 +277,26 @@ def set_token(
     set_default_channels: bool = typer.Option(
         True, help="Automatically configure default channels."
     ),
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
 ) -> None:
     """Install a new repository token."""
     install_token(
         token=token, org_name=org_name, set_default_channels=set_default_channels
     )
+    from anaconda_auth._conda import repo_config
+
+    repo_config.token_set(token=token, file=file, env=env, system=system)
 
 
 @app.command(name="remove")

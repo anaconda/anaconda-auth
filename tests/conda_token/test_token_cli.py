@@ -359,7 +359,9 @@ def test_token_remove(
         token_is_installed.get_repo_token(org_name=org_name), force=True
     )
     assert repo_config.token_list() == {
-        "https://repo.anaconda.cloud/repo/": "superSecretToken"
+        "https://repo.anaconda.cloud/repo/": token_is_installed.get_repo_token(
+            org_name=org_name
+        )
     }, repo_config.token_list()
     result = invoke_cli(
         [
@@ -369,3 +371,39 @@ def test_token_remove(
     )
     assert result.exit_code == 0, result.stdout
     assert repo_config.token_list() == {}, repo_config.token_list()
+
+
+def test_set_token_prints_success_message_via_cli(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(
+        ["token", "set", "--org", org_name, token_created_in_service.token],
+        input="y\nn\n",
+    )
+
+    assert result.exit_code == 0, result.stdout
+
+
+def test_set_token_failure_without_token(
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(
+        [
+            "token",
+            "set",
+        ],
+        input="y\nn\n",
+    )
+
+    assert result.exit_code == 2, result.stdout
+    assert len(repo_config.token_list()) > 0

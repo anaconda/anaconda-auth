@@ -138,38 +138,3 @@ def test_issue_new_token_prints_success_message_via_cli(
     expected_msg = "Your conda token has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
     assert result.exit_code == 0, result.stdout
     assert expected_msg in result.stdout
-
-
-def test_set_token_prints_success_message_via_cli(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        ["token", "set", "--org", org_name, token_created_in_service.token],
-        input="y\nn\n",
-    )
-
-    assert result.exit_code == 0, result.stdout
-
-
-def test_set_token_failure_without_token(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        [
-            "token",
-            "set",
-        ],
-        input="y\nn\n",
-    )
-
-    assert result.exit_code == 2, result.stdout
