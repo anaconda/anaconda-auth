@@ -16,14 +16,27 @@ from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 
-@pytest.fixture(autouse=True)
-def mock_openid_configuration(requests_mock: RequestMocker):
-    config = AnacondaAuthConfig()
+@pytest.fixture(
+    autouse=True,
+    params=[
+        "with-device-authorization-endpoint",
+        "without-device-authorization-endpoint",
+    ],
+)
+def mock_openid_configuration(request, requests_mock: RequestMocker):
     """Mock return value of openid configuration to prevent requiring actual network calls."""
+    config = AnacondaAuthConfig()
     expected = {
         "authorization_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/authorize",
         "token_endpoint": f"https://auth.{config.domain}/api/auth/oauth2/token",
     }
+    # This field was added to the openid configuration to support device auth, but is
+    # not present on anaconda.org, so we need to test it as optional. Remove once
+    # we don't need to special case this.
+    if request.param == "with-device-authorization-endpoint":
+        expected["device_authorization_endpoint"] = (
+            f"https://auth.{config.domain}/api/auth/oauth2/device/authorize"
+        )
     requests_mock.get(url=config.well_known_url, json=expected)
 
 

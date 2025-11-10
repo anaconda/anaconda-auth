@@ -58,6 +58,7 @@ class AnacondaAuthSite(BaseModel):
     proxy_servers: Optional[MutableMapping[str, str]] = None
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
+    use_device_flow: bool = False
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
@@ -132,6 +133,7 @@ class AnacondaAuthConfig(
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
+    device_authorization_endpoint: Optional[str] = None
 
 
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
