@@ -133,7 +133,7 @@ class AnacondaAuthConfig(
 class OpenIDConfiguration(BaseModel):
     authorization_endpoint: str
     token_endpoint: str
-    device_authorization_endpoint: str
+    device_authorization_endpoint: Optional[str] = None
 
 
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
