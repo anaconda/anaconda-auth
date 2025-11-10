@@ -304,8 +304,3 @@ def remove_token(
     from anaconda_auth._conda import repo_config
 
     repo_config.token_remove(file=file if file else None, env=env, system=system)
-    token_info = TokenInfo.load()
-    try:
-        token_info.delete()
-    except PasswordDeleteError:
-        console.print("No token found in Keyring data.")

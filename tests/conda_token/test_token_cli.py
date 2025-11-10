@@ -350,7 +350,6 @@ def test_token_uninstall_all(
         _ = token_info.get_repo_token(org_name=org_name)
 
 
-@pytest.mark.skipif(is_conda_installed(), reason="Conda not available")
 def test_token_remove(
     token_is_installed: TokenInfo,
     org_name,
@@ -371,6 +370,3 @@ def test_token_remove(
     )
     assert result.exit_code == 0, result.stdout
     assert repo_config.token_list() == {}, repo_config.token_list()
-    token_info = TokenInfo.load()
-    with pytest.raises(TokenNotFoundError):
-        _ = token_info.get_repo_token(org_name=org_name)
