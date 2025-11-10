@@ -6,7 +6,6 @@ from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
 from ..conftest import CLIInvoker
-from ..conftest import is_conda_installed
 
 pytest.importorskip("conda")
 
