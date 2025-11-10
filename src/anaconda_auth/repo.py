@@ -4,7 +4,6 @@ from datetime import datetime
 from uuid import UUID
 
 import typer
-from keyring.errors import PasswordDeleteError
 from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
