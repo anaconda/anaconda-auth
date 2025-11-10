@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from keyring.errors import PasswordDeleteError
 import typer
+from keyring.errors import PasswordDeleteError
 from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
