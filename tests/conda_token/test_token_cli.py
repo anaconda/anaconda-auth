@@ -145,43 +145,6 @@ def test_issue_new_token_prints_success_message_via_cli(
     assert expected_msg in result.stdout
 
 
-def test_set_token_prints_success_message_via_cli(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        ["token", "set", "--org", org_name, token_created_in_service.token],
-        input="y\nn\n",
-    )
-
-    expected_msg = "Success! Your token has been installed and validated, and conda has been configured"
-    assert result.exit_code == 0, result.stdout
-    assert expected_msg in result.stdout
-
-
-def test_set_token_failure_without_token(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        [
-            "token",
-            "set",
-        ],
-        input="y\nn\n",
-    )
-
-    assert result.exit_code == 2, result.stdout
-
-
 def test_token_list_no_tokens(
     invoke_cli: CLIInvoker, no_tokens_installed: None
 ) -> None:
@@ -371,42 +334,3 @@ def test_token_remove(
     )
     assert result.exit_code == 0, result.stdout
     assert repo_config.token_list() == {}, repo_config.token_list()
-
-
-def test_set_token_prints_success_message_via_cli(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        ["token", "set", "--org", org_name, token_created_in_service.token],
-        input="y\nn\n",
-    )
-
-    assert result.exit_code == 0, result.stdout
-    assert repo_config.token_list() == {
-        "https://repo.anaconda.cloud/repo/": "test-token"
-    }
-    repo_config.token_remove()
-
-
-def test_set_token_failure_without_token(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(
-        [
-            "token",
-            "set",
-        ],
-        input="y\nn\n",
-    )
-
-    assert result.exit_code == 2, result.stdout
