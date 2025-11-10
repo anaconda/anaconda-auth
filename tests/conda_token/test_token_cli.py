@@ -387,6 +387,9 @@ def test_set_token_prints_success_message_via_cli(
     )
 
     assert result.exit_code == 0, result.stdout
+    assert repo_config.token_list() == {
+        "https://repo.anaconda.cloud/repo/": "test-token"
+    }
 
 
 def test_set_token_failure_without_token(
@@ -406,4 +409,3 @@ def test_set_token_failure_without_token(
     )
 
     assert result.exit_code == 2, result.stdout
-    assert len(repo_config.token_list()) > 0
