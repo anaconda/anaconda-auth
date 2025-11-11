@@ -10,6 +10,8 @@ from ..conftest import CLIInvoker
 pytest.importorskip("conda")
 
 # ruff: noqa: E402
+import shlex
+
 from anaconda_auth._conda import repo_config
 from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import TokenCreateResponse
