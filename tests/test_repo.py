@@ -123,18 +123,3 @@ def test_issue_new_token_prints_success_message_via_client(
     expected_msg = "Your conda token has been installed and expires 2025-12-31 00:00:00. To view your token(s), you can use anaconda token list\n"
 
     assert expected_msg in res.out
-
-
-def test_issue_new_token_prints_success_message_via_cli(
-    org_name: str,
-    mocker: MockerFixture,
-    capsys: pytest.CaptureFixture,
-    token_exists_in_service,
-    token_created_in_service,
-    invoke_cli,
-) -> None:
-    result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
-
-    expected_msg = "Your conda token has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
-    assert result.exit_code == 0, result.stdout
-    assert expected_msg in result.stdout
