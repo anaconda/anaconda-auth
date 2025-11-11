@@ -14,6 +14,7 @@ from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
+import shlex
 
 
 @pytest.fixture(autouse=True)
@@ -280,7 +281,7 @@ def test_set_token_without_org(
     invoke_cli,
 ) -> None:
     result = invoke_cli(
-        ["token", "set", *(option_flag.split()), token_created_in_service.token],
+        ["token", "set", *(shlex.split(option_flag)), token_created_in_service.token],
         input="y\nn\n",
     )
 
