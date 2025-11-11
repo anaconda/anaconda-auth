@@ -291,9 +291,10 @@ def set_token(
     ),
 ) -> None:
     """Install a new repository token."""
-    install_token(
-        token=token, org_name=org_name, set_default_channels=set_default_channels
-    )
+    if org_name:
+        install_token(
+            token=token, org_name=org_name, set_default_channels=set_default_channels
+        )
     from anaconda_auth._conda import repo_config
 
     repo_config.token_set(token=token, file=file, env=env, system=system)
@@ -317,4 +318,4 @@ def remove_token(
     """Remove binstar token and data from Keyring."""
     from anaconda_auth._conda import repo_config
 
-    repo_config.token_remove(file=file if file else None, env=env, system=system)
+    repo_config.token_remove(file=file, env=env, system=system)
