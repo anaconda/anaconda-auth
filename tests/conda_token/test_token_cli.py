@@ -1,3 +1,4 @@
+import shlex
 from uuid import UUID
 
 import pytest
@@ -14,7 +15,6 @@ from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
-import shlex
 
 
 @pytest.fixture(autouse=True)
