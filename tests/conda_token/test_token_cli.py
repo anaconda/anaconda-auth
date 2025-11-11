@@ -257,3 +257,37 @@ def test_token_remove(
     )
     assert result.exit_code == 0, result.stdout
     assert repo_config.token_list() == {}, repo_config.token_list()
+
+
+@pytest.mark.parametrize(
+    "option_flag",
+    [
+        "-e",
+        "--env",
+        "-f ./some/path/.condarc",
+        "--file ./some/path/other/.condarc",
+        "-s",
+        "--system",
+    ],
+)
+def test_set_token_without_org(
+    option_flag,
+    org_name: str,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture,
+    token_exists_in_service,
+    token_created_in_service,
+    invoke_cli,
+) -> None:
+    result = invoke_cli(
+        ["token", "set", *(option_flag.split()), token_created_in_service.token],
+        input="y\nn\n",
+    )
+
+    assert result.exit_code == 0, result.stdout
+
+    bin_token = repo_config.token_list()
+    assert (
+        token_created_in_service.token == bin_token["https://repo.anaconda.cloud/repo/"]
+    ), bin_token
+    repo_config.token_remove()
