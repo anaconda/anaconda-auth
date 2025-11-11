@@ -4,6 +4,7 @@ import os
 import traceback
 import warnings
 from collections import defaultdict
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import IO
@@ -13,7 +14,10 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import cast
+from uuid import UUID
+from uuid import uuid4
 
+import jwt
 import pytest
 import typer
 from click.testing import Result
@@ -21,9 +25,13 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
 from anaconda_auth.client import BaseClient
+from anaconda_auth.repo import OrganizationData
+from anaconda_auth.repo import TokenCreateResponse
+from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
 
@@ -329,3 +337,167 @@ def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
     monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
     reset_context()
     yield condarc_path
+
+
+@pytest.fixture()
+def org_name() -> str:
+    return "test-org-name"
+
+
+@pytest.fixture()
+def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
+    valid_api_key.set_repo_token(org_name=org_name, token="test-token")
+    valid_api_key.save()
+    return valid_api_key
+
+
+@pytest.fixture(params=[True, False])
+def no_tokens_installed(
+    request, mocker: MockerFixture, valid_api_key: TokenInfo
+) -> None:
+    if request.param:
+        # Remove the API key
+        valid_api_key.delete()
+    else:
+        # Models the situation where we have a valid API key but it has no attached repo tokens.
+        pass
+
+    # No legacy tokens either
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.read_binstar_tokens",
+        return_value={},
+    )
+
+
+@pytest.fixture()
+def token_does_not_exist_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> None:
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
+    )
+
+
+@pytest.fixture()
+def token_exists_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenInfoResponse:
+    token_info = TokenInfoResponse(
+        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
+    )
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=token_info.model_dump(mode="json"),
+    )
+    return token_info
+
+
+@pytest.fixture()
+def token_created_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
+    test_token = "test-token"
+    payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=payload,
+    )
+    return TokenCreateResponse(**payload)
+
+
+@pytest.fixture()
+def user_has_one_org(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Cool Organization",
+            }
+        ],
+    )
+    return [
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Cool Organization"
+        )
+    ]
+
+
+@pytest.fixture()
+def user_has_multiple_orgs(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    first_id = uuid4()
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(first_id),
+                "name": "first-org",
+                "title": "My First Organization",
+            },
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Business Organization",
+            },
+        ],
+    )
+    return [
+        OrganizationData(id=first_id, name="first-org", title="My First Organizatoin"),
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Business Organization"
+        ),
+    ]
+
+
+@pytest.fixture()
+def user_has_no_orgs(
+    requests_mock: RequestMocker, user_has_no_subscriptions: None
+) -> list[OrganizationData]:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[],
+    )
+    return []
+
+
+@pytest.fixture()
+def business_org_id() -> UUID:
+    return uuid4()
+
+
+@pytest.fixture()
+def user_has_starter_subscription(
+    request, requests_mock: RequestMocker, business_org_id: UUID
+) -> None:
+    requests_mock.get(
+        "https://anaconda.com/api/account",
+        json={
+            "subscriptions": [
+                {
+                    "org_id": str(business_org_id),
+                    "product_code": "starter_subscription",
+                }
+            ]
+        },
+    )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
+
+
+@pytest.fixture()
+def valid_api_key():
+    token_info = TokenInfo.load(create=True)
+    token_info.api_key = jwt.encode(
+        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+    )
+    token_info.save()
+    return token_info

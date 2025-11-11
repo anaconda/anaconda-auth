@@ -242,18 +242,79 @@ def configure_conda(
 
 
 @app.command(name="uninstall")
-def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
+def uninstall_token(
+    org_name: str = typer.Option("", "-o", "--org"),
+    all: bool = typer.Option(False, "-a", "--all"),
+) -> None:
     """Uninstall a repository token for a specific organization."""
-    # TODO: Add --all option
+
+    token_info = TokenInfo.load()
+    if all:
+        token_info.delete_all_repo_token()
+        token_info.save()
+        console.print("Successfully deleted [cyan]all[/cyan] repo tokens.")
+        return
+
     if not org_name:
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org[/cyan] option")
         raise typer.Abort()
 
-    token_info = TokenInfo.load()
     token_info.delete_repo_token(org_name=org_name)
     token_info.save()
 
     console.print(
         f"Successfully deleted token for organization: [cyan]{org_name}[/cyan]"
     )
+
+
+@app.command(name="set")
+def set_token(
+    token: str = typer.Argument(
+        ..., help="Optionally, provide the token received via email or web interface."
+    ),
+    org_name: str = typer.Option("", "-o", "--org", help="Organization name (slug)."),
+    set_default_channels: bool = typer.Option(
+        True, help="Automatically configure default channels."
+    ),
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
+) -> None:
+    """Install a new repository token."""
+    install_token(
+        token=token, org_name=org_name, set_default_channels=set_default_channels
+    )
+    from anaconda_auth._conda import repo_config
+
+    repo_config.token_set(token=token, file=file, env=env, system=system)
+
+
+@app.command(name="remove")
+def remove_token(
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
+) -> None:
+    """Remove binstar token and data from Keyring."""
+    from anaconda_auth._conda import repo_config
+
+    repo_config.token_remove(file=file if file else None, env=env, system=system)

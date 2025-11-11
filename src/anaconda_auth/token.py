@@ -408,3 +408,8 @@ class TokenInfo(BaseModel):
         # We need to remove the existing token for this org first
         # TODO: We can drop this once we just use a dictionary instead
         self.repo_tokens[:] = [t for t in self.repo_tokens if t.org_name != org_name]
+
+    def delete_all_repo_token(self) -> None:
+        """Delete all repo tokens"""
+
+        self.repo_tokens[:] = []
