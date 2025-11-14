@@ -30,29 +30,27 @@ HERE = os.path.dirname(__file__)
 def test_login_required_error(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
-    client = BaseClient()
+    with BaseClient() as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
-
-    res = client.send(prepped)
-    assert not res.ok
-    assert "must login" in res.reason
+        res = client.send(prepped)
+        assert not res.ok
+        assert "must login" in res.reason
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("disable_dot_env")
 def test_outdated_api_key(outdated_api_key: str) -> None:
-    client = BaseClient(api_key=outdated_api_key)
+    with BaseClient(api_key=outdated_api_key) as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert prepped.headers.get("Authorization") == f"Bearer {outdated_api_key}"
 
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert prepped.headers.get("Authorization") == f"Bearer {outdated_api_key}"
-
-    res = client.send(prepped)
-    assert not res.ok
-    assert "is invalid" in res.reason
+        res = client.send(prepped)
+        assert not res.ok
+        assert "is invalid" in res.reason
 
 
 @pytest.mark.integration
@@ -64,22 +62,24 @@ def test_expired_token_ignored(
 
     outdated_token_info.save()
 
-    client = BaseClient(domain="mocked-domain")
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
+    with BaseClient(domain="mocked-domain") as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
 
 def test_client_factory_user_agent() -> None:
     client = client_factory("my-app/version")
-    response = client.get("/api/catalogs/examples")
+    with client:
+        response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("User-Agent") == "my-app/version"
     assert "Api-Version" not in response.request.headers
 
 
 def test_client_factory_api_version() -> None:
     client = client_factory(user_agent="my-app/version", api_version="2023.01.01")
-    response = client.get("/api/catalogs/examples")
+    with client:
+        response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("User-Agent") == "my-app/version"
     assert response.request.headers.get("Api-Version") == "2023.01.01"
 
@@ -89,10 +89,10 @@ def test_client_subclass_api_version() -> None:
         _user_agent = "my-app/version"
         _api_version = "2023.01.01"
 
-    client = Client()
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("User-Agent") == "my-app/version"
-    assert response.request.headers.get("Api-Version") == "2023.01.01"
+    with Client() as client:
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("User-Agent") == "my-app/version"
+        assert response.request.headers.get("Api-Version") == "2023.01.01"
 
 
 @pytest.mark.parametrize(
@@ -156,13 +156,13 @@ def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     # TODO: Use a mock for the request
-    client = BaseClient()
-    request = Request("GET", "api/projects/healthz")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
+    with BaseClient() as client:
+        request = Request("GET", "api/projects/healthz")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
-    res = client.send(prepped)
-    assert res
+        res = client.send(prepped)
+        assert res
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -177,9 +177,10 @@ def test_token_included(
 
     outdated_token_info.save()
 
-    client = BaseClient()
-    request = Request("GET", "api/catalogs/examples")
-    prepped = client.prepare_request(request)
+    with BaseClient() as client:
+        request = Request("GET", "api/catalogs/examples")
+        prepped = client.prepare_request(request)
+
     assert prepped.headers["Authorization"] == f"Bearer {outdated_token_info.api_key}"
 
 
@@ -189,11 +190,11 @@ def test_api_key_env_variable_over_keyring(
     outdated_token_info.save()
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
-    client = BaseClient()
-    assert client.config.api_key == "set-in-env"
+    with BaseClient() as client:
+        assert client.config.api_key == "set-in-env"
 
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("Authorization") == "Bearer set-in-env"
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("Authorization") == "Bearer set-in-env"
 
 
 def test_api_key_init_arg_over_variable(
@@ -202,11 +203,11 @@ def test_api_key_init_arg_over_variable(
     outdated_token_info.save()
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
-    client = BaseClient(api_key="set-in-init")
-    assert client.config.api_key == "set-in-init"
+    with BaseClient(api_key="set-in-init") as client:
+        assert client.config.api_key == "set-in-init"
 
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("Authorization") == "Bearer set-in-init"
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("Authorization") == "Bearer set-in-init"
 
 
 def test_name_reverts_to_email(mocker: MockerFixture) -> None:
@@ -224,10 +225,9 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
-    client = BaseClient()
-
-    assert client.email == "me@example.com"
-    assert client.name == client.email
+    with BaseClient() as client:
+        assert client.email == "me@example.com"
+        assert client.name == client.email
 
 
 def test_first_and_last_name(mocker: MockerFixture) -> None:
@@ -286,33 +286,30 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
-    client = BaseClient()
-    assert client.avatar is not None
+    with BaseClient() as client:
+        assert client.avatar is not None
 
 
 def test_extra_headers_dict() -> None:
     extra_headers = {"X-Extra": "stuff"}
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
 
 def test_extra_headers_string() -> None:
     extra_headers = '{"X-Extra": "stuff"}'
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
 
 def test_extra_headers_non_overwrite() -> None:
     extra_headers = {"X-Extra": "stuff", "Api-Version": "never overwrite"}
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
@@ -328,9 +325,8 @@ def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
     extra_headers = '{"X-Extra": "from-env"}'
     monkeypatch.setenv("ANACONDA_AUTH_EXTRA_HEADERS", extra_headers)
 
-    client = BaseClient(api_key="set-in-init")
-
-    res = client.get("api/something")
+    with BaseClient(api_key="set-in-init") as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "from-env"
 
 
@@ -341,9 +337,9 @@ def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
         "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
     )
 
-    client = BaseClient(ssl_verify=True)
-    with pytest.raises(SSLError):
-        client.get("api/account")
+    with BaseClient(ssl_verify=True) as client:
+        with pytest.raises(SSLError):
+            client.get("api/account")
 
 
 @pytest.mark.integration
@@ -353,8 +349,8 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
         "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
     )
 
-    client = BaseClient(ssl_verify=False)
-    res = client.get("api/account")
+    with BaseClient(ssl_verify=False) as client:
+        res = client.get("api/account")
     assert res.ok
 
 
