@@ -7,8 +7,8 @@ from typing import Optional
 from typing import Union
 from urllib.parse import urlencode
 
+import niquests
 import pkce
-import requests
 
 from anaconda_auth import __version__
 from anaconda_auth.config import AnacondaAuthSite
@@ -61,7 +61,7 @@ def _send_auth_code_request(
 
 def refresh_access_token(refresh_token: str, config: AnacondaAuthSite) -> str:
     """Refresh and save the tokens."""
-    response = requests.post(
+    response = niquests.post(
         config.oidc.token_endpoint,
         data={
             "grant_type": "refresh_token",
@@ -85,7 +85,7 @@ def request_access_token(
     client_id = config.client_id
     redirect_uri = config.redirect_uri
 
-    response = requests.post(
+    response = niquests.post(
         token_endpoint,
         data=dict(
             grant_type="authorization_code",
@@ -186,7 +186,7 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
 
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
-    response = requests.post(
+    response = niquests.post(
         config.oidc.token_endpoint,
         data={
             "grant_type": "password",
@@ -242,7 +242,7 @@ def get_api_key(
         f"https://{config.domain}/api/iam/api-keys",
     ]
     for url in urls:
-        response = requests.post(
+        response = niquests.post(
             url,
             json=dict(
                 scopes=["cloud:read", "cloud:write", "repo:read"],

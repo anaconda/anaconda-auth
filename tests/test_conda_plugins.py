@@ -1,7 +1,9 @@
+from typing import Generator
+
 import pytest
-from requests import PreparedRequest
-from requests import Response
-from requests.hooks import dispatch_hook
+from niquests import PreparedRequest
+from niquests import Response
+from niquests.hooks import dispatch_hook
 
 from anaconda_auth.token import TokenInfo
 
@@ -151,12 +153,13 @@ def url() -> str:
 
 
 @pytest.fixture()
-def session(handler, url) -> CondaSession:
+def session(handler, url) -> Generator[CondaSession, None, None]:
     # Create a session and assign the handler to it
     get_session.cache_clear()
     session_obj = get_session(url)
     session_obj.auth = handler
-    return session_obj
+    yield session_obj
+    session_obj.close()
 
 
 @pytest.mark.usefixtures("mocked_token_info")

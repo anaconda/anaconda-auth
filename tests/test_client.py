@@ -7,11 +7,12 @@ from textwrap import dedent
 from uuid import uuid4
 
 import pytest
+from niquests import Request
+from niquests.exceptions import SSLError
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
-from requests import Request
-from requests.exceptions import SSLError
 
+from anaconda_auth.client import BaseAsyncClient
 from anaconda_auth.client import BaseClient
 from anaconda_auth.client import client_factory
 from anaconda_auth.config import AnacondaAuthConfig
@@ -30,29 +31,27 @@ HERE = os.path.dirname(__file__)
 def test_login_required_error(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
-    client = BaseClient()
+    with BaseClient() as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
-
-    res = client.send(prepped)
-    assert not res.ok
-    assert "must login" in res.reason
+        res = client.send(prepped)
+        assert not res.ok
+        assert "must login" in res.reason
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("disable_dot_env")
 def test_outdated_api_key(outdated_api_key: str) -> None:
-    client = BaseClient(api_key=outdated_api_key)
+    with BaseClient(api_key=outdated_api_key) as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert prepped.headers.get("Authorization") == f"Bearer {outdated_api_key}"
 
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert prepped.headers.get("Authorization") == f"Bearer {outdated_api_key}"
-
-    res = client.send(prepped)
-    assert not res.ok
-    assert "is invalid" in res.reason
+        res = client.send(prepped)
+        assert not res.ok
+        assert "is invalid" in res.reason
 
 
 @pytest.mark.integration
@@ -64,22 +63,24 @@ def test_expired_token_ignored(
 
     outdated_token_info.save()
 
-    client = BaseClient(domain="mocked-domain")
-    request = Request("GET", "api/account")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
+    with BaseClient(domain="mocked-domain") as client:
+        request = Request("GET", "api/account")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
 
 def test_client_factory_user_agent() -> None:
     client = client_factory("my-app/version")
-    response = client.get("/api/catalogs/examples")
+    with client:
+        response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("User-Agent") == "my-app/version"
     assert "Api-Version" not in response.request.headers
 
 
 def test_client_factory_api_version() -> None:
     client = client_factory(user_agent="my-app/version", api_version="2023.01.01")
-    response = client.get("/api/catalogs/examples")
+    with client:
+        response = client.get("/api/catalogs/examples")
     assert response.request.headers.get("User-Agent") == "my-app/version"
     assert response.request.headers.get("Api-Version") == "2023.01.01"
 
@@ -89,29 +90,22 @@ def test_client_subclass_api_version() -> None:
         _user_agent = "my-app/version"
         _api_version = "2023.01.01"
 
-    client = Client()
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("User-Agent") == "my-app/version"
-    assert response.request.headers.get("Api-Version") == "2023.01.01"
+    with Client() as client:
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("User-Agent") == "my-app/version"
+        assert response.request.headers.get("Api-Version") == "2023.01.01"
 
 
 @pytest.mark.parametrize(
-    "attr_name, value, expected_base_uri",
+    "attr_name, value, expected_base_url",
     [
         ("domain", "anaconda.cloud", "https://anaconda.cloud"),
         ("domain", "dev.anaconda.cloud", "https://dev.anaconda.cloud"),
-        ("base_uri", "https://anaconda.cloud", "https://anaconda.cloud"),
-        ("base_uri", "https://dev.anaconda.cloud", "https://dev.anaconda.cloud"),
     ],
 )
-def test_client_base_uri(attr_name: str, value: str, expected_base_uri: str) -> None:
-    client = BaseClient(**{attr_name: value})  # type: ignore
-    assert client._base_uri == expected_base_uri
-
-
-def test_client_base_uri_and_domain_raises_error() -> None:
-    with pytest.raises(ValueError):
-        BaseClient(domain="anaconda.cloud", base_uri="https://anaconda.cloud")
+def test_client_base_url(attr_name: str, value: str, expected_base_url: str) -> None:
+    with BaseClient(**{attr_name: value}) as client:  # type: ignore
+        assert client.base_url == expected_base_url
 
 
 @pytest.fixture()
@@ -121,7 +115,7 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     mocked_request = MockedRequest(
         response_status_code=200, response_headers={"Min-Api-Version": "2023.02.02"}
     )
-    mocker.patch("requests.Session.request", mocked_request)
+    mocker.patch("niquests.Session.request", mocked_request)
     return mocked_request
 
 
@@ -156,13 +150,13 @@ def test_anonymous_endpoint(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
 
     # TODO: Use a mock for the request
-    client = BaseClient()
-    request = Request("GET", "api/projects/healthz")
-    prepped = client.prepare_request(request)
-    assert "Authorization" not in prepped.headers
+    with BaseClient() as client:
+        request = Request("GET", "api/projects/healthz")
+        prepped = client.prepare_request(request)
+        assert "Authorization" not in prepped.headers
 
-    res = client.send(prepped)
-    assert res
+        res = client.send(prepped)
+        assert res
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -177,9 +171,10 @@ def test_token_included(
 
     outdated_token_info.save()
 
-    client = BaseClient()
-    request = Request("GET", "api/catalogs/examples")
-    prepped = client.prepare_request(request)
+    with BaseClient() as client:
+        request = Request("GET", "api/catalogs/examples")
+        prepped = client.prepare_request(request)
+
     assert prepped.headers["Authorization"] == f"Bearer {outdated_token_info.api_key}"
 
 
@@ -189,11 +184,11 @@ def test_api_key_env_variable_over_keyring(
     outdated_token_info.save()
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
-    client = BaseClient()
-    assert client.config.api_key == "set-in-env"
+    with BaseClient() as client:
+        assert client.config.api_key == "set-in-env"
 
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("Authorization") == "Bearer set-in-env"
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("Authorization") == "Bearer set-in-env"
 
 
 def test_api_key_init_arg_over_variable(
@@ -202,11 +197,11 @@ def test_api_key_init_arg_over_variable(
     outdated_token_info.save()
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "set-in-env")
 
-    client = BaseClient(api_key="set-in-init")
-    assert client.config.api_key == "set-in-init"
+    with BaseClient(api_key="set-in-init") as client:
+        assert client.config.api_key == "set-in-init"
 
-    response = client.get("/api/catalogs/examples")
-    assert response.request.headers.get("Authorization") == "Bearer set-in-init"
+        response = client.get("/api/catalogs/examples")
+        assert response.request.headers.get("Authorization") == "Bearer set-in-init"
 
 
 def test_name_reverts_to_email(mocker: MockerFixture) -> None:
@@ -222,12 +217,10 @@ def test_name_reverts_to_email(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
-    client = BaseClient()
-
-    assert client.email == "me@example.com"
-    assert client.name == client.email
+    with BaseClient() as client:
+        assert client.email() == "me@example.com"
+        assert client.name() == client.email()
 
 
 def test_first_and_last_name(mocker: MockerFixture) -> None:
@@ -243,12 +236,11 @@ def test_first_and_last_name(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
     client = BaseClient()
 
-    assert client.email == "me@example.com"
-    assert client.name == "Anaconda User"
+    assert client.email() == "me@example.com"
+    assert client.name() == "Anaconda User"
 
 
 def test_gravatar_missing(mocker: MockerFixture) -> None:
@@ -261,14 +253,10 @@ def test_gravatar_missing(mocker: MockerFixture) -> None:
         }
     }
 
-    mocker.patch(
-        "anaconda_auth.client.BaseClient.account",
-        return_value=account,
-        new_callable=mocker.PropertyMock,
-    )
+    mocker.patch("anaconda_auth.client.BaseClient.account", return_value=account)
     client = BaseClient()
 
-    assert client.avatar is None
+    assert client.avatar() is None
 
 
 def test_gravatar_found(mocker: MockerFixture) -> None:
@@ -284,35 +272,31 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
     mocker.patch(
         "anaconda_auth.client.BaseClient.account",
         return_value=account,
-        new_callable=mocker.PropertyMock,
     )
-    client = BaseClient()
-    assert client.avatar is not None
+    with BaseClient() as client:
+        assert client.avatar is not None
 
 
 def test_extra_headers_dict() -> None:
     extra_headers = {"X-Extra": "stuff"}
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
 
 def test_extra_headers_string() -> None:
     extra_headers = '{"X-Extra": "stuff"}'
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
 
 def test_extra_headers_non_overwrite() -> None:
     extra_headers = {"X-Extra": "stuff", "Api-Version": "never overwrite"}
-    client = BaseClient(api_version="ver", extra_headers=extra_headers)
-
-    res = client.get("api/something")
+    with BaseClient(api_version="ver", extra_headers=extra_headers) as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "stuff"
     assert res.request.headers["Api-Version"] == "ver"
 
@@ -328,9 +312,8 @@ def test_extra_headers_env_var(monkeypatch: MonkeyPatch) -> None:
     extra_headers = '{"X-Extra": "from-env"}'
     monkeypatch.setenv("ANACONDA_AUTH_EXTRA_HEADERS", extra_headers)
 
-    client = BaseClient(api_key="set-in-init")
-
-    res = client.get("api/something")
+    with BaseClient(api_key="set-in-init") as client:
+        res = client.get("api/something")
     assert res.request.headers["X-Extra"] == "from-env"
 
 
@@ -341,9 +324,9 @@ def test_client_ssl_verify_true(monkeypatch: MonkeyPatch) -> None:
         "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
     )
 
-    client = BaseClient(ssl_verify=True)
-    with pytest.raises(SSLError):
-        client.get("api/account")
+    with BaseClient(ssl_verify=True) as client:
+        with pytest.raises(SSLError):
+            client.get("api/account")
 
 
 @pytest.mark.integration
@@ -353,8 +336,21 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
         "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
     )
 
-    client = BaseClient(ssl_verify=False)
-    res = client.get("api/account")
+    with BaseClient(ssl_verify=False) as client:
+        res = client.get("api/account")
+    assert res.ok
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.usefixtures("save_api_key_to_token")
+async def test_login_ssl_verify_false_async(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "REQUESTS_CA_BUNDLE", os.path.join(HERE, "resources", "mock-cert.pem")
+    )
+
+    client = BaseAsyncClient(ssl_verify=False)
+    res = await client.get("api/account")
     assert res.ok
 
 
@@ -376,18 +372,24 @@ def test_hostname_header(
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
-def test_anaconda_com_default_site_config() -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_anaconda_com_default_site_config(
+    Client: BaseAsyncClient | BaseClient,
+) -> None:
     """Test that without external modifiers the config matches the coded parameters"""
 
-    client = BaseClient()
+    client = Client()
     assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
-    client = BaseClient(site="anaconda.com")
+    client = Client(site="anaconda.com")
     assert client.config.model_dump() == AnacondaAuthSite().model_dump()
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_anaconda_com_site_config_toml_and_kwargs_overrides(
+    Client: BaseAsyncClient | BaseClient, config_toml: Path
+) -> None:
     config_toml.write_text(
         dedent(
             """\
@@ -397,20 +399,23 @@ def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -
         )
     )
 
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
     assert not client.config.ssl_verify
     assert client.config.api_key is None
 
     # specific overrides by kwargs
-    client = BaseClient(api_key="bar")
+    client = Client(api_key="bar")
     assert client.config != AnacondaAuthConfig()
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_client_site_selection_by_name(config_toml: Path) -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_client_site_selection_by_name(
+    Client: BaseAsyncClient | BaseClient, config_toml: Path
+) -> None:
     config_toml.write_text(
         dedent(
             """\
@@ -424,11 +429,11 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     )
 
     # make sure the default hasn't changed
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
 
     # load configured site
-    client = BaseClient(site="local")
+    client = Client(site="local")
     assert client.config.domain == "localhost"
     assert client.config.auth_domain_override == "auth-local"
     assert not client.config.ssl_verify
@@ -436,7 +441,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     assert client.config.extra_headers is None
 
     # load configured site and override
-    client = BaseClient(site="local", api_key="bar", extra_headers='{"key": "value"}')
+    client = Client(site="local", api_key="bar", extra_headers='{"key": "value"}')
     assert client.config.domain == "localhost"
     assert client.config.auth_domain_override == "auth-local"
     assert not client.config.ssl_verify
@@ -444,7 +449,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
     assert client.config.extra_headers == {"key": "value"}
 
     with pytest.raises(UnknownSiteName):
-        _ = BaseClient(site="unknown")
+        _ = Client(site="unknown")
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -660,24 +665,27 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
-def test_client_site_selection_with_config() -> None:
+@pytest.mark.parametrize("Client", [BaseClient, BaseAsyncClient])
+def test_client_site_selection_with_config(
+    Client: BaseAsyncClient | BaseClient,
+) -> None:
     # make sure the default hasn't changed
-    client = BaseClient()
+    client = Client()
     assert client.config == AnacondaAuthConfig()
 
     site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
 
     # load configured site
-    client = BaseClient(site=site)
+    client = Client(site=site)
     assert client.config.domain == "example.com"
     assert not client.config.ssl_verify
     assert client.config.api_key == "foo"
 
     # load configured site and override
-    client = BaseClient(site=site, api_key="bar")
+    client = Client(site=site, api_key="bar")
     assert client.config.domain == "example.com"
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
     with pytest.raises(UnknownSiteName):
-        _ = BaseClient(site=1)  # type: ignore
+        _ = Client(site=1)  # type: ignore

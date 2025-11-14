@@ -8,7 +8,7 @@ from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
 
-import requests
+import niquests
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
@@ -100,7 +100,7 @@ class AnacondaAuthSite(BaseModel):
     @property
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
-        res = requests.get(
+        res = niquests.get(
             self.well_known_url,
             headers=self.oidc_request_headers,
             verify=self.ssl_verify,

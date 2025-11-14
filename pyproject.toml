@@ -12,6 +12,7 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
+  "niquests >=3.11.0",
   "anaconda-cli-base >=0.5.4"
 ]
 description = "A client auth library for Anaconda APIs"
@@ -37,10 +38,9 @@ anaconda_auth = "anaconda_auth.panel:AnacondaLoginHandler"
 dev = [
   "mypy",
   "pytest",
+  "pytest-asyncio",
   "pytest-cov",
   "pytest-mock",
-  "requests-mock",
-  "responses",
   "tox",
   "types-requests"
 ]

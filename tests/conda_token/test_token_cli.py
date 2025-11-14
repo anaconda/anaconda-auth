@@ -3,9 +3,10 @@ from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
-from requests_mock import Mocker as RequestMocker
 
+# from requests_mock import Mocker as RequestMocker
 from ..conftest import CLIInvoker
+from ..conftest import NiquestsMock as RequestMocker
 
 pytest.importorskip("conda")
 
