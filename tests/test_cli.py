@@ -9,8 +9,7 @@ from pytest_mock import MockerFixture
 
 from anaconda_auth.cli import app
 from anaconda_auth.client import BaseClient
-
-from .conftest import CLIInvoker
+from tests.conftest import CLIInvoker
 
 
 @pytest.fixture

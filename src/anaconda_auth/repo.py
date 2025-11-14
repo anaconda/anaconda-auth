@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from rich.prompt import Confirm
 from rich.table import Table
 
-from anaconda_auth.actions import _do_auth_flow
 from anaconda_auth.client import BaseClient
 from anaconda_auth.token import RepoToken
 from anaconda_auth.token import TokenInfo
@@ -40,19 +39,6 @@ class SubscriptionData(BaseModel):
 
 
 class RepoAPIClient(BaseClient):
-    def __init__(self) -> None:
-        super().__init__()
-        self._access_token: str | None = None
-
-    def _ensure_access_token(self) -> None:
-        """Some endpoints do not accept API keys, so this method ensures we perform
-        an interactive authentication and then cache the access token.
-        """
-        if self._access_token is not None:
-            return
-        self._access_token = _do_auth_flow()
-        self.auth.api_key = self._access_token  # type: ignore
-
     def _get_repo_token_info(self, org_name: str) -> TokenInfoResponse | None:
         """Return the token information, if it exists.
 
@@ -63,7 +49,6 @@ class RepoAPIClient(BaseClient):
             The token information, including its id and expiration date, or
             None if a token doesn't exist.
         """
-        self._ensure_access_token()
         response = self.get(
             f"/api/organizations/{org_name}/ce/current-token",
         )
@@ -81,18 +66,17 @@ class RepoAPIClient(BaseClient):
         Returns:
             The token information, including its value and expiration date.
         """
-        self._ensure_access_token()
         response = self.put(
             f"/api/organizations/{org_name}/ce/current-token",
             json={"confirm": "yes"},
         )
         return TokenCreateResponse(**response.json())
 
-    def issue_new_token(self, org_name: str) -> str:
+    def issue_new_token(self, org_name: str, yes: bool = False) -> str:
         """Issue a new repository token from anaconda.com."""
         existing_token_info = self._get_repo_token_info(org_name=org_name)
 
-        if existing_token_info is not None:
+        if existing_token_info is not None and not yes:
             console.print(
                 f"An existing token already exists for the organization [cyan]{org_name}[/cyan]."
             )
@@ -211,6 +195,7 @@ def install_token(
     set_default_channels: bool = typer.Option(
         True, help="Automatically configure default channels."
     ),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Accept all prompts"),
 ) -> None:
     """Create and install a new repository token."""
     client = RepoAPIClient()
@@ -219,7 +204,7 @@ def install_token(
         org_name = _select_org_name(client)
 
     if not token:
-        token = client.issue_new_token(org_name=org_name)
+        token = client.issue_new_token(org_name=org_name, yes=yes)
 
     from anaconda_auth._conda import repo_config
 
@@ -237,7 +222,7 @@ def install_token(
     repo_config.configure_plugin()
 
     if set_default_channels:
-        repo_config.configure_default_channels()
+        repo_config.configure_default_channels(force=yes)
         msg += ", and conda has been configured"
 
     console.print(f"Success! {msg}.")
@@ -257,18 +242,80 @@ def configure_conda(
 
 
 @app.command(name="uninstall")
-def uninstall_token(org_name: str = typer.Option("", "-o", "--org")) -> None:
+def uninstall_token(
+    org_name: str = typer.Option("", "-o", "--org"),
+    all: bool = typer.Option(False, "-a", "--all"),
+) -> None:
     """Uninstall a repository token for a specific organization."""
-    # TODO: Add --all option
+
+    token_info = TokenInfo.load()
+    if all:
+        token_info.delete_all_repo_token()
+        token_info.save()
+        console.print("Successfully deleted [cyan]all[/cyan] repo tokens.")
+        return
+
     if not org_name:
         # TODO: We should try to load this dynamically and present a picker
         console.print("Must explicitly provide an [cyan]--org[/cyan] option")
         raise typer.Abort()
 
-    token_info = TokenInfo.load()
     token_info.delete_repo_token(org_name=org_name)
     token_info.save()
 
     console.print(
         f"Successfully deleted token for organization: [cyan]{org_name}[/cyan]"
     )
+
+
+@app.command(name="set")
+def set_token(
+    token: str = typer.Argument(
+        ..., help="Optionally, provide the token received via email or web interface."
+    ),
+    org_name: str = typer.Option("", "-o", "--org", help="Organization name (slug)."),
+    set_default_channels: bool = typer.Option(
+        True, help="Automatically configure default channels."
+    ),
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
+) -> None:
+    """Install a new repository token."""
+    if org_name:
+        install_token(
+            token=token, org_name=org_name, set_default_channels=set_default_channels
+        )
+    from anaconda_auth._conda import repo_config
+
+    repo_config.token_set(token=token, file=file, env=env, system=system)
+
+
+@app.command(name="remove")
+def remove_token(
+    file: str = typer.Option(
+        "", "-f", "--file", help="Write to the system .condarc file at '~/.condarc'."
+    ),
+    env: bool = typer.Option(
+        False,
+        "-e",
+        "--env",
+        help="Write to the active conda environment .condarc file. If no environment is active, write to the user config file (~/.condarc).",
+    ),
+    system: bool = typer.Option(
+        True, "-s", "--system", help="Organization name (slug)."
+    ),
+) -> None:
+    """Remove binstar token and data from Keyring."""
+    from anaconda_auth._conda import repo_config
+
+    repo_config.token_remove(file=file, env=env, system=system)

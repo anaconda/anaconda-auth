@@ -149,6 +149,29 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
     assert not AnacondaKeyring.viable
 
 
+def test_config_keyring(monkeypatch: MonkeyPatch) -> None:
+    backends = {k.name: k for k in keyring.backend.get_all_keyring()}
+
+    assert "token ConfigKeyring" in backends
+    assert backends["token ConfigKeyring"].priority == 0.0
+    assert (
+        backends["token ConfigKeyring"].priority
+        < backends["chainer ChainerBackend"].priority
+    )
+
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING", '{"s": {"u": "p"}}')
+    assert backends["token ConfigKeyring"].priority == 100.0
+    assert (
+        backends["token ConfigKeyring"].priority
+        > backends["chainer ChainerBackend"].priority
+    )
+
+    from anaconda_auth.token import ConfigKeyring
+
+    config_keyring = ConfigKeyring()
+    assert config_keyring.get_password("s", "u") == "p"
+
+
 @pytest.fixture()
 def expected_api_key() -> str:
     return "one key to rule them all"

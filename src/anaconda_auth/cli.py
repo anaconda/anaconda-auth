@@ -1,6 +1,7 @@
 import sys
 import warnings
 from textwrap import dedent
+from typing import List
 from typing import Optional
 
 import typer
@@ -115,11 +116,24 @@ def _obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
         raise typer.Abort(1)
 
 
-app = typer.Typer(name="auth", add_completion=False, help="anaconda.com auth commands")
+app = typer.Typer(
+    name="auth",
+    add_completion=False,
+    help="anaconda.com auth commands",
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+        "help_option_names": ["--help", "-h"],
+    },
+)
 
 
-@app.callback(invoke_without_command=True)
+@app.callback(
+    invoke_without_command=True,
+    no_args_is_help=False,
+)
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(False, "-V", "--version"),
     name: Optional[str] = typer.Option(
         None,
@@ -202,6 +216,9 @@ def main(
         "--current-info",
         hidden=True,
     ),
+    extra_args: Optional[List[str]] = typer.Argument(
+        default=None, hidden=True, metavar=""
+    ),
 ) -> None:
     if version:
         console.print(
@@ -210,7 +227,24 @@ def main(
         )
         raise typer.Exit()
 
-    has_options = any(
+    # We have to manually handle subcommands due the the handling of the auth subcommand
+    # as a top-level subcommand in anaconda-client
+    extra_args = extra_args or []
+    if extra_args:
+        subcommand_name = extra_args[0]
+    else:
+        subcommand_name = None
+
+    # Extract the subcommands attached to the app. Use dynamic loading just to be safe,
+    # because static typing shows this to be invalid.
+    subcommands_dict = getattr(ctx.command, "commands", {})
+
+    # If the subcommand is known, then we delegate to the actual functions defined in this module
+    if cmd := subcommands_dict.get(subcommand_name):
+        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+        return
+
+    has_legacy_options = any(
         value is not None
         for value in (
             name,
@@ -229,7 +263,8 @@ def main(
             info,
         )
     )
-    if has_options:
+
+    if has_legacy_options or subcommand_name:
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
@@ -247,6 +282,10 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
+        return
+
+    # No subcommand was given, so we print help
+    console.print(ctx.get_help())
 
 
 @app.command("login")

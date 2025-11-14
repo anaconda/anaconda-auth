@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import os
+import traceback
+import warnings
 from collections import defaultdict
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import IO
@@ -11,7 +14,10 @@ from typing import Mapping
 from typing import Protocol
 from typing import Sequence
 from typing import cast
+from uuid import UUID
+from uuid import uuid4
 
+import jwt
 import pytest
 import typer
 from click.testing import Result
@@ -19,13 +25,26 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
 from anaconda_auth.client import BaseClient
+from anaconda_auth.repo import OrganizationData
+from anaconda_auth.repo import TokenCreateResponse
+from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
 
 load_dotenv()
+
+
+def is_conda_installed():
+    try:
+        import conda  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 class MockedKeyring(KeyringBackend):
@@ -150,6 +169,38 @@ def pytest_addoption(parser):  # type: ignore
         default=False,
         help="enable integration tests",
     )
+    parser.addoption(
+        "--error-on-pending-deprecations",
+        action="store_true",
+        default=False,
+        help="Treat PendingDeprecationWarnings from anaconda_auth as errors",
+    )
+
+
+def pytest_configure(config):
+    """Customize warning filters to ignore PendingDeprecationWarnings that are
+    raised by other conda plugins, while allowing us to still catch our own.
+    """
+    if config.getoption("--error-on-pending-deprecations"):
+        warnings.simplefilter("error", PendingDeprecationWarning)
+
+        original_warn = warnings.warn
+
+        def custom_warn(message, category=UserWarning, stacklevel=1, source=None):
+            if isinstance(category, type) and issubclass(
+                category, PendingDeprecationWarning
+            ):
+                stack = traceback.extract_stack()
+                # Ignore the warning if any of the known plugins matches
+                for frame in stack:
+                    if "conda_libmamba_solver" in frame.filename:
+                        return
+                    if "anaconda_anon_usage" in frame.filename:
+                        return
+
+            original_warn(message, category, stacklevel + 1, source)
+
+        warnings.warn = custom_warn
 
 
 def pytest_collection_modifyitems(config, items):  # type: ignore
@@ -297,3 +348,207 @@ def config_toml(
     config_file = tmp_path / "config.toml"
     monkeypatch.setenv("ANACONDA_CONFIG_TOML", str(config_file))
     yield config_file
+
+
+@pytest.fixture()
+def condarc_path(tmp_path):
+    """Returns the path of a temporary, empty .condarc file."""
+    condarc_path = tmp_path / ".condarc"
+    condarc_path.touch()
+    yield condarc_path
+
+
+@pytest.fixture(autouse=is_conda_installed())
+def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
+    """Patch operations that modify .condarc to prevent modifying
+    the ~/.condarc of the user running the tests.
+    """
+    from conda.base import context as conda_context
+    from conda.base.context import reset_context
+
+    from anaconda_auth._conda import condarc as condarc_module
+    from anaconda_auth._conda import repo_config
+
+    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
+
+    # Patch the handling of conda CLI arguments to pass the path to the condarc file
+    orig_get_condarc_args = repo_config._get_condarc_args
+
+    def _new_get_condarc_args(*args, **kwargs) -> None:
+        return orig_get_condarc_args(condarc_file=str(condarc_path))
+
+    monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
+
+    # Patch reset_context function such that it only loads config from our temp file
+    orig_reset_context = reset_context
+
+    def _new_reset_context(*args, **kwargs):
+        return orig_reset_context([condarc_path])
+
+    monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
+    reset_context()
+    yield condarc_path
+
+
+@pytest.fixture()
+def org_name() -> str:
+    return "test-org-name"
+
+
+@pytest.fixture()
+def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
+    valid_api_key.set_repo_token(org_name=org_name, token="test-token")
+    valid_api_key.save()
+    return valid_api_key
+
+
+@pytest.fixture(params=[True, False])
+def no_tokens_installed(
+    request, mocker: MockerFixture, valid_api_key: TokenInfo
+) -> None:
+    if request.param:
+        # Remove the API key
+        valid_api_key.delete()
+    else:
+        # Models the situation where we have a valid API key but it has no attached repo tokens.
+        pass
+
+    # No legacy tokens either
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.read_binstar_tokens",
+        return_value={},
+    )
+
+
+@pytest.fixture()
+def token_does_not_exist_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> None:
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
+    )
+
+
+@pytest.fixture()
+def token_exists_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenInfoResponse:
+    token_info = TokenInfoResponse(
+        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
+    )
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=token_info.model_dump(mode="json"),
+    )
+    return token_info
+
+
+@pytest.fixture()
+def token_created_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
+    test_token = "test-token"
+    payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=payload,
+    )
+    return TokenCreateResponse(**payload)
+
+
+@pytest.fixture()
+def user_has_one_org(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Cool Organization",
+            }
+        ],
+    )
+    return [
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Cool Organization"
+        )
+    ]
+
+
+@pytest.fixture()
+def user_has_multiple_orgs(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    first_id = uuid4()
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(first_id),
+                "name": "first-org",
+                "title": "My First Organization",
+            },
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Business Organization",
+            },
+        ],
+    )
+    return [
+        OrganizationData(id=first_id, name="first-org", title="My First Organizatoin"),
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Business Organization"
+        ),
+    ]
+
+
+@pytest.fixture()
+def user_has_no_orgs(
+    requests_mock: RequestMocker, user_has_no_subscriptions: None
+) -> list[OrganizationData]:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[],
+    )
+    return []
+
+
+@pytest.fixture()
+def business_org_id() -> UUID:
+    return uuid4()
+
+
+@pytest.fixture()
+def user_has_starter_subscription(
+    request, requests_mock: RequestMocker, business_org_id: UUID
+) -> None:
+    requests_mock.get(
+        "https://anaconda.com/api/account",
+        json={
+            "subscriptions": [
+                {
+                    "org_id": str(business_org_id),
+                    "product_code": "starter_subscription",
+                }
+            ]
+        },
+    )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
+
+
+@pytest.fixture()
+def valid_api_key():
+    token_info = TokenInfo.load(create=True)
+    token_info.api_key = jwt.encode(
+        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+    )
+    token_info.save()
+    return token_info
