@@ -101,9 +101,9 @@ def test_http_error_general(
 ) -> None:
     @app.command("bad-request")
     def bad_request() -> None:
-        client = BaseClient()
-        res = client.get("api/docs/not-found")
-        res.raise_for_status()
+        with BaseClient() as client:
+            res = client.get("api/docs/not-found")
+            res.raise_for_status()
 
     result = invoke_cli([subcommand, "bad-request"])
 
