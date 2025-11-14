@@ -4,7 +4,7 @@ from urllib.parse import urlunparse
 import pytest
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.gateways.connection.session import CondaSession
-from requests import HTTPError
+from niquests import HTTPError
 
 from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.conda_api import run_command

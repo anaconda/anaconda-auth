@@ -138,7 +138,7 @@ def mocked_request(mocker: MockerFixture) -> MockedRequest:
     mocked_request = MockedRequest(
         response_status_code=201, response_data={"api_key": "some-jwt"}
     )
-    mocker.patch("requests.post", mocked_request)
+    mocker.patch("niquests.post", mocked_request)
     return mocked_request
 
 

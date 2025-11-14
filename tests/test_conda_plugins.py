@@ -1,7 +1,7 @@
 import pytest
-from requests import PreparedRequest
-from requests import Response
-from requests.hooks import dispatch_hook
+from niquests import PreparedRequest
+from niquests import Response
+from niquests.hooks import dispatch_hook
 
 from anaconda_auth.token import TokenInfo
 

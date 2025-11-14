@@ -25,7 +25,6 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
-from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
 from anaconda_auth.client import BaseClient
@@ -312,7 +311,7 @@ def _niquests_mock_send(registry: dict, request, **kwargs: Any) -> MockResponse:
 
 
 @pytest.fixture(scope="function")
-def niquests_mock(mocker: MockerFixture) -> NiquestsMock:
+def requests_mock(mocker: MockerFixture) -> NiquestsMock:
     mymock = NiquestsMock()
     mock_send = partial(_niquests_mock_send, mymock.registry)
     mocker.patch("anaconda_auth.client.BaseClient.send", mock_send)
@@ -421,9 +420,7 @@ def no_tokens_installed(
 
 
 @pytest.fixture()
-def token_does_not_exist_in_service(
-    requests_mock: RequestMocker, org_name: str
-) -> None:
+def token_does_not_exist_in_service(requests_mock: NiquestsMock, org_name: str) -> None:
     requests_mock.get(
         f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
         status_code=404,
@@ -432,7 +429,7 @@ def token_does_not_exist_in_service(
 
 @pytest.fixture()
 def token_exists_in_service(
-    requests_mock: RequestMocker, org_name: str
+    requests_mock: NiquestsMock, org_name: str
 ) -> TokenInfoResponse:
     token_info = TokenInfoResponse(
         id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
@@ -446,7 +443,7 @@ def token_exists_in_service(
 
 @pytest.fixture()
 def token_created_in_service(
-    requests_mock: RequestMocker, org_name: str
+    requests_mock: NiquestsMock, org_name: str
 ) -> TokenCreateResponse:
     test_token = "test-token"
     payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
@@ -459,7 +456,7 @@ def token_created_in_service(
 
 @pytest.fixture()
 def user_has_one_org(
-    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+    requests_mock: NiquestsMock, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
@@ -480,7 +477,7 @@ def user_has_one_org(
 
 @pytest.fixture()
 def user_has_multiple_orgs(
-    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+    requests_mock: NiquestsMock, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
     first_id = uuid4()
     requests_mock.get(
@@ -508,7 +505,7 @@ def user_has_multiple_orgs(
 
 @pytest.fixture()
 def user_has_no_orgs(
-    requests_mock: RequestMocker, user_has_no_subscriptions: None
+    requests_mock: NiquestsMock, user_has_no_subscriptions: None
 ) -> list[OrganizationData]:
     requests_mock.get(
         "https://anaconda.com/api/organizations/my",
@@ -524,7 +521,7 @@ def business_org_id() -> UUID:
 
 @pytest.fixture()
 def user_has_starter_subscription(
-    request, requests_mock: RequestMocker, business_org_id: UUID
+    request, requests_mock: NiquestsMock, business_org_id: UUID
 ) -> None:
     requests_mock.get(
         "https://anaconda.com/api/account",
@@ -540,7 +537,7 @@ def user_has_starter_subscription(
 
 
 @pytest.fixture()
-def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+def user_has_no_subscriptions(requests_mock: NiquestsMock) -> None:
     requests_mock.get("https://anaconda.com/api/account", json={})
 
 

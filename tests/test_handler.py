@@ -3,8 +3,8 @@ from multiprocessing.pool import ThreadPool
 from threading import Thread
 from typing import Iterator
 
+import niquests
 import pytest
-import requests
 
 from anaconda_auth.exceptions import AuthenticationError
 from anaconda_auth.handlers import AuthCodeRedirectServer
@@ -35,7 +35,7 @@ def server() -> Iterator[AuthCodeRedirectServer]:
 def test_server_response_success(server: AuthCodeRedirectServer) -> None:
     """The server captures the query parameters and then redirects to the success page."""
     # Make the request and ensure the code is captured by the server
-    response = requests.get(
+    response = niquests.get(
         f"http://localhost:{SERVER_PORT}/auth/oidc?code=something&state=some-state"
     )
     assert server.result is not None
@@ -57,7 +57,7 @@ def test_server_response_error(
     server: AuthCodeRedirectServer, query_params: str
 ) -> None:
     """We redirect to the error page if we forget the code or state parameters."""
-    response = requests.get(
+    response = niquests.get(
         f"http://localhost:{SERVER_PORT}/auth/oidc?state=some-state?{query_params}"
     )
     assert response.status_code == 200
@@ -66,7 +66,7 @@ def test_server_response_error(
 
 def test_server_response_not_found(server: AuthCodeRedirectServer) -> None:
     """Return a 404 if the path is not the OIDC path."""
-    response = requests.get(
+    response = niquests.get(
         f"http://localhost:{SERVER_PORT}/auth/oidc2?code=some-code&state=some-state"
     )
     assert response.status_code == 404

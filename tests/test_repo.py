@@ -3,7 +3,6 @@ from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
-from requests_mock import Mocker as RequestMocker
 
 pytest.importorskip("conda")
 
@@ -12,6 +11,8 @@ from anaconda_auth.repo import OrganizationData
 from anaconda_auth.repo import RepoAPIClient
 from anaconda_auth.repo import TokenCreateResponse
 from anaconda_auth.repo import TokenInfoResponse
+
+from .conftest import NiquestsMock as RequestMocker
 
 
 @pytest.fixture(autouse=True)

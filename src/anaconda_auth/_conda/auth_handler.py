@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 
 from conda import CondaError
 from conda.plugins.types import ChannelAuthBase
-from requests import PreparedRequest
-from requests import Response
+from niquests import PreparedRequest
+from niquests import Response
 
 from anaconda_auth._conda import repo_config
 from anaconda_auth.config import AnacondaAuthConfig

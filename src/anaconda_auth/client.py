@@ -159,6 +159,7 @@ class AnacondaClientMixin:
 
         self.configure_ssl(conda_config)
 
+        self.headers["Connection"] = "close"
         self.headers["User-Agent"] = user_agent or self._user_agent
         self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
         self.verify = self.config.ssl_verify

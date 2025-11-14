@@ -1,11 +1,10 @@
 from pathlib import Path
 from textwrap import dedent
 
+import niquests
 import pytest
-import requests
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
-from requests_mock import Mocker as RequestMocker
 
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
@@ -14,6 +13,8 @@ from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
+
+from .conftest import NiquestsMock as RequestMocker
 
 
 @pytest.fixture(
@@ -41,7 +42,7 @@ def mock_openid_configuration(request, requests_mock: RequestMocker):
 
 
 def test_well_known_headers(mocker: MockerFixture) -> None:
-    spy = mocker.spy(requests, "get")
+    spy = mocker.spy(niquests, "get")
 
     config = AnacondaAuthConfig()
     assert config.oidc

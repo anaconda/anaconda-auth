@@ -13,7 +13,7 @@ from typing import Union
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import requests
+import niquests
 from pydantic import BaseModel
 
 from anaconda_auth.config import AnacondaAuthSite
@@ -173,4 +173,4 @@ def shutdown_all_servers() -> None:
     for server in list(AuthCodeRedirectServer._open_servers):
         # Here, we just make a single request to force the `server.handle_request()` method to stop blocking.
         # There is probably a better way by calling some method, but :shrug:
-        requests.get(f"http://{server.host_name}:{server.server_port}/cancel")
+        niquests.get(f"http://{server.host_name}:{server.server_port}/cancel")
