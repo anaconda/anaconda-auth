@@ -223,7 +223,9 @@ class ConfigKeyring(AnacondaKeyring):
         if config.api_key:
             # Build a keyring structure out of the api key and domain
             decoded = TokenInfo(domain=config.domain, api_key=config.api_key)
-            encoded = base64.b64encode(decoded.model_dump_json().encode("ascii"))
+            encoded = base64.b64encode(
+                decoded.model_dump_json().encode("ascii")
+            ).decode("ascii")
             return {KEYRING_NAME: {config.domain: encoded}}
         if config.keyring:
             return config.keyring
