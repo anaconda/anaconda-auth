@@ -314,7 +314,7 @@ def auth_info(at: Optional[str] = None) -> None:
     client = BaseClient(site=config)
     response = client.get("/api/account")
     response.raise_for_status()
-    console.print("Your anaconda.com info:")
+    console.print(f"Your info ({config.domain}):")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
 
