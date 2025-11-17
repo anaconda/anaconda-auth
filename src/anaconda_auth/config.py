@@ -5,6 +5,8 @@ from typing import Dict
 from typing import Literal
 from typing import MutableMapping
 from typing import Optional
+from typing import Tuple
+from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -13,6 +15,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
+from pydantic_settings import PydanticBaseSettingsSource
 from pydantic_settings import SettingsConfigDict
 
 from anaconda_auth import __version__ as version
@@ -184,6 +188,26 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
             return matches[0]
 
 
+class _AnacondaAuthConfigWithoutToml(AnacondaAuthConfig, plugin_name="auth"):
+    model_config = AnacondaAuthConfig.model_config
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            env_settings,
+            file_secret_settings,
+            dotenv_settings,
+        )
+
+
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     sites: Sites = Field(
         default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
@@ -193,11 +217,19 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     @field_validator("sites", mode="before")
     @classmethod
     def add_anaconda_com_site(cls, sites: Any) -> Any:
+        anaconda_auth_override = _AnacondaAuthConfigWithoutToml()
+        override_values = anaconda_auth_override.model_dump(
+            exclude={"domain", "auth_domain_override"}, exclude_defaults=True
+        )
+
         if isinstance(sites, dict):
             if "anaconda.com" in sites:
                 raise ValueError(
                     "You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]"
                 )
+
+            for name, site in sites.items():
+                sites[name] = {**override_values, **site}
 
             sites["anaconda.com"] = AnacondaAuthConfig()
 
