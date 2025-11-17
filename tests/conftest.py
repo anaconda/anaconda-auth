@@ -496,8 +496,9 @@ def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
 @pytest.fixture()
 def valid_api_key():
     token_info = TokenInfo.load(create=True)
+    exp = int(datetime(2099, 1, 1).timestamp())
     token_info.api_key = jwt.encode(
-        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
+        {"exp": exp}, key="secret", algorithm="HS256"
     )
     token_info.save()
     return token_info
