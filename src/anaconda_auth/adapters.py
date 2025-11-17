@@ -43,5 +43,5 @@ class _SSLContextAdapterMixin:
         )
 
 
-class HTTPAdapter(_SSLContextAdapterMixin, BaseHttpAdapter):
+class HTTPAdapter(_SSLContextAdapterMixin, BaseHttpAdapter):  # type: ignore
     pass
