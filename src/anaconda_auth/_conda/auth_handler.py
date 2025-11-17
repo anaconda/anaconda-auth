@@ -150,8 +150,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         request.register_hook("response", self.handle_invalid_token)
         config = AnacondaAuthConfig()
         if config.use_unified_repo_api_key:
-            request.headers["Authorization"] = f"Bearer {token}"
+            request.headers["Authorization"] = f"Bearer {token}"  # type: ignore
         else:
-            request.headers["Authorization"] = f"token {token}"
+            request.headers["Authorization"] = f"token {token}"  # type: ignore
 
         return request

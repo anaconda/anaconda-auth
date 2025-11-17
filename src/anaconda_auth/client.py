@@ -217,8 +217,8 @@ class AnacondaClientMixin:
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
 
-        self.mount("http://", http_adapter)  # noqa
-        self.mount("https://", http_adapter)  # noqa
+        self.mount("http://", http_adapter)  # type: ignore
+        self.mount("https://", http_adapter)  # type: ignore
 
         if self.config.client_cert_key and self.config.client_cert:
             self.cert = (self.config.client_cert, self.config.client_cert_key)
