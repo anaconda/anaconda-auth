@@ -265,3 +265,36 @@ def test_anaconda_override_fails(config_toml: Path) -> None:
 
     with pytest.raises(AnacondaConfigValidationError):
         _ = AnacondaAuthSitesConfig()
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_override_site_with_auth_env_vars(
+    config_toml: Path, monkeypatch: MonkeyPatch
+) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [plugin.auth]
+            domain = "foo.com"
+            client_id = "baz"
+
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            ssl_verify = false
+            client_id = "bar"
+            """
+        )
+    )
+
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "foo")
+
+    config = AnacondaAuthSitesConfig()
+
+    # Only env vars (including dotenv and secrets) apply the override to all site configs
+    assert config.sites["local"].api_key == "foo"
+
+    assert config.sites["local"].domain == "localhost"
+    assert config.sites["local"].auth_domain_override == "auth-local"
+    assert config.sites["local"].client_id == "bar"
+    assert not config.sites["local"].ssl_verify
