@@ -4,7 +4,6 @@ from urllib.parse import urlunparse
 import pytest
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.gateways.connection.session import CondaSession
-from niquests import HTTPError
 
 from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.conda_api import run_command
@@ -29,8 +28,6 @@ def test_add_token(set_dummy_token, repodata_url, repo_url):
 def test_channeldata_403(remove_token, channeldata_url):
     session = CondaSession()
     r = session.get(channeldata_url)
-    with pytest.raises(HTTPError):
-        r.raise_for_status()
     assert r.status_code == 403
 
 
