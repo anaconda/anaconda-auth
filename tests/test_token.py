@@ -150,6 +150,8 @@ def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
 
 
 def test_config_keyring(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.delenv("ANACONDA_AUTH_KEYRING", raising=False)
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
     backends = {k.name: k for k in keyring.backend.get_all_keyring()}
 
     assert "token ConfigKeyring" in backends
@@ -170,6 +172,12 @@ def test_config_keyring(monkeypatch: MonkeyPatch) -> None:
 
     config_keyring = ConfigKeyring()
     assert config_keyring.get_password("s", "u") == "p"
+
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "test_token")
+    assert backends["token ConfigKeyring"].priority == 100.0
+
+    config_keyring = ConfigKeyring()
+    assert config_keyring.get_password(anaconda_auth.token.KEYRING_NAME, "anaconda.com")
 
 
 @pytest.fixture()

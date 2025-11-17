@@ -209,8 +209,8 @@ class ConfigKeyring(AnacondaKeyring):
 
     @classproperty
     def priority(cls) -> float:
-        data = AnacondaAuthSitesConfig.load_site().keyring
-        return 100.0 if data else 0.0
+        config = AnacondaAuthSitesConfig.load_site()
+        return 100.0 if config.api_key or config.keyring else 0.0
 
     def set_password(self, service: str, username: str, password: str) -> None:
         raise PasswordSetError("This keyring cannot set passwords")
@@ -219,7 +219,15 @@ class ConfigKeyring(AnacondaKeyring):
         raise PasswordSetError("This keyring cannot delete passwords")
 
     def _read(self) -> LocalKeyringData:
-        return AnacondaAuthSitesConfig.load_site().keyring or {}
+        config = AnacondaAuthSitesConfig.load_site()
+        if config.api_key:
+            # Build a keyring structure out of the api key and domain
+            decoded = TokenInfo(domain=config.domain, api_key=config.api_key)
+            encoded = base64.b64encode(decoded.model_dump_json().encode("ascii"))
+            return {KEYRING_NAME: {config.domain: encoded}}
+        if config.keyring:
+            return config.keyring
+        return {}
 
 
 class RepoToken(BaseModel):
