@@ -111,7 +111,7 @@ def _obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
 app = typer.Typer(
     name="auth",
     add_completion=False,
-    help="anaconda.com auth commands",
+    help="Manage your Anaconda authentication",
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
