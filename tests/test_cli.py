@@ -9,7 +9,6 @@ from pytest_mock import MockerFixture
 
 from anaconda_auth.cli import app
 from anaconda_auth.client import BaseClient
-from anaconda_auth.token import TokenInfo
 from tests.conftest import CLIInvoker
 
 
