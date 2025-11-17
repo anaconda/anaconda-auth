@@ -106,6 +106,7 @@ class AnacondaClientMixin:
     hooks: Any
     auth: Any
     base_url: Any
+    cert: Optional[Union[str, tuple[str, str]]]
     _account = None
 
     def _initialize(
@@ -216,8 +217,8 @@ class AnacondaClientMixin:
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
 
-        self.mount("http://", http_adapter)
-        self.mount("https://", http_adapter)
+        self.mount("http://", http_adapter)  # noqa
+        self.mount("https://", http_adapter)  # noqa
 
         if self.config.client_cert_key and self.config.client_cert:
             self.cert = (self.config.client_cert, self.config.client_cert_key)

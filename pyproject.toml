@@ -158,6 +158,7 @@ filterwarnings = [
   # Treat all warnings errors: https://til.simonwillison.net/pytest/treat-warnings-as-errors
   "error",
   # Ignore our own intended deprecation warnings
+  "ignore::FutureWarning",
   "ignore:Please use `anaconda org auth` instead:DeprecationWarning",
   "ignore:Client API version is:DeprecationWarning",
   "ignore:The following fields have been set using legacy environment variables:DeprecationWarning",

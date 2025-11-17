@@ -2,12 +2,11 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Optional
 
+from niquests._constant import DEFAULT_POOLBLOCK
 from niquests.adapters import HTTPAdapter as BaseHttpAdapter
 
 if TYPE_CHECKING:
     from ssl import SSLContext
-
-    from urllib3 import PoolManager
 
 
 class _SSLContextAdapterMixin:
@@ -31,9 +30,9 @@ class _SSLContextAdapterMixin:
         self,
         connections: int,
         maxsize: int,
-        block: bool = False,
+        block: bool = DEFAULT_POOLBLOCK,
         **pool_kwargs: Any,
-    ) -> "PoolManager":
+    ) -> None:
         if self._ssl_context is not None:
             pool_kwargs.setdefault("ssl_context", self._ssl_context)
         return super().init_poolmanager(  # type: ignore[misc]
