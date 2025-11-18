@@ -99,6 +99,12 @@ class TokenInfoAuth(AuthBase):
 
 
 class AnacondaClientMixin:
+    """Functionality shared between the sync and async clients
+
+    Particularly has methods around config and encryption, and some useful
+    attributes
+    """
+
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
     token_info: Optional[TokenInfo] = None
@@ -271,6 +277,12 @@ class AnacondaClientMixin:
 
 
 class BaseClient(niquests.Session, AnacondaClientMixin):
+    """Specialised HTTP session for communicating with Anaconda.
+
+    Most argument and methods are the same as for niqeusts.Session, which
+    is modelled on requests.Session.
+    """
+
     def __init__(
         self,
         site: Optional[Union[str, AnacondaAuthSite]] = None,
@@ -308,6 +320,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         *args: Any,
         **kwargs: Any,
     ) -> Response:
+        """Send request, first ensuring correct headers and URL prefix."""
         # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
         # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
         if kwargs.get("verify") is None:
@@ -321,6 +334,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         return response
 
     def account(self) -> dict:
+        """Object representing the currently logged in user"""
         if self._account is None:
             res = self.get("/api/account")
             res.raise_for_status()
@@ -329,6 +343,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
         return self._account
 
     def name(self) -> str:
+        """Logged in users' username"""
         user = self.account().get("user", {})
 
         first_name = user.get("first_name", "")
@@ -339,6 +354,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             return f"{first_name} {last_name}".strip()
 
     def email(self) -> str:
+        """Logged in users' email"""
         value = self.account().get("user", {}).get("email")
         if value is None:
             raise ValueError(
@@ -348,6 +364,7 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
             return value
 
     def avatar(self) -> Union[bytes, None]:
+        """Logged in users' avatar"""
         hashed = md5(self.email().encode("utf-8")).hexdigest()
         res = niquests.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
@@ -360,6 +377,13 @@ class BaseClient(niquests.Session, AnacondaClientMixin):
 
 
 class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
+    """Variant of BaseClient, but with async methods.
+
+    This implementation is experimental and not used by CLI utilities
+    in this package. It is expected to be used by internal code rather than
+    end-users.
+    """
+
     def __init__(
         self,
         site: Optional[Union[str, AnacondaAuthSite]] = None,
