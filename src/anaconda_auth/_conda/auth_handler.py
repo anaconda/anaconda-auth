@@ -26,6 +26,7 @@ TOKEN_DOMAIN_MAP = {
     "repo.anaconda.com": "anaconda.com",
     "repo.anaconda.cloud": "anaconda.com",
 }
+MESSAGES: set[str] = set()
 
 
 class AnacondaAuthError(CondaError):
@@ -58,6 +59,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
+
+        if "repo.anaconda.com" in url:
+            return token_info.api_key
 
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
