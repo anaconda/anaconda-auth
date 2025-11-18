@@ -260,13 +260,12 @@ def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_site_inherits_from_plugin_auth(
-    config_toml: Path, monkeypatch: MonkeyPatch
-) -> None:
+def test_site_inherits_from_plugin_auth_config(config_toml: Path) -> None:
     config_toml.write_text(
         dedent(
             """\
             [plugin.auth]
+            domain = "foo.com"
             client_id = "foo"
             ssl_verify = false
 
@@ -280,14 +279,9 @@ def test_site_inherits_from_plugin_auth(
     config = AnacondaAuthSitesConfig()
 
     local = config.sites["local"]
+    assert local.domain == "localhost"
+    # [plugin.auth] provide backfills for unset values in all [sites.<name>]
     assert local.client_id == "foo"
-    assert not local.ssl_verify
-
-    monkeypatch.setenv("ANACONDA_AUTH_CLIENT_ID", "bar")
-
-    config = AnacondaAuthSitesConfig()
-    local = config.sites["local"]
-    assert local.client_id == "bar"
     assert not local.ssl_verify
 
 
@@ -301,11 +295,11 @@ def test_override_site_with_auth_env_vars(
             [plugin.auth]
             domain = "foo.com"
             client_id = "baz"
+            ssl_verify = false
 
             [sites.local]
             domain = "localhost"
             auth_domain_override = "auth-local"
-            ssl_verify = false
             client_id = "bar"
             """
         )
@@ -315,10 +309,18 @@ def test_override_site_with_auth_env_vars(
 
     config = AnacondaAuthSitesConfig()
 
-    # [plugin.auth] and env vars provide backfill for unset values in all [sites.<name>]
     assert config.sites["local"].api_key == "foo"
-
     assert config.sites["local"].domain == "localhost"
     assert config.sites["local"].auth_domain_override == "auth-local"
     assert config.sites["local"].client_id == "bar"
     assert not config.sites["local"].ssl_verify
+
+    # Finally, ANACONDA_AUTH_* env vars even override the site configuration
+    monkeypatch.setenv("ANACONDA_AUTH_CLIENT_ID", "override-in-env")
+
+    config = AnacondaAuthSitesConfig()
+    local = config.sites["local"]
+    assert config.sites["local"].domain == "localhost"
+    assert config.sites["local"].auth_domain_override == "auth-local"
+    assert local.client_id == "override-in-env"
+    assert not local.ssl_verify

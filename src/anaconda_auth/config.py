@@ -5,6 +5,8 @@ from typing import Dict
 from typing import Literal
 from typing import MutableMapping
 from typing import Optional
+from typing import Tuple
+from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -13,6 +15,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
+from pydantic_settings import PydanticBaseSettingsSource
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
@@ -151,17 +155,40 @@ class AnacondaCloudConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="c
         super().__init__(**kwargs)
 
 
+class _AnacondaAuthConfigVariablesAndSecrets(
+    AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"
+):
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            env_settings,
+            file_secret_settings,
+            dotenv_settings,
+        )
+
+
 def _backfill_from_auth_config(config: AnacondaAuthSite):
     auth_config = AnacondaAuthConfig()
     auth_config_dump = auth_config.model_dump(exclude_defaults=True)
+
+    auth_env_config = _AnacondaAuthConfigVariablesAndSecrets()
+    auth_env_config_dump = auth_env_config.model_dump(exclude_defaults=True)
 
     config_dump = config.model_dump(exclude_defaults=True)
 
     # any values set in [plugin.auth] or provided by ANACONDA_AUTH_* env vars or secrets
     # will be applied if they have not already been set by the provided config object,
     # i.e. one ready from [sites.<site-name>]
+    # finally the ANACONDA_AUTH_* vars and secrets provide the final override
     # merged = {**config_dump, **auth_config_dump}
-    merged = {**auth_config_dump, **config_dump}
+    merged = {**auth_config_dump, **config_dump, **auth_env_config_dump}
     updated_config = AnacondaAuthSite(**merged)  # type: ignore
     return updated_config
 
