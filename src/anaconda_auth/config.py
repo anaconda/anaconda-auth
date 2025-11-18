@@ -5,8 +5,6 @@ from typing import Dict
 from typing import Literal
 from typing import MutableMapping
 from typing import Optional
-from typing import Tuple
-from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -15,9 +13,6 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
-from pydantic_settings import PydanticBaseSettingsSource
-from pydantic_settings import SettingsConfigDict
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
@@ -143,22 +138,7 @@ class OpenIDConfiguration(BaseModel):
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
 
 
-class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
-    # Here, we explicitly specify the model_config for this class. This is because
-    # there is a bug inside AnacondaBaseSettings, where the env_prefix is mutated
-    # in that base class. Thus, nested inheritance doesn't quite work as I'd expect.
-    # However, if we set this attribute on *this* class, then that problem goes away,
-    # Even though the behavior that handles the injecting of the `plugin_name` into
-    # the env_prefix is handled in the __init_subclass__ method in that base class.
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        pyproject_toml_table_header=(),
-        env_prefix="ANACONDA_",
-        env_nested_delimiter="__",
-        extra="ignore",
-        ignored_types=(cached_property,),
-        secrets_dir=AnacondaAuthConfig.model_config.get("secrets_dir"),
-    )
+class AnacondaCloudConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="cloud"):
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
 
     def __init__(self, raise_deprecation_warning: bool = True, **kwargs: Any):
@@ -171,10 +151,25 @@ class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
         super().__init__(**kwargs)
 
 
+def _backfill_from_auth_config(config: AnacondaAuthSite):
+    auth_config = AnacondaAuthConfig()
+    auth_config_dump = auth_config.model_dump(exclude_defaults=True)
+
+    config_dump = config.model_dump(exclude_defaults=True)
+
+    # any values set in [plugin.auth] or provided by ANACONDA_AUTH_* env vars or secrets
+    # will be applied if they have not already been set by the provided config object,
+    # i.e. one ready from [sites.<site-name>]
+    # merged = {**config_dump, **auth_config_dump}
+    merged = {**auth_config_dump, **config_dump}
+    updated_config = AnacondaAuthSite(**merged)  # type: ignore
+    return updated_config
+
+
 class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def __getitem__(self, key: str) -> AnacondaAuthSite:
         try:
-            return self.root[key]
+            config = self.root[key]
         except KeyError:
             matches = [site for site in self.root.values() if site.domain == key]
             if len(matches) > 1:
@@ -185,53 +180,24 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
                 raise UnknownSiteName(
                     f"The site name or domain {key} has not been configured in {anaconda_config_path()}"
                 )
-            return matches[0]
+            config = matches[0]
 
-
-class _AnacondaAuthConfigWithoutToml(AnacondaAuthConfig, plugin_name="auth"):
-    model_config = AnacondaAuthConfig.model_config
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: Type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        return (
-            init_settings,
-            env_settings,
-            file_secret_settings,
-            dotenv_settings,
-        )
+        backfilled_config = _backfill_from_auth_config(config)
+        return backfilled_config
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
+    default_site: str = "anaconda.com"
     sites: Sites = Field(
         default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
     )
-    default_site: str = "anaconda.com"
 
     @field_validator("sites", mode="before")
     @classmethod
     def add_anaconda_com_site(cls, sites: Any) -> Any:
-        anaconda_auth_override = _AnacondaAuthConfigWithoutToml()
-        override_values = anaconda_auth_override.model_dump(
-            exclude={"domain", "auth_domain_override"}, exclude_defaults=True
-        )
-
         if isinstance(sites, dict):
-            if "anaconda.com" in sites:
-                raise ValueError(
-                    "You cannot override the 'anaconda.com' site with [sites.'anaconda.com'] please use [plugin.auth]"
-                )
-
-            for name, site in sites.items():
-                sites[name] = {**override_values, **site}
-
-            sites["anaconda.com"] = AnacondaAuthConfig()
+            if "anaconda.com" not in sites:
+                sites["anaconda.com"] = AnacondaAuthConfig()
 
         return sites
 
@@ -241,6 +207,8 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
         sites_config = cls()
 
         if site is None:
-            return sites_config.sites[sites_config.default_site]
+            config = sites_config.sites[sites_config.default_site]
         else:
-            return sites_config.sites[site]
+            config = sites_config.sites[site]
+
+        return config

@@ -398,13 +398,13 @@ def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -
     )
 
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
     assert not client.config.ssl_verify
     assert client.config.api_key is None
 
     # specific overrides by kwargs
     client = BaseClient(api_key="bar")
-    assert client.config != AnacondaAuthConfig()
+    assert client.config.model_dump() != AnacondaAuthConfig().model_dump()
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
@@ -425,7 +425,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
 
     # make sure the default hasn't changed
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
 
     # load configured site
     client = BaseClient(site="local")
@@ -663,7 +663,7 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
 def test_client_site_selection_with_config() -> None:
     # make sure the default hasn't changed
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
 
     site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
 
