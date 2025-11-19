@@ -11,5 +11,6 @@ dependencies:
 - tox=3
 - tox-conda
 - pip
+- frozendict
 - pip:
     - "-e .[dev]"
