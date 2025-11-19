@@ -9,6 +9,7 @@ dependencies = [
   "python-dotenv",
   "pydantic",
   "pyjwt",
+  "frozendict",
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
