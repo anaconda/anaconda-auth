@@ -1,7 +1,6 @@
 import warnings
 from functools import cached_property
 from typing import Any
-from typing import ClassVar
 from typing import Dict
 from typing import Literal
 from typing import MutableMapping
@@ -9,8 +8,8 @@ from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
 
-import requests
 from frozendict import frozendict
+import requests
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
@@ -61,6 +60,10 @@ class AnacondaAuthSite(BaseModel):
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
+    channel_auth: list[str] = [
+        "https://repo.anaconda.com/",
+        "https://repo.anaconda.cloud/",
+    ]
 
     def __init__(self, **kwargs: Any):
         if self.__class__ == AnacondaAuthConfig:
@@ -72,7 +75,39 @@ class AnacondaAuthSite(BaseModel):
                 # Merge dictionaries, ensuring that any duplicate keys in kwargs wins
                 kwargs = {**set_fields, **kwargs}
         super().__init__(**kwargs)
-        self.merge_auth_configs()
+
+    @classmethod
+    def merge_auth_configs(cls, **kwargs: Any):
+        """Implements default auth settings for Anaconda channels, respecting overrides.
+        If the .condarc file already has an "auth" entry for a given channel, it is left
+        unchanged; but all other channels in the list DEFAULT_CHANNEL_AUTH are pointed
+        to this plugin for authentication.
+        """
+        conf = cls(**kwargs)
+        from conda.base.context import context
+
+        result = []
+        wildcards = set(conf.channel_auth)
+        for orec in context.channel_settings:
+            channel = orec.get("channel")
+            if channel is None:
+                break
+
+            for c in conf.channel_auth:
+                if channel.startswith(c):
+                    if channel == c + "*":
+                        wildcards.discard(c)
+                    if "auth" not in orec:
+                        orec = frozendict([*orec.items(), ("auth", "anaconda-auth")])
+                    break
+            result.append(orec)
+
+        for channel in wildcards:
+            result.append(
+                frozendict([("channel", channel + "*"), ("auth", "anaconda-auth")])
+            )
+        context.channel_settings = tuple(result)
+        return conf
 
     @property
     def auth_domain(self) -> str:
@@ -188,7 +223,6 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
-    _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
     sites: Sites = Field(
         default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
     )
@@ -206,11 +240,6 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
             sites["anaconda.com"] = AnacondaAuthConfig()
 
         return sites
-
-    def __new__(cls) -> "AnacondaAuthSitesConfig":
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
 
     @classmethod
     def load_site(cls, site: Optional[str] = None) -> AnacondaAuthSite:

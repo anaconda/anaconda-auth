@@ -15,10 +15,11 @@ from frozendict import frozendict
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 from anaconda_auth._conda.conda_token import cli
+from anaconda_auth.config import AnacondaAuthConfig
 
 __all__ = ["conda_subcommands", "conda_auth_handlers", "conda_pre_commands"]
 
-DEFAULT_CHANNEL_AUTH = ("https://repo.anaconda.com/", "https://repo.anaconda.cloud/")
+# DEFAULT_CHANNEL_AUTH = ("https://repo.anaconda.com/", "https://repo.anaconda.cloud/")
 
 
 def _cli_wrapper(argv: Optional[list[str]] = None) -> int:  # type: ignore
@@ -26,42 +27,42 @@ def _cli_wrapper(argv: Optional[list[str]] = None) -> int:  # type: ignore
     return cli(argv=argv or None)
 
 
-def merge_auth_configs(command):
-    """Implements default auth settings for Anaconda channels, respecting overrides.
-    If the .condarc file already has an "auth" entry for a given channel, it is left
-    unchanged; but all other channels in the list DEFAULT_CHANNEL_AUTH are pointed
-    to this plugin for authentication.
-    """
-    from conda.base.context import context
+# def merge_auth_configs(command):
+#     """Implements default auth settings for Anaconda channels, respecting overrides.
+#     If the .condarc file already has an "auth" entry for a given channel, it is left
+#     unchanged; but all other channels in the list DEFAULT_CHANNEL_AUTH are pointed
+#     to this plugin for authentication.
+#     """
+#     from conda.base.context import context
 
-    result = []
-    wildcards = set(DEFAULT_CHANNEL_AUTH)
-    for orec in context.channel_settings:
-        channel = orec.get("channel")
-        if channel is None:
-            break
+#     result = []
+#     wildcards = set(DEFAULT_CHANNEL_AUTH)
+#     for orec in context.channel_settings:
+#         channel = orec.get("channel")
+#         if channel is None:
+#             break
 
-        for c in DEFAULT_CHANNEL_AUTH:
-            if channel.startswith(c):
-                if channel == c + "*":
-                    wildcards.discard(c)
-                if "auth" not in orec:
-                    orec = frozendict([*orec.items(), ("auth", "anaconda-auth")])
-                break
-        result.append(orec)
+#         for c in DEFAULT_CHANNEL_AUTH:
+#             if channel.startswith(c):
+#                 if channel == c + "*":
+#                     wildcards.discard(c)
+#                 if "auth" not in orec:
+#                     orec = frozendict([*orec.items(), ("auth", "anaconda-auth")])
+#                 break
+#         result.append(orec)
 
-    for channel in wildcards:
-        result.append(
-            frozendict([("channel", channel + "*"), ("auth", "anaconda-auth")])
-        )
-    context.channel_settings = tuple(result)
+#     for channel in wildcards:
+#         result.append(
+#             frozendict([("channel", channel + "*"), ("auth", "anaconda-auth")])
+#         )
+#     context.channel_settings = tuple(result)
 
 
 @plugins.hookimpl
 def conda_pre_commands():
     yield plugins.CondaPreCommand(
         name="anaconda-auth",
-        action=merge_auth_configs,
+        action=AnacondaAuthConfig.merge_auth_configs,
         run_for={"config", "install", "create", "uninstall", "env_create", "search"},
     )
 
