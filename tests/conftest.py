@@ -220,12 +220,12 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", "anon-token")
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", "anon-token")
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", None)
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", None)
 
 
 class MockResponse:
