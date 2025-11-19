@@ -9,9 +9,7 @@ from typing import Iterable
 from typing import Optional
 
 from conda import plugins
-from conda.plugins.types import CondaAuthHandler
-from conda.plugins.types import CondaSubcommand
-from frozendict import frozendict
+from conda.plugins.types import CondaAuthHandler, CondaSubcommand, CondaPreCommand
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 from anaconda_auth._conda.conda_token import cli
@@ -59,8 +57,8 @@ def _cli_wrapper(argv: Optional[list[str]] = None) -> int:  # type: ignore
 
 
 @plugins.hookimpl
-def conda_pre_commands():
-    yield plugins.CondaPreCommand(
+def conda_pre_commands() -> Iterable[CondaPreCommand]:
+    yield CondaPreCommand(
         name="anaconda-auth",
         action=AnacondaAuthConfig.merge_auth_configs,
         run_for={"config", "install", "create", "uninstall", "env_create", "search"},

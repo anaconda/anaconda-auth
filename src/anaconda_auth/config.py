@@ -77,13 +77,13 @@ class AnacondaAuthSite(BaseModel):
         super().__init__(**kwargs)
 
     @classmethod
-    def merge_auth_configs(cls, **kwargs: Any):
+    def merge_auth_configs(cls, command: str) -> None:
         """Implements default auth settings for Anaconda channels, respecting overrides.
         If the .condarc file already has an "auth" entry for a given channel, it is left
         unchanged; but all other channels in the list DEFAULT_CHANNEL_AUTH are pointed
         to this plugin for authentication.
         """
-        conf = cls(**kwargs)
+        conf = cls()
         from conda.base.context import context
 
         result = []
@@ -107,7 +107,6 @@ class AnacondaAuthSite(BaseModel):
                 frozendict([("channel", channel + "*"), ("auth", "anaconda-auth")])
             )
         context.channel_settings = tuple(result)
-        return conf
 
     @property
     def auth_domain(self) -> str:
