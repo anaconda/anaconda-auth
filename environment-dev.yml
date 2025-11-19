@@ -4,6 +4,7 @@ channels:
 - conda-forge
 dependencies:
 - conda
+- frozendict
 - python=3.10
 - anaconda-anon-usage
 - anaconda-cli-base >=0.4.0
@@ -11,6 +12,5 @@ dependencies:
 - tox=3
 - tox-conda
 - pip
-- frozendict
 - pip:
     - "-e .[dev]"

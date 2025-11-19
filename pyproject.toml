@@ -230,11 +230,11 @@ passenv =
     ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY
 deps =
     mypy
-    fozendict
     pytest
     pytest-cov
     pytest-mock
     requests-mock
+    frozendict >=2.0.0
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
     # This is to test the removal of jaraco.classes in earlier versions, so we don't explicitly depend
