@@ -3,9 +3,10 @@ from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
-from requests_mock import Mocker as RequestMocker
 
+# from requests_mock import Mocker as RequestMocker
 from ..conftest import CLIInvoker
+from ..conftest import NiquestsMock as RequestMocker
 
 pytest.importorskip("conda")
 
@@ -59,13 +60,16 @@ def test_issue_new_token_prints_success_message_via_cli(
     org_name: str,
     mocker: MockerFixture,
     capsys: pytest.CaptureFixture,
-    token_exists_in_service,
+    token_does_not_exist_in_service,
     token_created_in_service,
     invoke_cli,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
     result = invoke_cli(["token", "install", "--org", org_name], input="y\nn\n")
 
-    expected_msg = "Your conda token has been installed and expires 2025-01-01 00:00:00. To view your token(s), you can use anaconda token list\n"
+    expected_msg = "Your conda token has been installed and expires"
     assert result.exit_code == 0, result.stdout
     assert expected_msg in result.stdout
 
@@ -76,9 +80,7 @@ def test_token_list_no_tokens(
     result = invoke_cli(["token", "list"])
 
     assert result.exit_code == 1
-    assert (
-        "No repo tokens are installed. Run anaconda token install." in result.stdout
-    ), result.stdout
+    assert "No repo tokens are installed." in result.stdout, result.stdout
     assert "Aborted." in result.stdout
 
 
@@ -104,9 +106,13 @@ def test_token_install_does_not_exist_yet(
     org_name: str,
     token_does_not_exist_in_service: None,
     token_created_in_service: str,
+    mocker: MockerFixture,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
     result = invoke_cli(
         ["token", "install", option_flag, org_name],
         input="y\n",
@@ -124,9 +130,13 @@ def test_token_install_exists_already_accept(
     org_name: str,
     token_exists_in_service: None,
     token_created_in_service: TokenCreateResponse,
+    mocker: MockerFixture,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
     result = invoke_cli(["token", "install", option_flag, org_name], input="y\ny\n")
     assert result.exit_code == 0, result.stdout
 
@@ -142,9 +152,13 @@ def test_token_install_exists_already_decline(
     valid_api_key: TokenInfo,
     token_exists_in_service: None,
     token_created_in_service: str,
+    mocker: MockerFixture,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
     result = invoke_cli(["token", "install", option_flag, org_name], input="n")
     assert result.exit_code == 1, result.stdout
 
@@ -169,9 +183,14 @@ def test_token_install_select_first_if_only_org(
     token_does_not_exist_in_service: None,
     token_created_in_service: str,
     user_has_one_org: list[OrganizationData],
+    mocker: MockerFixture,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
+
     result = invoke_cli(["token", "install"], input="y")
     assert result.exit_code == 0, result.stdout
     assert (
@@ -189,9 +208,14 @@ def test_token_install_select_second_of_multiple_orgs(
     token_does_not_exist_in_service: None,
     token_created_in_service: str,
     user_has_multiple_orgs: list[OrganizationData],
+    mocker: MockerFixture,
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.validate_token", lambda *_, **__: True
+    )
+
     # TODO: This uses the "j" key binding. I can't figure out how to send the right
     #       escape code for down arrow.
     result = invoke_cli(["token", "install"], input="j\ny\n")

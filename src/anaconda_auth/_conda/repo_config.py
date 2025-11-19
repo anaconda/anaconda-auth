@@ -135,6 +135,7 @@ def validate_token(token: str, no_ssl_verify: bool = False) -> None:
     token_url = str(channel.url(with_credentials=True))
 
     r = session.head(token_url, verify=session.verify)
+    session.close()
     if r.status_code != 200:
         raise CondaTokenError(
             "The token could not be validated. Please check that you have typed it correctly."

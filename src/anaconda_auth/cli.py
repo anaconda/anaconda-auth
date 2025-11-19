@@ -5,8 +5,8 @@ from typing import List
 from typing import Optional
 
 import typer
-from requests.exceptions import HTTPError
-from requests.exceptions import JSONDecodeError
+from niquests.exceptions import HTTPError
+from niquests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 
@@ -82,11 +82,19 @@ def token_expired(e: Exception) -> int:
 @register_error_handler(HTTPError)
 def http_error(e: HTTPError) -> int:
     try:
-        error_code = e.response.json().get("error", {}).get("code", "")
+        if e.response is None:
+            error_code = ""
+        else:
+            error_code = e.response.json().get("error", {}).get("code", "")
     except JSONDecodeError:
         error_code = ""
 
     if error_code == "auth_required":
+        if e.request is None:
+            return 1
+        if e.request.headers is None:
+            return 1
+
         if "Authorization" in e.request.headers:
             console.print(
                 "[bold][red]InvalidAuthentication:[/red][/bold] Your provided API Key or login token is invalid"
@@ -311,9 +319,9 @@ def auth_login(
 def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
     config = _obtain_site_config(at)
-    client = BaseClient(site=config)
-    response = client.get("/api/account")
-    response.raise_for_status()
+    with BaseClient(site=config) as client:
+        response = client.get("/api/account")
+        response.raise_for_status()
     console.print(f"Your info ({config.domain}):")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 

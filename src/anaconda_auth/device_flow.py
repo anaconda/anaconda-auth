@@ -7,7 +7,7 @@ import time
 from typing import Dict
 from typing import Optional
 
-import requests
+import niquests
 from pydantic import BaseModel
 
 from anaconda_auth.config import AnacondaAuthSite
@@ -62,7 +62,7 @@ class DeviceCodeFlow:
             raise DeviceFlowError("Server does not support device authorization")
 
         try:
-            response = requests.post(
+            response = niquests.post(
                 self.config.oidc.device_authorization_endpoint,
                 data=data,
                 verify=self.config.ssl_verify,
@@ -75,7 +75,7 @@ class DeviceCodeFlow:
             self.authorize_response = DeviceAuthorizationResponse(**auth_response)
             return self.authorize_response
 
-        except requests.RequestException as e:
+        except niquests.RequestException as e:
             raise DeviceFlowError(f"Device authorization request failed: {e}")
         except KeyError as e:
             raise DeviceFlowError(f"Missing required field in response: {e}")
@@ -129,7 +129,7 @@ class DeviceCodeFlow:
             "client_id": self.config.client_id,
         }
 
-        response = requests.post(
+        response = niquests.post(
             self.config.oidc.token_endpoint,
             data=data,
             verify=self.config.ssl_verify,

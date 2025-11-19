@@ -11,8 +11,8 @@ from urllib.parse import urlparse
 
 from conda import CondaError
 from conda.plugins.types import ChannelAuthBase
-from requests import PreparedRequest
-from requests import Response
+from niquests import PreparedRequest
+from niquests import Response
 
 from anaconda_auth._conda import repo_config
 from anaconda_auth.config import AnacondaAuthConfig
@@ -150,8 +150,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         request.register_hook("response", self.handle_invalid_token)
         config = AnacondaAuthConfig()
         if config.use_unified_repo_api_key:
-            request.headers["Authorization"] = f"Bearer {token}"
+            request.headers["Authorization"] = f"Bearer {token}"  # type: ignore
         else:
-            request.headers["Authorization"] = f"token {token}"
+            request.headers["Authorization"] = f"token {token}"  # type: ignore
 
         return request

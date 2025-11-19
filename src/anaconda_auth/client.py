@@ -1,6 +1,5 @@
 import json
 import warnings
-from functools import cached_property
 from hashlib import md5
 from typing import Any
 from typing import Dict
@@ -8,13 +7,17 @@ from typing import MutableMapping
 from typing import Optional
 from typing import Union
 from typing import cast
-from urllib.parse import urljoin
 
-import requests
+import niquests
+from niquests import AsyncResponse
+from niquests import PreparedRequest
+from niquests import Response
+from niquests._typing import HookCallableType
+from niquests._typing import HttpMethodType
+from niquests.auth import AuthBase
+from niquests.auth import BearerTokenAuth
+from niquests.structures import CaseInsensitiveDict
 from pydantic import BaseModel
-from requests import PreparedRequest
-from requests import Response
-from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.adapters import HTTPAdapter
@@ -34,13 +37,27 @@ except ImportError:
     from semver import VersionInfo as Version
 
 
-def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
+class CondaConfig(BaseModel):
+    proxy_servers: Optional[MutableMapping[str, str]] = None
+    ssl_verify: Optional[Union[bool, str]] = None
+    cert: Optional[Union[str, tuple[str, str]]] = None
+
+
+def _login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
+    if response.request is None:
+        return response
+
+    if response.request.headers is None:
+        return response
+
     has_auth_header = response.request.headers.get("Authorization", False)
 
     if response.status_code in [401, 403]:
         try:
             error_code = response.json().get("error", {}).get("code", "")
-        except requests.JSONDecodeError:
+        except niquests.JSONDecodeError:
             error_code = ""
 
         if error_code == "auth_required":
@@ -55,43 +72,52 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
     return response
 
 
-class CondaConfig(BaseModel):
-    proxy_servers: Optional[MutableMapping[str, str]] = None
-    ssl_verify: Optional[Union[bool, str]] = None
-    cert: Optional[Union[str, tuple[str, str]]] = None
+def login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
+    return _login_required(response, *args, **kwargs)
 
 
-class BearerAuth(AuthBase):
-    def __init__(
-        self, domain: Optional[str] = None, api_key: Optional[str] = None
-    ) -> None:
-        self.api_key = api_key
-        if domain is None:
-            domain = AnacondaAuthSitesConfig.load_site().domain
+async def async_login_required(
+    response: Response, *args: Any, **kwargs: Any
+) -> Union[PreparedRequest, Response]:
+    return _login_required(response, *args, **kwargs)
 
-        self._token_info = TokenInfo(domain=domain)
+
+class TokenInfoAuth(AuthBase):
+    def __init__(self, token_info: TokenInfo) -> None:
+        self._token_info = token_info
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
-        if not self.api_key:
-            try:
-                r.headers["Authorization"] = (
-                    f"Bearer {self._token_info.get_access_token()}"
-                )
-            except (TokenNotFoundError, TokenExpiredError):
-                pass
-        else:
-            r.headers["Authorization"] = f"Bearer {self.api_key}"
+        if r.headers is None:
+            r.headers = CaseInsensitiveDict()
+        try:
+            r.headers["Authorization"] = f"Bearer {self._token_info.get_access_token()}"
+        except (TokenNotFoundError, TokenExpiredError):
+            pass
         return r
 
 
-class BaseClient(requests.Session):
+class AnacondaClientMixin:
+    """Functionality shared between the sync and async clients
+
+    Particularly has methods around config and encryption, and some useful
+    attributes
+    """
+
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
+    token_info: Optional[TokenInfo] = None
+    headers: Any
+    hooks: Any
+    auth: Any
+    base_url: Any
+    cert: Optional[Union[str, tuple[str, str]]]
+    _account = None
 
-    def __init__(
+    def _initialize(
         self,
         site: Optional[Union[str, AnacondaAuthSite]] = None,
-        base_uri: Optional[str] = None,
         domain: Optional[str] = None,
         auth_domain_override: Optional[str] = None,
         api_key: Optional[str] = None,
@@ -103,50 +129,47 @@ class BaseClient(requests.Session):
         proxy_servers: Optional[MutableMapping[str, str]] = None,
         client_cert: Optional[str] = None,
         client_cert_key: Optional[str] = None,
-    ):
+    ) -> None:
         super().__init__()
 
-        # Prepare the requested or default site config
         if isinstance(site, AnacondaAuthSite):
             config = site
         else:
             config = AnacondaAuthSitesConfig.load_site(site=site)
 
-        # Prepare site overrides
-        if base_uri and domain:
-            raise ValueError("Can only specify one of `domain` or `base_uri` argument")
-
-        kwargs: Dict[str, Any] = {}
+        config_kwargs: Dict[str, Any] = {}
         if domain is not None:
-            kwargs["domain"] = domain
+            config_kwargs["domain"] = domain
         if auth_domain_override is not None:
-            kwargs["auth_domain_override"] = auth_domain_override
+            config_kwargs["auth_domain_override"] = domain
         if api_key is not None:
-            kwargs["api_key"] = api_key
+            config_kwargs["api_key"] = api_key
         if ssl_verify is not None:
-            kwargs["ssl_verify"] = ssl_verify
+            config_kwargs["ssl_verify"] = ssl_verify
         if extra_headers is not None:
-            kwargs["extra_headers"] = extra_headers
+            config_kwargs["extra_headers"] = extra_headers
         if hash_hostname is not None:
-            kwargs["hash_hostname"] = hash_hostname
+            config_kwargs["hash_hostname"] = hash_hostname
         if proxy_servers is not None:
-            kwargs["proxy_servers"] = proxy_servers
+            config_kwargs["proxy_servers"] = proxy_servers
         if client_cert_key is not None:
-            kwargs["client_cert"] = client_cert
-            kwargs["client_cert_key"] = client_cert_key
+            config_kwargs["client_cert"] = client_cert
+            config_kwargs["client_cert_key"] = client_cert_key
         if client_cert is not None:
-            kwargs["client_cert"] = client_cert
+            config_kwargs["client_cert"] = client_cert
 
         conda_config = self.retrieve_base_conda_ssl_config()
 
-        self.config = config.model_copy(update=kwargs)
+        self.config = config.model_copy(update=config_kwargs)
+
+        self.base_url = f"https://{self.config.domain}"
 
         self.configure_ssl(conda_config)
 
-        # base_url overrides domain
-        self._base_uri = base_uri or f"https://{self.config.domain}"
+        self.headers["Connection"] = "close"
         self.headers["User-Agent"] = user_agent or self._user_agent
         self.headers["X-Client-Hostname"] = get_hostname(hash=self.config.hash_hostname)
+        self.verify = self.config.ssl_verify
         self.api_version = api_version or self._api_version
         if self.api_version:
             self.headers["Api-Version"] = self.api_version
@@ -166,7 +189,12 @@ class BaseClient(requests.Session):
             for k in keys_to_add:
                 self.headers[k] = self.config.extra_headers[k]
 
-        self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
+        if self.config.api_key:
+            self.auth = BearerTokenAuth(token=self.config.api_key)
+        else:
+            self.token_info = TokenInfo(domain=self.config.domain)
+            self.auth = TokenInfoAuth(self.token_info)
+
         self.hooks["response"].append(login_required)
 
     def configure_ssl(self, cfg: CondaConfig) -> None:
@@ -195,8 +223,8 @@ class BaseClient(requests.Session):
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
 
-        self.mount("http://", http_adapter)
-        self.mount("https://", http_adapter)
+        self.mount("http://", http_adapter)  # type: ignore
+        self.mount("https://", http_adapter)  # type: ignore
 
         if self.config.client_cert_key and self.config.client_cert:
             self.cert = (self.config.client_cert, self.config.client_cert_key)
@@ -228,73 +256,6 @@ class BaseClient(requests.Session):
 
         return conda_config
 
-    def urljoin(self, url: str) -> str:
-        return urljoin(self._base_uri, url)
-
-    def prepare_request(self, request: requests.Request) -> PreparedRequest:
-        request.url = self.urljoin(str(request.url))
-        return super().prepare_request(request)
-
-    def request(
-        self,
-        method: Union[str, bytes],
-        url: Union[str, bytes],
-        *args: Any,
-        **kwargs: Any,
-    ) -> Response:
-        joined_url = self.urljoin(str(url))
-
-        # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
-        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
-        kwargs.setdefault("verify", self.config.ssl_verify)
-
-        response = super().request(method, joined_url, *args, **kwargs)
-
-        min_api_version_string = response.headers.get("Min-Api-Version")
-        self._validate_api_version(min_api_version_string)
-
-        return response
-
-    @cached_property
-    def account(self) -> dict:
-        res = self.get("/api/account")
-        res.raise_for_status()
-        account = res.json()
-        return account
-
-    @property
-    def name(self) -> str:
-        user = self.account.get("user", {})
-
-        first_name = user.get("first_name", "")
-        last_name = user.get("last_name", "")
-        if not first_name and not last_name:
-            return self.email
-        else:
-            return f"{first_name} {last_name}".strip()
-
-    @property
-    def email(self) -> str:
-        value = self.account.get("user", {}).get("email")
-        if value is None:
-            raise ValueError(
-                "Something is wrong with your account. An email address could not be found."
-            )
-        else:
-            return value
-
-    @cached_property
-    def avatar(self) -> Union[bytes, None]:
-        hashed = md5(self.email.encode("utf-8")).hexdigest()
-        res = requests.get(
-            f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
-            verify=self.config.ssl_verify,
-        )
-        if res.ok:
-            return res.content
-        else:
-            return None
-
     def _validate_api_version(self, min_api_version_string: Optional[str]) -> None:
         """Validate that the client API version against the min API version from the service."""
         if min_api_version_string is None or self.api_version is None:
@@ -313,6 +274,203 @@ class BaseClient(requests.Session):
                 "You may need to update your client.",
                 DeprecationWarning,
             )
+
+
+class BaseClient(niquests.Session, AnacondaClientMixin):
+    """Specialised HTTP session for communicating with Anaconda.
+
+    Most argument and methods are the same as for niqeusts.Session, which
+    is modelled on requests.Session.
+    """
+
+    def __init__(
+        self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
+        domain: Optional[str] = None,
+        api_key: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        api_version: Optional[str] = None,
+        ssl_verify: Optional[bool] = None,
+        extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: Optional[bool] = None,
+        proxy_servers: Optional[MutableMapping[str, str]] = None,
+        client_cert: Optional[str] = None,
+        client_cert_key: Optional[str] = None,
+        **session_kwargs: Any,
+    ):
+        super().__init__(**session_kwargs)
+        self._initialize(
+            site=site,
+            domain=domain,
+            api_key=api_key,
+            user_agent=user_agent,
+            api_version=api_version,
+            ssl_verify=ssl_verify,
+            extra_headers=extra_headers,
+            hash_hostname=hash_hostname,
+            proxy_servers=proxy_servers,
+            client_cert=client_cert,
+            client_cert_key=client_cert_key,
+        )
+        self.hooks["response"].append(cast(HookCallableType, login_required))
+
+    def request(
+        self,
+        method: HttpMethodType,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Response:
+        """Send request, first ensuring correct headers and URL prefix."""
+        # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
+        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
+        if kwargs.get("verify") is None:
+            kwargs["verify"] = self.config.ssl_verify
+
+        response = super().request(method, *args, **kwargs)
+
+        min_api_version_string = response.headers.get("Min-Api-Version")
+        self._validate_api_version(min_api_version_string)
+
+        return response
+
+    def account(self) -> dict:
+        """Object representing the currently logged in user"""
+        if self._account is None:
+            res = self.get("/api/account")
+            res.raise_for_status()
+            self._account = res.json()
+        assert isinstance(self._account, dict)
+        return self._account
+
+    def name(self) -> str:
+        """Logged in users' username"""
+        user = self.account().get("user", {})
+
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+        if not first_name and not last_name:
+            return self.email()
+        else:
+            return f"{first_name} {last_name}".strip()
+
+    def email(self) -> str:
+        """Logged in users' email"""
+        value = self.account().get("user", {}).get("email")
+        if value is None:
+            raise ValueError(
+                "Something is wrong with your account. An email address could not be found."
+            )
+        else:
+            return value
+
+    def avatar(self) -> Union[bytes, None]:
+        """Logged in users' avatar"""
+        hashed = md5(self.email().encode("utf-8")).hexdigest()
+        res = niquests.get(
+            f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
+            verify=self.config.ssl_verify,
+        )
+        if res.ok:
+            return res.content
+        else:
+            return None
+
+
+class BaseAsyncClient(niquests.AsyncSession, AnacondaClientMixin):
+    """Variant of BaseClient, but with async methods.
+
+    This implementation is experimental and not used by CLI utilities
+    in this package. It is expected to be used by internal code rather than
+    end-users.
+    """
+
+    def __init__(
+        self,
+        site: Optional[Union[str, AnacondaAuthSite]] = None,
+        domain: Optional[str] = None,
+        api_key: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        api_version: Optional[str] = None,
+        ssl_verify: Optional[bool] = None,
+        extra_headers: Optional[Union[str, dict]] = None,
+        hash_hostname: Optional[bool] = None,
+        proxy_servers: Optional[MutableMapping[str, str]] = None,
+        client_cert: Optional[str] = None,
+        client_cert_key: Optional[str] = None,
+        **session_kwargs: Any,
+    ):
+        super().__init__(**session_kwargs)
+        self._initialize(
+            site=site,
+            domain=domain,
+            api_key=api_key,
+            user_agent=user_agent,
+            api_version=api_version,
+            ssl_verify=ssl_verify,
+            extra_headers=extra_headers,
+            hash_hostname=hash_hostname,
+            proxy_servers=proxy_servers,
+            client_cert=client_cert,
+            client_cert_key=client_cert_key,
+        )
+        self.hooks["response"].append(cast(HookCallableType, async_login_required))
+
+    async def request(  # type: ignore[override]
+        self,
+        method: HttpMethodType,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Union[AsyncResponse, Response]:
+        # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
+        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
+        if kwargs.get("verify") is None:
+            kwargs["verify"] = self.config.ssl_verify
+
+        response = await super().request(method, *args, **kwargs)
+
+        min_api_version_string = response.headers.get("Min-Api-Version")
+        self._validate_api_version(min_api_version_string)
+
+        return response
+
+    async def account(self) -> dict:
+        if self._account is None:
+            res = await self.get("/api/account")
+            res.raise_for_status()
+            self._account = res.json()
+        assert isinstance(self._account, dict)
+        return self._account
+
+    async def name(self) -> str:
+        user = (await self.account()).get("user", {})
+
+        first_name = user.get("first_name", "")
+        last_name = user.get("last_name", "")
+        if not first_name and not last_name:
+            return await self.email()
+        else:
+            return f"{first_name} {last_name}".strip()
+
+    async def email(self) -> str:
+        value = (await self.account()).get("user", {}).get("email")
+        if value is None:
+            raise ValueError(
+                "Something is wrong with your account. An email address could not be found."
+            )
+        else:
+            return value
+
+    async def avatar(self) -> Union[bytes, None]:
+        # could be cached
+        hashed = md5((await self.email()).encode("utf-8")).hexdigest()
+        res = await niquests.async_api.get(
+            f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
+            verify=self.config.ssl_verify,
+        )
+        if res.ok:
+            return res.content
+        else:
+            return None
 
 
 def _parse_semver_string(version: str) -> Optional[Version]:
