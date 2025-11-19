@@ -230,6 +230,7 @@ passenv =
     ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY
 deps =
     mypy
+    fozendict
     pytest
     pytest-cov
     pytest-mock
