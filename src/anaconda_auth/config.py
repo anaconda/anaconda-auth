@@ -10,7 +10,6 @@ from typing import Union
 from urllib.parse import urljoin
 
 import requests
-from frozendict import frozendict
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
