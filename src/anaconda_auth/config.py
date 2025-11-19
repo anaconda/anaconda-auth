@@ -9,8 +9,8 @@ from typing import Optional
 from typing import Union
 from urllib.parse import urljoin
 
-from frozendict import frozendict
 import requests
+from frozendict import frozendict
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
