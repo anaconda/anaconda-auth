@@ -11,7 +11,6 @@ from typing import Optional
 from conda import plugins
 from conda.plugins.types import CondaAuthHandler
 from conda.plugins.types import CondaSubcommand
-from frozendict import frozendict
 
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 from anaconda_auth._conda.conda_token import cli
