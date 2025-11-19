@@ -180,7 +180,7 @@ class _AnacondaAuthConfigVariablesAndSecrets(
         )
 
 
-def _backfill_from_auth_config(config: AnacondaAuthSite):
+def _backfill_from_auth_config(config: AnacondaAuthSite) -> AnacondaAuthSite:
     auth_config = AnacondaAuthConfig()
     auth_config_dump = auth_config.model_dump(exclude_defaults=True)
 
