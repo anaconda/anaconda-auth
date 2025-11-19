@@ -1,5 +1,6 @@
 import warnings
 from functools import cached_property
+from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import Literal
@@ -21,6 +22,7 @@ from pydantic_settings import PydanticBaseSettingsSource
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.config import AnacondaBaseSettings
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 
@@ -171,6 +173,9 @@ class _AnacondaAuthConfigVariablesAndSecrets(
             env_settings,
             file_secret_settings,
             dotenv_settings,
+            # We don't want to read from a config.toml but due to subclassing AnacondaBaseSettings
+            # if we do not provide TomlSettingsSource pydantic throws a warning
+            AnacondaConfigTomlSettingsSource(settings_cls, Path("/dev/null")),
         )
 
 
@@ -187,7 +192,6 @@ def _backfill_from_auth_config(config: AnacondaAuthSite):
     # will be applied if they have not already been set by the provided config object,
     # i.e. one ready from [sites.<site-name>]
     # finally the ANACONDA_AUTH_* vars and secrets provide the final override
-    # merged = {**config_dump, **auth_config_dump}
     merged = {**auth_config_dump, **config_dump, **auth_env_config_dump}
     updated_config = AnacondaAuthSite(**merged)  # type: ignore
     return updated_config
