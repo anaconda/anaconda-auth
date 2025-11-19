@@ -2,6 +2,7 @@ import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import Any
+from typing import ClassVar
 from typing import Dict
 from typing import Literal
 from typing import MutableMapping
@@ -218,6 +219,8 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
+    _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
+
     default_site: str = "anaconda.com"
     sites: Sites = Field(
         default_factory=lambda: Sites({"anaconda.com": AnacondaAuthConfig()})
@@ -231,6 +234,11 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
                 sites["anaconda.com"] = AnacondaAuthConfig()
 
         return sites
+
+    def __new__(cls) -> "AnacondaAuthSitesConfig":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     @classmethod
     def load_site(cls, site: Optional[str] = None) -> AnacondaAuthSite:

@@ -105,7 +105,7 @@ def _override_default_site(at: Optional[str] = None) -> None:
 app = typer.Typer(
     name="auth",
     add_completion=False,
-    help="anaconda.com auth commands",
+    help="Manage your Anaconda authentication",
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,
@@ -307,7 +307,7 @@ def auth_info(at: Optional[str] = None) -> None:
     client = BaseClient()
     response = client.get("/api/account")
     response.raise_for_status()
-    console.print("Your anaconda.com info:")
+    console.print(f"Your info ({client.config.domain}):")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
 
