@@ -14,11 +14,13 @@ from urllib.parse import urljoin
 import requests
 from pydantic import BaseModel
 from pydantic import RootModel
+from pydantic.fields import FieldInfo
 from pydantic_settings import PydanticBaseSettingsSource
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_cli_base.config import AnacondaBaseSettings
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 
@@ -41,6 +43,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 
 class AnacondaAuthSite(BaseModel):
+    site: Optional[str] = "anaconda.com"
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -116,38 +119,61 @@ class AnacondaAuthSite(BaseModel):
             return None
 
 
+class AnacondaSettingsSource(PydanticBaseSettingsSource):
+    def get_field_value(
+        self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        # Nothing to do here. Only implement the return statement to make mypy happy
+        return None, "", False
+
+
+class AnacondaCloudSettingsSource(AnacondaSettingsSource):
+    def __call__(self) -> Dict[str, Any]:
+        cloud_config = AnacondaCloudConfig(raise_deprecation_warning=False)
+        set_fields = cloud_config.model_dump(exclude_unset=True)
+        if set_fields:
+            _raise_deprecated_field_set_warning(set_fields)
+        return set_fields
+
+
+class AnacondaSiteSettingsSource(AnacondaSettingsSource):
+    def __call__(self) -> Dict[str, Any]:
+        state = self.current_state
+        site_config = AnacondaAuthSitesConfig()
+        all_sites = site_config.sites
+        if state.get("site"):
+            # If an explicit site is requested, the name must
+            # be an exact match for a key in the sites data.
+            site = all_sites._find_key(state["site"])
+        elif state.get("domain"):
+            # If a domain is requested:
+            # - if a single match is found, use it
+            # - if multiple matches are found, raise an error
+            # - if no match is found, use the default
+            try:
+                site = all_sites._find_domain(state["domain"])
+            except UnknownSiteName:
+                return {}
+        else:
+            # We now fall back to default_site, which for historical
+            # reasons can be a site key or a domain.
+            site = all_sites._find_at(site_config.default_site)
+        return all_sites.root[site].model_dump(exclude_unset=True)
+
+
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):
-    _dump: ClassVar[Dict[str, Any]] = {}
-    _part: ClassVar[str] = "both"
-
-    def __init_subclass__(cls, part: Optional[str] = None, **kwargs: Any):
-        cls._part = part or "both"
-        return super().__init_subclass__(**kwargs)
-
     @classmethod
     def settings_customise_sources(
         cls, *args: Any, **kwargs: Any
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
         settings = super().settings_customise_sources(*args, **kwargs)
-        if cls._part == "env":
-            return settings[:-1]
-        elif cls._part == "toml":
-            return (settings[-1],)
-        return settings
-
-    @classmethod
-    def values(cls) -> Dict[str, Any]:
-        if cls._dump is None:
-            cls._dump = cls().model_dump(exclude_unset=True)
-        return cls._dump
-
-
-# An AnacondaAuthConfig object constructed only from environment
-class AnacondaEnvPart(AnacondaAuthConfig, part="env"): ...
-
-
-# An AnacondaAuthConfig object constructed only from the TOML settings
-class AnacondaAuthPart(AnacondaAuthConfig, part="toml"): ...
+        assert isinstance(settings[-1], AnacondaConfigTomlSettingsSource)
+        return (
+            *settings[:-1],
+            AnacondaSiteSettingsSource(cls),
+            AnacondaCloudSettingsSource(cls),
+            settings[-1],
+        )
 
 
 class OpenIDConfiguration(BaseModel):
@@ -159,57 +185,54 @@ class OpenIDConfiguration(BaseModel):
 _OLD_OIDC_REQUEST_HEADERS = {"User-Agent": f"anaconda-cloud-auth/{version}"}
 
 
-class AnacondaCloudConfig(AnacondaAuthConfig, plugin_name="cloud"):
+class AnacondaCloudConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="cloud"):
     oidc_request_headers: Dict[str, str] = _OLD_OIDC_REQUEST_HEADERS
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, raise_deprecation_warning: bool = True, **kwargs: Any):
+        if self.__class__ == "AnacondaCloudConfig" and raise_deprecation_warning:
+            warnings.warn(
+                "AnacondaCloudConfig is deprecated, please use AnacondaAuthConfig instead.",
+                DeprecationWarning,
+            )
         super().__init__(**kwargs)
-        set_fields = self.model_dump(exclude_unset=True)
-        if set_fields:
-            _raise_deprecated_field_set_warning(set_fields)
-
-
-# An AnacondaCloudConfig object constructed only from the TOML settings
-class AnacondaCloudPart(AnacondaCloudConfig, part="toml"): ...
-
-
-def _backfill_from_auth_config(
-    config: AnacondaAuthSite, include_env: bool
-) -> AnacondaAuthSite:
-    config_dump = config.model_dump(exclude_unset=True)
-    env_config = AnacondaEnvPart.values() if include_env else {}
-    auth_config = AnacondaAuthPart.values()
-    cloud_config = AnacondaCloudPart.values()
-    merged = {**cloud_config, **auth_config, **config_dump, **env_config}
-    return AnacondaAuthSite(**merged)
 
 
 class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
-    def __getitem__(self, key: str) -> AnacondaAuthSite:
-        config = self.root.get(key)
-        if config is None:
-            matches = [
-                (skey, site) for skey, site in self.root.items() if site.domain == key
-            ]
-            if len(matches) == 1:
-                key, config = matches[0]
-            elif matches:
-                mstr = ", ".join(skey for skey, _ in matches)
-                raise ValueError(
-                    f"The domain {key} matches more than one configured site ({mstr})"
-                )
-            elif key == "anaconda.com":
-                config = AnacondaAuthSite()
-            else:
-                raise UnknownSiteName(
-                    f"The site name or domain {key} has not been configured in {anaconda_config_path()}"
-                )
-        if not config._merged:
-            is_default = key == AnacondaAuthSitesConfig().default_site
-            config = _backfill_from_auth_config(config, is_default)
-            config._merged = True
-        self.root[key] = config
-        return config
+    def _find_key(self, key: Optional[str]) -> str:
+        if key in self.root:
+            return key
+        raise UnknownSiteName(
+            f"The site name {key} has not been configured in {anaconda_config_path()}"
+        )
+
+    def _find_domain(self, domain: Optional[str]) -> str:
+        matches = [
+            (key, site) for key, site in self.root.items() if site.domain == domain
+        ]
+        if len(matches) == 1:
+            return matches[0][0]
+        if matches:
+            mstr = ", ".join(skey for skey, _ in matches)
+            raise ValueError(
+                f"The domain {domain} matches more than one configured site ({mstr})"
+            )
+        else:
+            raise UnknownSiteName(
+                f"The site or domain {domain} has not been configured in {anaconda_config_path()}"
+            )
+
+    def _find_at(self, key: Optional[str]) -> str:
+        # Fuzzy match:
+        # - If the key is an exact match for a site key, use it
+        # - If the key matches a single site's domain, use it
+        # - Otherwise, raise an exception
+        try:
+            return self._find_key(key)
+        except UnknownSiteName:
+            return self._find_domain(key)
+
+    def __getitem__(self, key: str) -> AnacondaAuthConfig:
+        return AnacondaAuthConfig(site=self._find_at(key))
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
@@ -230,6 +253,10 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
                 self.default_site = next(iter(self.sites.root))
             else:
                 self.default_site = "anaconda.com"
+        if not any(site.domain == "anaconda.com" for site in self.sites.root.values()):
+            self.sites.root["anaconda.com"] = AnacondaAuthSite()
+        for key, value in self.sites.root.items():
+            value.site = key
 
     @classmethod
     def all_sites(cls) -> List[str]:
