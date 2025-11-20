@@ -216,6 +216,9 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
             raise ValueError(
                 f"The domain {domain} matches more than one configured site ({mstr})"
             )
+        elif domain == "anaconda.com":
+            self.root[domain] = AnacondaAuthSite()
+            return domain
         else:
             raise UnknownSiteName(
                 f"The site or domain {domain} has not been configured in {anaconda_config_path()}"
