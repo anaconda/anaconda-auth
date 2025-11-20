@@ -11,8 +11,8 @@ import pkce
 import requests
 
 from anaconda_auth import __version__
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
-from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.device_flow import DeviceCodeFlow
 from anaconda_auth.exceptions import AuthenticationError
 from anaconda_auth.exceptions import DeviceFlowError
@@ -30,7 +30,7 @@ def make_auth_code_request_url(
     """Build the authorization code request URL."""
 
     if config is None:
-        config = AnacondaAuthSitesConfig.load_site()
+        config = AnacondaAuthConfig()
 
     authorization_endpoint = config.oidc.authorization_endpoint
     client_id = config.client_id
@@ -109,7 +109,7 @@ def request_access_token(
 
 def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     """Login using OAuth 2.0 device code flow."""
-    config = config or AnacondaAuthSitesConfig.load_site()
+    config = config or AnacondaAuthConfig()
 
     # Initialize device flow
     device_flow = DeviceCodeFlow(config=config)
@@ -158,7 +158,7 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
 
 def _do_auth_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     """Do the browser-based auth flow and return the short-lived access_token and id_token tuple."""
-    config = config or AnacondaAuthSitesConfig.load_site()
+    config = config or AnacondaAuthConfig()
 
     state = str(uuid.uuid4())
     code_verifier, code_challenge = pkce.generate_pkce_pair(code_verifier_length=128)
@@ -182,7 +182,7 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
     )
 
     if config is None:
-        config = AnacondaAuthSitesConfig.load_site()
+        config = AnacondaAuthConfig()
 
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
@@ -228,7 +228,7 @@ def get_api_key(
     if isinstance(ssl_verify, str):
         ssl_verify = True
 
-    config = config or AnacondaAuthSitesConfig.load_site()
+    config = config or AnacondaAuthConfig()
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -276,9 +276,7 @@ def login(
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
-        config = AnacondaAuthSitesConfig.load_site().model_copy(
-            update=dict(ssl_verify=ssl_verify)
-        )
+        config = AnacondaAuthConfig().model_copy(update=dict(ssl_verify=ssl_verify))
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
@@ -287,7 +285,7 @@ def login(
 def logout(config: Optional[AnacondaAuthSite] = None) -> None:
     """Log out of anaconda.com."""
     if config is None:
-        config = AnacondaAuthSitesConfig.load_site()
+        config = AnacondaAuthConfig()
 
     try:
         token_info = TokenInfo.load(domain=config.domain)
@@ -315,7 +313,7 @@ def is_logged_in(site: Optional[Union[str, AnacondaAuthSite]] = None) -> bool:
     if isinstance(site, AnacondaAuthSite):
         config = site
     else:
-        config = AnacondaAuthSitesConfig.load_site(site=site)
+        config = AnacondaAuthConfig(site=site)
 
     try:
         token_info = TokenInfo.load(domain=config.domain)

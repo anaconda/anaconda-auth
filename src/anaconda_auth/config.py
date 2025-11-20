@@ -158,7 +158,8 @@ class AnacondaSiteSettingsSource(AnacondaSettingsSource):
             # We now fall back to default_site, which for historical
             # reasons can be a site key or a domain.
             site = all_sites._find_at(site_config.default_site)
-        return all_sites.root[site].model_dump(exclude_unset=True)
+        result = all_sites.root[site].model_dump(exclude_unset=True)
+        return result
 
 
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):

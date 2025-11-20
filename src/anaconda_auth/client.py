@@ -18,8 +18,8 @@ from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.adapters import HTTPAdapter
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
-from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -67,7 +67,7 @@ class BearerAuth(AuthBase):
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaAuthSitesConfig.load_site().domain
+            domain = AnacondaAuthConfig().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -109,8 +109,10 @@ class BaseClient(requests.Session):
         # Prepare the requested or default site config
         if isinstance(site, AnacondaAuthSite):
             config = site
+        elif site:
+            config = AnacondaAuthConfig(site=site)
         else:
-            config = AnacondaAuthSitesConfig.load_site(site=site)
+            config = AnacondaAuthConfig()
 
         # Prepare site overrides
         if base_uri and domain:
