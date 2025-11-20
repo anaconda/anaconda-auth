@@ -190,7 +190,7 @@ def test_extra_site_config(config_toml: Path) -> None:
         ssl_verify=False,
     )
 
-    assert config.sites == Sites({"local": local, "anaconda.com": AnacondaAuthSite()})
+    assert config.sites == Sites({"local": local})
 
     assert config.default_site == "local"
     # This default site anaconda.com is identical to the AnacondaAuthConfig()
@@ -231,7 +231,7 @@ def test_default_extra_site_config(config_toml: Path) -> None:
         auth_domain_override="auth-local"
     )
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthSite(), "local": local})
+    assert config.sites == Sites({"local": local})
 
     assert config.sites["local"].model_dump() == local.model_dump()
     assert config.default_site == "local"

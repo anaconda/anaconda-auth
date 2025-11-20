@@ -253,8 +253,7 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
                 self.default_site = next(iter(self.sites.root))
             else:
                 self.default_site = "anaconda.com"
-        if not any(site.domain == "anaconda.com" for site in self.sites.root.values()):
-            self.sites.root["anaconda.com"] = AnacondaAuthSite()
+                self.sites.root["anaconda.com"] = AnacondaAuthSite()
         for key, value in self.sites.root.items():
             value.site = key
 
