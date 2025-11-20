@@ -228,7 +228,7 @@ def test_default_extra_site_config(config_toml: Path) -> None:
         site="local",
         domain="localhost",
         ssl_verify=False,
-        auth_domain_override="auth-local"
+        auth_domain_override="auth-local",
     )
 
     assert config.sites == Sites({"local": local})
