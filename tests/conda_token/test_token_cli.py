@@ -243,14 +243,13 @@ def test_token_remove(
     *,
     invoke_cli: CLIInvoker,
 ) -> None:
+    exp_dict = repo_config.token_list()
     repo_config.token_set(
         token_is_installed.get_repo_token(org_name=org_name), force=True
     )
-    assert repo_config.token_list() == {
-        "https://repo.anaconda.cloud/repo/": token_is_installed.get_repo_token(
-            org_name=org_name
-        )
-    }, repo_config.token_list()
+    exp_token = token_is_installed.get_repo_token(org_name=org_name)
+    exp_dict["https://repo.anaconda.cloud/repo/"] = exp_token
+    assert repo_config.token_list() == exp_dict, repo_config.token_list()
     result = invoke_cli(
         [
             "token",
@@ -258,7 +257,8 @@ def test_token_remove(
         ]
     )
     assert result.exit_code == 0, result.stdout
-    assert repo_config.token_list() == {}, repo_config.token_list()
+    del exp_dict["https://repo.anaconda.cloud/repo/"]
+    assert repo_config.token_list() == exp_dict, repo_config.token_list()
 
 
 @pytest.mark.parametrize(
