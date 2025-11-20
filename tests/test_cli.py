@@ -65,13 +65,14 @@ def test_login_error_handler_no_tty(
 @pytest.mark.usefixtures("disable_dot_env")
 @pytest.mark.parametrize("subcommand", ["auth", "cloud"])
 def test_api_key_prefers_env_var(
-    monkeypatch: MonkeyPatch, invoke_cli: CLIInvoker, subcommand: str
+    monkeypatch: MonkeyPatch, invoke_cli: CLIInvoker, subcommand: str, valid_api_key
 ) -> None:
-    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "foo")
+    api_key = valid_api_key.api_key
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", api_key)
 
     result = invoke_cli([subcommand, "api-key"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "foo"
+    assert result.stdout.strip() == api_key
 
 
 @pytest.mark.usefixtures("disable_dot_env", "is_a_tty")

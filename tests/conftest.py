@@ -220,12 +220,12 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", "anon-token")
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", "anon-token")
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", None)
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", None)
 
 
 class MockResponse:
@@ -496,8 +496,7 @@ def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
 @pytest.fixture()
 def valid_api_key():
     token_info = TokenInfo.load(create=True)
-    token_info.api_key = jwt.encode(
-        {"exp": datetime(2099, 1, 1).toordinal()}, key="secret", algorithm="HS256"
-    )
+    exp = int(datetime(2099, 1, 1).timestamp())
+    token_info.api_key = jwt.encode({"exp": exp}, key="secret", algorithm="HS256")
     token_info.save()
     return token_info

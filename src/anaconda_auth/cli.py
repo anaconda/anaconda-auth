@@ -1,3 +1,4 @@
+import os
 import sys
 import warnings
 from textwrap import dedent
@@ -14,10 +15,7 @@ from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaAuthSite
-from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
-from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
@@ -99,13 +97,9 @@ def http_error(e: HTTPError) -> int:
         return 1
 
 
-def _obtain_site_config(at: Optional[str] = None) -> AnacondaAuthSite:
-    try:
-        config = AnacondaAuthSitesConfig.load_site(site=at)
-        return config
-    except UnknownSiteName as e:
-        console.print(e.args[0])
-        raise typer.Abort(1)
+def _override_default_site(at: Optional[str] = None) -> None:
+    if at:
+        os.environ["ANACONDA_DEFAULT_SITE"] = at
 
 
 app = typer.Typer(
@@ -285,49 +279,43 @@ def auth_login(
     force: bool = False, ssl_verify: bool = True, at: Optional[str] = None
 ) -> None:
     """Login"""
+    _override_default_site(at)
     try:
-        config = _obtain_site_config(at)
-
-        auth_domain = config.domain
-        expired = TokenInfo.load(domain=auth_domain).expired
-        if expired:
-            console.print("Your API key has expired, logging into anaconda.com")
+        token_info = TokenInfo.load()
+        domain = token_info.domain
+        if token_info.expired:
+            console.print(f"Your API key has expired, logging into {domain}")
             login(force=True, ssl_verify=ssl_verify)
             raise typer.Exit()
     except TokenNotFoundError:
         pass  # Proceed to login
     else:
         force = force or Confirm.ask(
-            f"You are already logged into Anaconda ({auth_domain}). Would you like to force a new login?",
+            f"You are already logged into Anaconda ({domain}). Would you like to force a new login?",
             default=False,
         )
         if not force:
             raise typer.Exit()
 
-    login(config=config, force=force, ssl_verify=ssl_verify)
+    login(force=force, ssl_verify=ssl_verify)
 
 
 @app.command(name="whoami")
 def auth_info(at: Optional[str] = None) -> None:
     """Display information about the currently signed-in user"""
-    config = _obtain_site_config(at)
-    client = BaseClient(site=config)
+    _override_default_site(at)
+    client = BaseClient()
     response = client.get("/api/account")
     response.raise_for_status()
-    console.print(f"Your info ({config.domain}):")
+    console.print(f"Your info ({client.config.domain}):")
     console.print_json(data=response.json(), indent=2, sort_keys=True)
 
 
 @app.command(name="api-key")
 def auth_key(at: Optional[str] = None) -> None:
     """Display API Key for signed-in user"""
-    config = _obtain_site_config(at)
-
-    if config.api_key:
-        print(config.api_key)
-        return
-
-    token_info = TokenInfo.load(domain=config.domain)
+    _override_default_site(at)
+    token_info = TokenInfo.load()
     if not token_info.expired:
         print(token_info.api_key)
         return
@@ -338,5 +326,5 @@ def auth_key(at: Optional[str] = None) -> None:
 @app.command(name="logout")
 def auth_logout(at: Optional[str] = None) -> None:
     """Logout"""
-    config = _obtain_site_config(at)
-    logout(config=config)
+    _override_default_site(at)
+    logout()

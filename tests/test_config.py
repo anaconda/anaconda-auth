@@ -13,7 +13,6 @@ from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
-from anaconda_cli_base.exceptions import AnacondaConfigValidationError
 
 
 @pytest.fixture(
@@ -131,9 +130,13 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
 def test_default_site_no_config() -> None:
     config = AnacondaAuthSitesConfig()
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthSite()})
     assert config.default_site == "anaconda.com"
-    assert AnacondaAuthSitesConfig.load_site() == AnacondaAuthConfig()
+    # The classes are not literally the same but the values are
+    assert (
+        AnacondaAuthSitesConfig.load_site().model_dump()
+        == AnacondaAuthConfig().model_dump()
+    )
 
 
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
@@ -157,11 +160,12 @@ def test_default_site_with_plugin_config(config_toml: Path) -> None:
     )
     config = AnacondaAuthSitesConfig()
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig()})
+    assert config.sites == Sites({"anaconda.com": AnacondaAuthSite()})
     assert config.default_site == "anaconda.com"
 
     default_site = AnacondaAuthSitesConfig.load_site()
-    assert default_site == AnacondaAuthConfig()
+    # this default site is identical to the AnacondaAuthConfig()
+    assert default_site.model_dump() == AnacondaAuthConfig().model_dump()
     assert default_site.domain == "localhost"
     assert not default_site.ssl_verify
 
@@ -181,17 +185,22 @@ def test_extra_site_config(config_toml: Path) -> None:
     config = AnacondaAuthSitesConfig()
 
     local = AnacondaAuthSite(
+        site="local",
         domain="localhost",
         ssl_verify=False,
     )
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
+    assert config.sites == Sites({"local": local})
 
-    assert config.default_site == "anaconda.com"
-    assert AnacondaAuthSitesConfig.load_site() == AnacondaAuthConfig()
+    assert config.default_site == "local"
+    # This default site anaconda.com is identical to the AnacondaAuthConfig()
+    assert (
+        AnacondaAuthSitesConfig.load_site().model_dump()
+        == AnacondaAuthConfig().model_dump()
+    )
 
     site = AnacondaAuthSitesConfig.load_site(site="local")
-    assert site == local
+    assert site.model_dump() == local.model_dump()
     assert site.domain == "localhost"
     assert AnacondaAuthSitesConfig.load_site(
         site="local"
@@ -216,14 +225,17 @@ def test_default_extra_site_config(config_toml: Path) -> None:
     config = AnacondaAuthSitesConfig()
 
     local = AnacondaAuthSite(
-        domain="localhost", ssl_verify=False, auth_domain_override="auth-local"
+        site="local",
+        domain="localhost",
+        ssl_verify=False,
+        auth_domain_override="auth-local",
     )
 
-    assert config.sites == Sites({"anaconda.com": AnacondaAuthConfig(), "local": local})
+    assert config.sites == Sites({"local": local})
 
-    assert config.sites["local"] == local
+    assert config.sites["local"].model_dump() == local.model_dump()
     assert config.default_site == "local"
-    assert AnacondaAuthSitesConfig.load_site() == local
+    assert AnacondaAuthSitesConfig.load_site().model_dump() == local.model_dump()
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -252,16 +264,67 @@ def test_duplicate_domain_lookup_fail(config_toml: Path) -> None:
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_anaconda_override_fails(config_toml: Path) -> None:
+def test_site_inherits_from_plugin_auth_config(config_toml: Path) -> None:
     config_toml.write_text(
         dedent(
             """\
-            [sites."anaconda.com"]
-            ssl_verify = false
+            [plugin.auth]
+            domain = "foo.com"
             client_id = "foo"
+            ssl_verify = false
+
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
             """
         )
     )
 
-    with pytest.raises(AnacondaConfigValidationError):
-        _ = AnacondaAuthSitesConfig()
+    config = AnacondaAuthSitesConfig()
+
+    local = config.sites["local"]
+    assert local.domain == "localhost"
+    # [plugin.auth] provide backfills for unset values in all [sites.<name>]
+    assert local.client_id == "foo"
+    assert not local.ssl_verify
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_override_site_with_auth_env_vars(
+    config_toml: Path, monkeypatch: MonkeyPatch
+) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [plugin.auth]
+            domain = "foo.com"
+            client_id = "baz"
+            ssl_verify = false
+
+            [sites.local]
+            domain = "localhost"
+            auth_domain_override = "auth-local"
+            client_id = "bar"
+            """
+        )
+    )
+
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "foo")
+
+    config = AnacondaAuthSitesConfig()
+
+    assert config.sites["local"].api_key == "foo"
+    assert config.sites["local"].domain == "localhost"
+    assert config.sites["local"].auth_domain_override == "auth-local"
+    assert config.sites["local"].client_id == "bar"
+    assert not config.sites["local"].ssl_verify
+
+    # Finally, ANACONDA_AUTH_* env vars even override the site configuration
+    monkeypatch.setenv("ANACONDA_AUTH_CLIENT_ID", "override-in-env")
+
+    config = AnacondaAuthSitesConfig()
+    local = config.sites["local"]
+    assert config.sites["local"].domain == "localhost"
+    assert config.sites["local"].auth_domain_override == "auth-local"
+    assert local.client_id == "override-in-env"
+    assert not local.ssl_verify
