@@ -5,9 +5,6 @@ conditionally import it in case conda is not installed in the user's environment
 
 """
 
-from frozendict import frozendict
-import sys
-
 from typing import Iterable
 from typing import Optional
 
@@ -15,13 +12,12 @@ from conda import plugins
 from conda.plugins.types import CondaAuthHandler
 from conda.plugins.types import CondaPreCommand
 from conda.plugins.types import CondaSubcommand
+from frozendict import frozendict
 
-from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 from anaconda_auth._conda.auth_handler import TOKEN_DOMAIN_MAP
+from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
 from anaconda_auth._conda.conda_token import cli
-from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSitesConfig
-
 
 __all__ = ["conda_subcommands", "conda_auth_handlers", "conda_pre_commands"]
 
@@ -38,15 +34,17 @@ def merge_auth_configs(command: str) -> None:
     to this plugin for authentication.
     """
     from conda.base.context import context
+
     result = []
-    wildcards = {f'https://{host}/' for host in TOKEN_DOMAIN_MAP}
+    hosts = {f"https://{host}/" for host in TOKEN_DOMAIN_MAP}
     for site in AnacondaAuthSitesConfig().sites.root.values():
-        wildcards.add(f'https://{site.domain}/')
+        hosts.add(f"https://{site.domain}/")
+    wildcards = set(hosts)
     for orec in context.channel_settings:
         channel = orec.get("channel")
         if channel is None:
             break
-        for c in conf.channel_auth:
+        for c in hosts:
             if channel.startswith(c):
                 if channel == c + "*":
                     wildcards.discard(c)

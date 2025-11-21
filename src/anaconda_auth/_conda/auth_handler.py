@@ -29,7 +29,7 @@ URI_PREFIX = "/repo/"
 TOKEN_DOMAIN_MAP = {
     "repo.continuum.io": ("anaconda.com", True),
     "repo.anaconda.com": ("anaconda.com", True),
-    "repo.anaconda.cloud": ("anaconda.com", False)
+    "repo.anaconda.cloud": ("anaconda.com", False),
 }
 MESSAGES: set[str] = set()
 
@@ -69,7 +69,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         #   otherwise continue and attempt to utilize repo token
         api_key = token_info.api_key
         if api_key and isinstance(api_key, str):
-            if unified or config.use_unified_repo_api_key:
+            if is_unified or config.use_unified_repo_api_key:
                 return api_key
 
         path = parsed_url.path
