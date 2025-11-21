@@ -68,7 +68,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return None
 
         # Check configuration to use unified api key,
-        #   otherwise continue and attempt to utilize repo token
+        # otherwise continue and attempt to utilize repo token
         api_key = token_info.api_key
         if api_key and isinstance(api_key, str):
             if is_unified:
@@ -157,9 +157,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        print("IN THE HANDLER:", request.url)
         token = self._load_token(request.url)
-        print("RETRIEVING THE TOKEN:", token)
         if not token:
             request.register_hook("response", self.handle_missing_token)
             return request
