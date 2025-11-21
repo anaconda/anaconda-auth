@@ -5,14 +5,15 @@ conditionally import it in case conda is not installed in the user's environment
 
 """
 
+from typing import Any
 from typing import Iterable
 from typing import Optional
 
 from conda import plugins
+from conda.base.context import frozendict
 from conda.plugins.types import CondaAuthHandler
 from conda.plugins.types import CondaPreCommand
 from conda.plugins.types import CondaSubcommand
-from frozendict import frozendict
 
 from anaconda_auth._conda.auth_handler import TOKEN_DOMAIN_MAP
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler
@@ -27,7 +28,7 @@ def _cli_wrapper(argv: Optional[list[str]] = None) -> int:  # type: ignore
     return cli(argv=argv or None)
 
 
-def merge_auth_configs(command: str) -> None:
+def _merge_auth_configs(command: str) -> None:
     """Implements default auth settings for Anaconda channels, respecting overrides.
     If the .condarc file already has an "auth" entry for a given channel, it is left
     unchanged; but all other channels in the list TOKEN_DOMAIN_MAP are pointed
@@ -60,7 +61,7 @@ def merge_auth_configs(command: str) -> None:
 
 
 class AlwaysContains:
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> bool:
         return True
 
 
@@ -68,7 +69,7 @@ class AlwaysContains:
 def conda_pre_commands() -> Iterable[CondaPreCommand]:
     yield CondaPreCommand(
         name="anaconda-auth",
-        action=merge_auth_configs,
+        action=_merge_auth_configs,
         run_for=AlwaysContains(),
     )
 

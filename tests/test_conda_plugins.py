@@ -99,7 +99,7 @@ def test_get_unified_api_token_for_dotcom(handler, monkeypatch):
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
 def test_get_unified_api_token_via_keyring(handler, monkeypatch):
-    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "False")
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "True")
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )

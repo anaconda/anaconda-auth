@@ -56,8 +56,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
-        token_domain, is_unified = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
-        config = AnacondaAuthConfig()
+        if channel_domain in TOKEN_DOMAIN_MAP:
+            token_domain, is_unified = TOKEN_DOMAIN_MAP[channel_domain]
+        else:
+            token_domain, is_unified = channel_domain, False
 
         try:
             token_info = TokenInfo.load(token_domain)
@@ -69,8 +71,14 @@ class AnacondaAuthHandler(ChannelAuthBase):
         #   otherwise continue and attempt to utilize repo token
         api_key = token_info.api_key
         if api_key and isinstance(api_key, str):
-            if is_unified or config.use_unified_repo_api_key:
+            if is_unified:
                 return api_key
+            try:
+                config = AnacondaAuthConfig(domain=token_domain)
+                if config.use_unified_repo_api_key:
+                    return api_key
+            except Exception:
+                pass
 
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
