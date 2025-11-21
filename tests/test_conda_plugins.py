@@ -1,3 +1,6 @@
+import json
+import subprocess
+
 import pytest
 from requests import PreparedRequest
 from requests import Response
@@ -308,6 +311,17 @@ def test_override_single_channel_settings():
     assert _parse_config(context.channel_settings) == {
         "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
         "https://repo.continuum.io/pkgs/main/*": {"auth": "override"},
+        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
+        "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
+        "https://anaconda.com/*": {"auth": "anaconda-auth"},
+    }
+
+
+def test_pre_command_plugin_runs():
+    proc = subprocess.run(["conda", "config", "--show", "--json"], capture_output=True)
+    data = json.loads(proc.stdout)
+    assert _parse_config(data.get("channel_settings") or {}) == {
+        "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
         "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
         "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
         "https://anaconda.com/*": {"auth": "anaconda-auth"},
