@@ -157,7 +157,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
+        print("IN THE HANDLER:", request.url)
         token = self._load_token(request.url)
+        print("RETRIEVING THE TOKEN:", token)
         if not token:
             request.register_hook("response", self.handle_missing_token)
             return request
