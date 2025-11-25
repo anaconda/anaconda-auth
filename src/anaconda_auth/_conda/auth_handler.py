@@ -76,7 +76,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
         api_key = token_info.api_key
-        if api_key and isinstance(api_key, str):
+        if api_key:
             if is_unified:
                 return api_key
             try:
