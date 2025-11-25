@@ -31,7 +31,6 @@ TOKEN_DOMAIN_MAP = {
     "repo.anaconda.com": ("anaconda.com", True),
     "repo.anaconda.cloud": ("anaconda.com", False),
 }
-MESSAGES: set[str] = set()
 
 
 class AnacondaAuthError(CondaError):
