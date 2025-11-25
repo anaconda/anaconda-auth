@@ -6,6 +6,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 from functools import lru_cache
 from typing import Any
+from typing import NamedTuple
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -21,15 +22,21 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
+
 # This list is now serving TWO purposes. The keys are used in the conda
 # plugin module to determine which hosts should be hardcoded to use
 # anaconda-auth for authentication. The values are used to provide the
 # keyring domain where the legacy token will be stored, as well as
 # whether or not the destination should receive a proper API key.
+class TokenDomainSetting(NamedTuple):
+    token_domain: str
+    default_use_unified_api_key: bool = True
+
+
 TOKEN_DOMAIN_MAP = {
-    "repo.continuum.io": ("anaconda.com", True),
-    "repo.anaconda.com": ("anaconda.com", True),
-    "repo.anaconda.cloud": ("anaconda.com", False),
+    "repo.continuum.io": TokenDomainSetting("anaconda.com"),
+    "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
+    "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False),
 }
 
 
