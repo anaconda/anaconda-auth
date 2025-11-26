@@ -6,6 +6,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 from functools import lru_cache
 from typing import Any
+from typing import NamedTuple
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -21,10 +22,21 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
-# If the channel netloc matches the key, we look for a token stored under the value
+
+# This list is now serving TWO purposes. The keys are used in the conda
+# plugin module to determine which hosts should be hardcoded to use
+# anaconda-auth for authentication. The values are used to provide the
+# keyring domain where the legacy token will be stored, as well as
+# whether or not the destination should receive a proper API key.
+class TokenDomainSetting(NamedTuple):
+    token_domain: str
+    default_use_unified_api_key: bool = True
+
+
 TOKEN_DOMAIN_MAP = {
-    "repo.anaconda.com": "anaconda.com",
-    "repo.anaconda.cloud": "anaconda.com",
+    "repo.continuum.io": TokenDomainSetting("anaconda.com"),
+    "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
+    "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False),
 }
 
 
@@ -50,8 +62,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
-        token_domain = TOKEN_DOMAIN_MAP.get(channel_domain, channel_domain)
-        config = AnacondaAuthConfig()
+        if channel_domain in TOKEN_DOMAIN_MAP:
+            token_domain, is_unified = TOKEN_DOMAIN_MAP[channel_domain]
+        else:
+            token_domain, is_unified = channel_domain, False
 
         try:
             token_info = TokenInfo.load(token_domain)
@@ -59,16 +73,22 @@ class AnacondaAuthHandler(ChannelAuthBase):
             # Fallback to conda-token if the token is not found in the keyring
             return None
 
+        # Check configuration to use unified api key,
+        # otherwise continue and attempt to utilize repo token
+        if api_key := token_info.api_key:
+            if is_unified:
+                return api_key
+            try:
+                config = AnacondaAuthConfig(domain=token_domain)
+                if config.use_unified_repo_api_key:
+                    return api_key
+            except Exception:
+                pass
+
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
             path = path[len(URI_PREFIX) :]
         maybe_org, _, _ = path.partition("/")
-
-        # Check configuration to use unified api key,
-        #   otherwise continue and attempt to utilize repo token
-        api_key = token_info.api_key
-        if api_key and config.use_unified_repo_api_key and isinstance(api_key, str):
-            return api_key
 
         # First we attempt to return an organization-specific token
         try:
