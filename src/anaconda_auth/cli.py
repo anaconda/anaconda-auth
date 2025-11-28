@@ -227,7 +227,9 @@ def main(
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
     if cmd := subcommands_dict.get(subcommand_name):
-        cmd.main(extra_args[1:], standalone_mode=False, parent=ctx)
+        cmd.main(
+            extra_args[1:], prog_name=subcommand_name, standalone_mode=False, parent=ctx
+        )
         return
 
     has_legacy_options = any(
