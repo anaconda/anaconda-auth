@@ -259,7 +259,7 @@ class TokenInfo(BaseModel):
         )
 
     @property
-    def api_key_kid(self):
+    def api_key_kid(self) -> str:
         return self.decoded_api_key.get("kid")
 
     @classmethod
