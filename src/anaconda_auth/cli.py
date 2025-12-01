@@ -326,7 +326,12 @@ def auth_key(at: Optional[str] = None) -> None:
 
 
 @app.command(name="logout")
-def auth_logout(at: Optional[str] = None, invalidate: bool = typer.Option(False, "--invalidate", "-i", help="Invalidate Api Key.")) -> None:
+def auth_logout(
+    at: Optional[str] = None,
+    invalidate: bool = typer.Option(
+        False, "--invalidate", "-i", help="Invalidate Api Key."
+    ),
+) -> None:
     """Logout"""
     _override_default_site(at)
 
