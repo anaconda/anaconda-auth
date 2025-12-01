@@ -326,7 +326,14 @@ def auth_key(at: Optional[str] = None) -> None:
 
 
 @app.command(name="logout")
-def auth_logout(at: Optional[str] = None) -> None:
+def auth_logout(at: Optional[str] = None, invalidate: bool = typer.Option(False, "--invalidate", "-i", help="Invalidate Api Key.")) -> None:
     """Logout"""
     _override_default_site(at)
+
+    if invalidate:
+        token_info = TokenInfo.load()
+        client = BaseClient()
+        response = client.delete(f"/api/auth/api-keys/{token_info.api_key_kid}")
+        response.raise_for_status()
+
     logout()
