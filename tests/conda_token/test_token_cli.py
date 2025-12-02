@@ -79,7 +79,7 @@ def test_token_list_no_tokens(
     assert (
         "No repo tokens are installed. Run anaconda token install." in result.stdout
     ), result.stdout
-    assert "Aborted." in result.stdout
+    assert "Aborted." in result.stdout, result.stderr
 
 
 def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
