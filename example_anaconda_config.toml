@@ -1,0 +1,6 @@
+# ~/.anaconda/config.toml
+
+default_site = "cloud-staging"
+
+[sites."cloud-staging"]
+domain = "stage.anaconda.com"
