@@ -164,7 +164,18 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return response
 
     def echo_response(self, response: Response, **_: Any) -> Response:
-        print(response)
+        request = response.request
+        lines = [
+            "\n###############################",
+            f"{request.method=}",
+            f"{request.url=}",
+            f"{request.headers=}",
+            f"{response=}",
+        ]
+        if response.ok:
+            lines.append(f"{response.json()=}")
+        lines.append("###############################\n")
+        print("\n".join(lines))
         return response
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
@@ -181,7 +192,5 @@ class AnacondaAuthHandler(ChannelAuthBase):
         else:
             request.headers["Authorization"] = f"token {token}"
 
-        print(request.url)
-        print(request.headers)
         request.register_hook("response", self.echo_response)
         return request
