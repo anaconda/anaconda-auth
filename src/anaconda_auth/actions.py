@@ -132,6 +132,23 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     console.print(device_authorization.user_code)
     console.print()
 
+    import qrcode
+
+    # Create a QR code object
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=1,  # Set box_size to 1 for terminal display
+        border=4,
+    )
+
+    # Add data to the QR code
+    qr.add_data(device_authorization.verification_uri_complete)
+    qr.make(fit=True)
+
+    # Print the QR code as ASCII art to the terminal
+    qr.print_ascii()
+
     # Try to open browser automatically
     try:
         webbrowser.open(device_authorization.verification_uri_complete)
