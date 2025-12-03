@@ -285,7 +285,8 @@ class CLIInvoker(Protocol):
 def invoke_cli(tmp_cwd: Path) -> CLIInvoker:
     """Returns a function, which can be used to call the CLI from within a temporary directory."""
 
-    runner = CliRunner()
+    # mix_stderr combines stdout and stderr for easier assertion testing
+    runner = CliRunner(mix_stderr=True)
 
     return partial(runner.invoke, cast(typer.Typer, app))
 
