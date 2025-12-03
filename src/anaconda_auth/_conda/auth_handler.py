@@ -143,18 +143,34 @@ class AnacondaAuthHandler(ChannelAuthBase):
             )
         return response
 
+    def _build_header(self, url: str) -> Optional[str]:
+        """Build the Authorization header based on the request URL.
+
+        The result can vary in terms of "token" vs. "Bearer" as well as whether the
+        credential is a legacy repo token or an API key.
+
+        """
+        token = self._load_token(url)
+        if token is None:
+            return None
+
+        config = AnacondaAuthConfig()
+        if config.use_unified_repo_api_key:
+            return f"Bearer {token}"
+
+        return f"token {token}"
+
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        token = self._load_token(request.url)
-        if not token:
+        # Technically the request URL may not be set yet
+        if request.url is None:
+            return request
+
+        header = self._build_header(request.url)
+        if not header:
             request.register_hook("response", self.handle_missing_token)
             return request
 
         request.register_hook("response", self.handle_invalid_token)
-        config = AnacondaAuthConfig()
-        if config.use_unified_repo_api_key:
-            request.headers["Authorization"] = f"Bearer {token}"
-        else:
-            request.headers["Authorization"] = f"token {token}"
-
+        request.headers["Authorization"] = header
         return request
