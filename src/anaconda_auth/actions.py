@@ -148,7 +148,7 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
 
     # Print the QR code as ASCII art to the terminal
     console.print("Or login with any device using the QR code!")
-    qr.print_ascii()
+    qr.print_ascii(out=console.file)
 
     # Try to open browser automatically
     try:
