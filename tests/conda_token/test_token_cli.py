@@ -79,7 +79,7 @@ def test_token_list_no_tokens(
     assert (
         "No repo tokens are installed. Run anaconda token install." in result.stdout
     ), result.stdout
-    assert "Aborted." in result.stdout
+    assert "Aborted." in result.output
 
 
 def test_token_list_has_tokens(mocker: MockerFixture, invoke_cli: CLIInvoker) -> None:
@@ -161,7 +161,7 @@ def test_token_install_no_available_org(
     result = invoke_cli(["token", "install"])
     assert result.exit_code == 1, result.stdout
     assert "No organizations found." in result.stdout, result.stdout
-    assert "Aborted." in result.stdout
+    assert "Aborted." in result.output
 
 
 def test_token_install_select_first_if_only_org(
