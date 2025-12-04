@@ -28,7 +28,7 @@ outputs:
       run:
         - python {{ project['requires-python'] }}
         {% for dep in project['dependencies'] %}
-        {% if dep.startswith('anaconda-cli-base') %}
+        {% if not dep.startswith('anaconda-cli-base') %}
         - {{ dep.lower() }}
         {% else %}
         # TODO(mattkram): This is here because of coordinated rollout. Remove after releases.
