@@ -32,7 +32,7 @@ outputs:
         - {{ dep.lower() }}
         {% else %}
         # TODO(mattkram): This is here because of coordinated rollout. Remove after releases.
-        - anaconda-cli-base >=0.7.0rc0
+        - anaconda-cli-base >=0.6.0
         {% endif %}
         {% endfor %}
       run_constrained:
