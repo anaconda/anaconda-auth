@@ -8,7 +8,9 @@ configure their ~/.anaconda/config.toml file and optionally logs them in.
 import logging
 import shutil
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import typer
 from rich.panel import Panel
@@ -96,7 +98,9 @@ def select_domain_interactive() -> str:
     # Build list of available sites
     # Start with anaconda.com if not already in configured sites
     site_options: List[Tuple[str, str]] = []
-    anaconda_com_exists = any(domain == "anaconda.com" for _, domain in configured_sites)
+    anaconda_com_exists = any(
+        domain == "anaconda.com" for _, domain in configured_sites
+    )
 
     if not anaconda_com_exists:
         site_options.append(("anaconda.com", "anaconda.com"))
