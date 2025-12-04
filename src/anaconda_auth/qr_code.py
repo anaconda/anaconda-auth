@@ -75,9 +75,9 @@ DATA_CAPACITY = {1: 17, 2: 32, 3: 53, 4: 78, 5: 106, 6: 134}
 ALIGN_POSITIONS = {1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34]}
 
 
-def select_version(data: str) -> int:
+def _select_version(url: str) -> int:
     """Select smallest version that fits the URL."""
-    byte_len = len(data.encode("latin-1"))
+    byte_len = len(url.encode("latin-1"))
     for v in range(1, 7):
         if DATA_CAPACITY[v] >= byte_len:
             return v
@@ -264,7 +264,7 @@ def generate_qr(url: str) -> Matrix:
     Returns:
         Matrix as list of lists (1=dark, 0=light)
     """
-    version = select_version(url)
+    version = _select_version(url)
     codewords = _encode_data(url, version)
     m, f = create_matrix(version)
     place_data(m, f, codewords)
@@ -322,4 +322,4 @@ if __name__ == "__main__":
     url = sys.argv[1] if len(sys.argv) > 1 else "https://anaconda.com"
     print(qr_to_terminal(url))
     print(f"\nURL: {url}")
-    print(f"Length: {len(url)} chars, Version: {select_version(url)}")
+    print(f"Length: {len(url)} chars, Version: {_select_version(url)}")
