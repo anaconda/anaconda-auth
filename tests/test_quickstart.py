@@ -18,10 +18,13 @@ def test_quickstart(
         lambda: config_path,
     )
 
-    # Mock the interactive prompts
+    # Mock configured sites and user selection
     with patch(
-        "anaconda_auth.quickstart.select_domain_interactive",
-        return_value="test.example.com",
+        "anaconda_auth.quickstart.get_configured_sites",
+        return_value=[],  # No configured sites
+    ), patch(
+        "anaconda_auth.quickstart.Prompt.ask",
+        return_value="1",  # Select anaconda.com (first option)
     ), patch(
         "anaconda_auth.quickstart.Confirm.ask", side_effect=[True, False]
     ):  # Apply config, skip login
@@ -31,7 +34,7 @@ def test_quickstart(
     assert config_path.exists()
 
     content = config_path.read_text()
-    assert 'domain = "test.example.com"' in content
+    assert 'domain = "anaconda.com"' in content
     assert "[plugin.auth]" in content
 
 
