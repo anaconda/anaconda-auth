@@ -144,7 +144,7 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
 
     # Add data to the QR code
     qr.add_data(device_authorization.verification_uri_complete)
-    qr.make(fit=True)
+    qr.make()
 
     # Print the QR code as ASCII art to the terminal
     console.print("Or login with any device using the QR code!")
