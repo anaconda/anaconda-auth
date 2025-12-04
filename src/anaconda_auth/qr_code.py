@@ -275,20 +275,27 @@ def generate_qr(url: str) -> Matrix:
 
 def qr_to_terminal(url: str, quiet_zone: int = 4, invert: bool = False) -> str:
     """Generate terminal-printable QR code."""
+    # Generate the QR code data for the provided URL
     matrix = generate_qr(url)
-    size = len(matrix)
 
+    # Pad the matrix with 0's around the top, bottom, left, and right
+    size = len(matrix)
     full_size = size + 2 * quiet_zone
     full = [[0] * full_size for _ in range(full_size)]
     for r in range(size):
         for c in range(size):
             full[r + quiet_zone][c + quiet_zone] = matrix[r][c]
 
+    # Construct variables for the ASCII characters to use. Each line of the terminal
+    # output will actually cover two vertical pixels from the matrix.
     BOTH_DARK, TOP_DARK, BOT_DARK, BOTH_LIGHT = "█", "▀", "▄", " "
     if invert:
         BOTH_DARK, BOTH_LIGHT = BOTH_LIGHT, BOTH_DARK
         TOP_DARK, BOT_DARK = BOT_DARK, TOP_DARK
 
+    # Iterate every two rows, and determine whether top and bottom should be filled.
+    # Then, we select the appropriate ASCII character to place in each line of the
+    # string output.
     lines = []
     for r in range(0, full_size, 2):
         line = ""
