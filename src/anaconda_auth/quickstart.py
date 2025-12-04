@@ -159,21 +159,6 @@ domain = "{domain}"
     config_path.write_text(config_content)
 
 
-def run_login() -> bool:
-    """Run the anaconda auth login action.
-
-    Returns:
-        True if login was successful, False otherwise
-    """
-    console.print("\n[bold]Opening browser for authentication...[/bold]")
-    try:
-        login()
-        return True
-    except Exception as e:
-        log.debug(f"Login failed: {e}")
-        return False
-
-
 def quickstart(
     restore: bool = typer.Option(
         False,
@@ -248,13 +233,15 @@ def quickstart(
     )
 
     if should_login:
-        success = run_login()
-        if success:
+        console.print("\n[bold]Opening browser for authentication...[/bold]")
+        try:
+            login()
             console.print(
                 "\n[bold green]Setup complete! "
                 "You're ready to use Anaconda services.[/bold green]"
             )
-        else:
+        except Exception as e:
+            log.debug(f"Login failed: {e}")
             console.print(
                 "\n[yellow]Configuration saved, but login was not completed. "
                 "Run 'anaconda auth login' when ready.[/yellow]"
