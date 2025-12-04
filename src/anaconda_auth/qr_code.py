@@ -8,12 +8,16 @@ Usage:
     print(qr_to_terminal("https://example.com"))
 """
 
+# Type aliases
+Matrix = list[list[int]]
+BoolMatrix = list[list[bool]]
+
 # GF(2^8) arithmetic for Reed-Solomon
 _GF_EXP = [0] * 512
 _GF_LOG = [0] * 256
 
 
-def _init_gf():
+def _init_gf() -> None:
     x = 1
     for i in range(255):
         _GF_EXP[i] = x
@@ -27,11 +31,11 @@ def _init_gf():
 _init_gf()
 
 
-def _gf_mul(a, b):
+def _gf_mul(a: int, b: int) -> int:
     return 0 if a == 0 or b == 0 else _GF_EXP[_GF_LOG[a] + _GF_LOG[b]]
 
 
-def _gf_poly_mul(p, q):
+def _gf_poly_mul(p: list[int], q: list[int]) -> list[int]:
     r = [0] * (len(p) + len(q) - 1)
     for i, a in enumerate(p):
         for j, b in enumerate(q):
@@ -39,7 +43,7 @@ def _gf_poly_mul(p, q):
     return r
 
 
-def _gf_poly_div(dividend, divisor):
+def _gf_poly_div(dividend: list[int], divisor: list[int]) -> list[int]:
     r = list(dividend)
     for i in range(len(dividend) - len(divisor) + 1):
         if r[i]:
@@ -49,7 +53,7 @@ def _gf_poly_div(dividend, divisor):
     return r[-(len(divisor) - 1) :]
 
 
-def _rs_encode(data, nsym):
+def _rs_encode(data: list[int], nsym: int) -> list[int]:
     g = [1]
     for i in range(nsym):
         g = _gf_poly_mul(g, [1, _GF_EXP[i]])
@@ -71,7 +75,7 @@ DATA_CAPACITY = {1: 17, 2: 32, 3: 53, 4: 78, 5: 106, 6: 134}
 ALIGN_POSITIONS = {1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34]}
 
 
-def select_version(data):
+def select_version(data: str) -> int:
     """Select smallest version that fits the URL."""
     byte_len = len(data.encode("latin-1"))
     for v in range(1, 7):
@@ -80,7 +84,7 @@ def select_version(data):
     raise ValueError(f"URL too long ({byte_len} bytes), max 134 chars")
 
 
-def _encode_data(data, version):
+def _encode_data(data: str, version: int) -> list[int]:
     """Encode URL data into codewords with Reed-Solomon."""
     total, ec_per, nblocks, data_per = EC_PARAMS[version]
     data_cw = nblocks * data_per
@@ -121,13 +125,13 @@ def _encode_data(data, version):
     return result
 
 
-def create_matrix(version):
+def create_matrix(version: int) -> tuple[Matrix, BoolMatrix]:
     """Create matrix with finder patterns, timing, alignment."""
     size = 17 + version * 4
     m = [[0] * size for _ in range(size)]
     f = [[False] * size for _ in range(size)]
 
-    def set_fixed(r, c, val):
+    def set_fixed(r: int, c: int, val: int) -> None:
         if 0 <= r < size and 0 <= c < size:
             m[r][c] = val
             f[r][c] = True
@@ -185,7 +189,7 @@ def create_matrix(version):
     return m, f
 
 
-def place_data(matrix, fixed, codewords):
+def place_data(matrix: Matrix, fixed: BoolMatrix, codewords: list[int]) -> None:
     """Place data codewords in zigzag pattern."""
     size = len(matrix)
     bits = "".join(format(cw, "08b") for cw in codewords)
@@ -210,7 +214,7 @@ def place_data(matrix, fixed, codewords):
         going_up = not going_up
 
 
-def apply_mask(matrix, fixed):
+def apply_mask(matrix: Matrix, fixed: BoolMatrix) -> None:
     """Apply mask pattern 0: (row + col) % 2 == 0."""
     size = len(matrix)
     for r in range(size):
@@ -219,7 +223,7 @@ def apply_mask(matrix, fixed):
                 matrix[r][c] ^= 1
 
 
-def place_format_info(matrix):
+def place_format_info(matrix: Matrix) -> None:
     """Place format information."""
     size = len(matrix)
 
@@ -254,7 +258,7 @@ def place_format_info(matrix):
         matrix[8][size - 8 + i] = bits[7 + i]
 
 
-def generate_qr(url):
+def generate_qr(url: str) -> Matrix:
     """Generate QR code matrix for URL.
 
     Returns:
@@ -269,7 +273,7 @@ def generate_qr(url):
     return m
 
 
-def qr_to_terminal(url, quiet_zone=4, invert=False):
+def qr_to_terminal(url: str, quiet_zone: int = 4, invert: bool = False) -> str:
     """Generate terminal-printable QR code."""
     matrix = generate_qr(url)
     size = len(matrix)
