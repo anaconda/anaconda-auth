@@ -134,15 +134,19 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     console.print(device_authorization.user_code)
     console.print()
 
-    # Print the QR code as ASCII art to the terminal
-    console.print("Or login with any device using the QR code!")
-    console.print(qr_to_terminal(device_authorization.verification_uri_complete))
+    # Open browser to complete device flow (if configured)
+    if not config.disable_web_browser:
+        browser_was_opened = webbrowser.open(
+            device_authorization.verification_uri_complete
+        )
+    else:
+        browser_was_opened = False
 
-    # Try to open browser automatically
-    try:
-        webbrowser.open(device_authorization.verification_uri_complete)
-    except Exception:
-        pass
+    # Print the QR code as ASCII art to the terminal either if configured, or if browser
+    # could not be opened
+    if not browser_was_opened:
+        console.print("Or login with any device using the QR code!")
+        console.print(qr_to_terminal(device_authorization.verification_uri_complete))
 
     status = console.status("Waiting for authorization (CTRL-C to cancel)")
 

@@ -65,6 +65,7 @@ class AnacondaAuthSite(BaseModel):
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
+    disable_web_browser: bool = False
     _merged: bool = False
 
     @field_validator("ssl_verify", mode="before")
