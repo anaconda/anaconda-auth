@@ -125,7 +125,7 @@ def _encode_data(data: str, version: int) -> list[int]:
     return result
 
 
-def create_matrix(version: int) -> tuple[Matrix, BoolMatrix]:
+def _create_matrix(version: int) -> tuple[Matrix, BoolMatrix]:
     """Create matrix with finder patterns, timing, alignment."""
     size = 17 + version * 4
     m = [[0] * size for _ in range(size)]
@@ -189,7 +189,7 @@ def create_matrix(version: int) -> tuple[Matrix, BoolMatrix]:
     return m, f
 
 
-def place_data(matrix: Matrix, fixed: BoolMatrix, codewords: list[int]) -> None:
+def _place_data(matrix: Matrix, fixed: BoolMatrix, codewords: list[int]) -> None:
     """Place data codewords in zigzag pattern."""
     size = len(matrix)
     bits = "".join(format(cw, "08b") for cw in codewords)
@@ -214,7 +214,7 @@ def place_data(matrix: Matrix, fixed: BoolMatrix, codewords: list[int]) -> None:
         going_up = not going_up
 
 
-def apply_mask(matrix: Matrix, fixed: BoolMatrix) -> None:
+def _apply_mask(matrix: Matrix, fixed: BoolMatrix) -> None:
     """Apply mask pattern 0: (row + col) % 2 == 0."""
     size = len(matrix)
     for r in range(size):
@@ -223,7 +223,7 @@ def apply_mask(matrix: Matrix, fixed: BoolMatrix) -> None:
                 matrix[r][c] ^= 1
 
 
-def place_format_info(matrix: Matrix) -> None:
+def _place_format_info(matrix: Matrix) -> None:
     """Place format information."""
     size = len(matrix)
 
@@ -266,10 +266,10 @@ def generate_qr(url: str) -> Matrix:
     """
     version = _select_version(url)
     codewords = _encode_data(url, version)
-    m, f = create_matrix(version)
-    place_data(m, f, codewords)
-    apply_mask(m, f)
-    place_format_info(m)
+    m, f = _create_matrix(version)
+    _place_data(m, f, codewords)
+    _apply_mask(m, f)
+    _place_format_info(m)
     return m
 
 
