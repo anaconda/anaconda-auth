@@ -13,9 +13,12 @@ from urllib.parse import urljoin
 
 import requests
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import RootModel
+from pydantic import model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import PydanticBaseSettingsSource
+from typing_extensions import Self
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
@@ -43,7 +46,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 
 class AnacondaAuthSite(BaseModel):
-    site: Optional[str] = "anaconda.com"
+    site: Optional[str] = Field(default=None, exclude=True)
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -65,6 +68,13 @@ class AnacondaAuthSite(BaseModel):
     use_device_flow: bool = False
     disable_conda_auto_config: bool = False
     _merged: bool = False
+
+    @model_validator(mode="after")
+    def set_site_name_if_none(self) -> Self:
+        if self.site is None:
+            self.site = self.domain
+
+        return self
 
     @property
     def auth_domain(self) -> str:
@@ -242,7 +252,10 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
 
-    default_site: Optional[str] = None
+    default_site: Optional[str] = Field(
+        default=None,
+        exclude_if=lambda v: AnacondaAuthSitesConfig._exclude_default_site(v),
+    )
     sites: Sites = Sites({})
 
     def __new__(cls) -> "AnacondaAuthSitesConfig":
@@ -260,6 +273,15 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
                 self.sites.root["anaconda.com"] = AnacondaAuthSite()
         for key, value in self.sites.root.items():
             value.site = key
+
+    @classmethod
+    def _exclude_default_site(cls, value: str) -> bool:
+        this = cls()
+        if this.sites.root:
+            implicit_site = next(iter(this.sites.root))
+            return value == implicit_site
+        else:
+            return value == "anaconda.com"
 
     @classmethod
     def all_sites(cls) -> List[str]:
