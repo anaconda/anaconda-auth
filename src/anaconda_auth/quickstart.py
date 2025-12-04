@@ -8,7 +8,7 @@ configure their ~/.anaconda/config.toml file and optionally logs them in.
 import logging
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import typer
 from rich.panel import Panel
@@ -16,16 +16,29 @@ from rich.prompt import Confirm
 from rich.prompt import Prompt
 
 from anaconda_auth.actions import login
+from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 
 log = logging.getLogger(__name__)
 
-# Preset domains for easy selection
-PRESET_DOMAINS = {
-    "1": ("anaconda.com", "Cloud Package Security Manager"),
-    "2": ("custom", "Custom/Private Instance"),
-}
+
+def get_configured_sites() -> List[Tuple[str, str]]:
+    """Get list of configured sites from config.toml.
+
+    Returns:
+        List of tuples (site_key, domain) for configured sites
+    """
+    try:
+        sites_config = AnacondaAuthSitesConfig()
+        configured_sites = []
+        for site_key in sites_config.sites.root.keys():
+            site = sites_config.sites.root[site_key]
+            configured_sites.append((site_key, site.domain))
+        return configured_sites
+    except Exception as e:
+        log.debug(f"Failed to load configured sites: {e}")
+        return []
 
 
 def get_backup_path(config_path: Path) -> Path:
@@ -77,26 +90,54 @@ def select_domain_interactive() -> str:
     """
     console.print("\n[bold]Which Anaconda service do you want to use?[/bold]\n")
 
-    for key, (domain, description) in PRESET_DOMAINS.items():
-        if domain != "custom":
-            console.print(f"  {key}. {description} ([cyan]{domain}[/cyan])")
+    # Get configured sites from config.toml
+    configured_sites = get_configured_sites()
+
+    # Build list of available sites
+    # Start with anaconda.com if not already in configured sites
+    site_options: List[Tuple[str, str]] = []
+    anaconda_com_exists = any(domain == "anaconda.com" for _, domain in configured_sites)
+
+    if not anaconda_com_exists:
+        site_options.append(("anaconda.com", "anaconda.com"))
+
+    # Add all configured sites
+    site_options.extend(configured_sites)
+
+    # Display options
+    for idx, (site_key, domain) in enumerate(site_options, start=1):
+        if site_key == domain:
+            # Simple site, just show domain
+            console.print(f"  {idx}. {domain}")
         else:
-            console.print(f"  {key}. {description}")
+            # Named site, show both name and domain
+            console.print(f"  {idx}. {site_key} ([cyan]{domain}[/cyan])")
+
+    # Add "custom domain" option at the end
+    custom_option_idx = len(site_options) + 1
+    console.print(f"  {custom_option_idx}. Custom domain")
+
+    # Get valid choices as strings
+    valid_choices = [str(i) for i in range(1, custom_option_idx + 1)]
 
     selection = Prompt.ask(
         "\nSelection",
-        choices=list(PRESET_DOMAINS.keys()),
+        choices=valid_choices,
         default="1",
     )
 
-    domain, _ = PRESET_DOMAINS[selection]
+    selected_idx = int(selection)
 
-    if domain == "custom":
+    # Check if user selected custom domain
+    if selected_idx == custom_option_idx:
         domain = Prompt.ask(
             "Enter your domain (e.g., my-company.anaconda.com)",
         )
         # Strip any protocol prefix if user included it
         domain = domain.replace("https://", "").replace("http://", "").strip("/")
+    else:
+        # User selected an existing site
+        _, domain = site_options[selected_idx - 1]
 
     return domain
 
