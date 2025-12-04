@@ -17,6 +17,7 @@ from anaconda_auth.exceptions import AuthenticationError
 from anaconda_auth.exceptions import DeviceFlowError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.handlers import capture_auth_code
+from anaconda_auth.qr_code import qr_to_terminal
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.console import console
 
@@ -133,23 +134,9 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     console.print(device_authorization.user_code)
     console.print()
 
-    import qrcode
-
-    # Create a QR code object
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=1,  # Set box_size to 1 for terminal display
-        border=4,
-    )
-
-    # Add data to the QR code
-    qr.add_data(device_authorization.verification_uri_complete)
-    qr.make()
-
     # Print the QR code as ASCII art to the terminal
     console.print("Or login with any device using the QR code!")
-    qr.print_ascii(out=console.file)
+    console.print(qr_to_terminal(device_authorization.verification_uri_complete))
 
     # Try to open browser automatically
     try:
