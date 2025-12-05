@@ -7,13 +7,22 @@ configure their ~/.anaconda/config.toml file and optionally logs them in.
 
 import logging
 import shutil
+import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import typer
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.prompt import Prompt
+
+# TOML library imports with compatibility for Python 3.9+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
+import tomli_w
 
 from anaconda_auth.actions import login
 from anaconda_auth.config import AnacondaAuthSitesConfig
@@ -142,21 +151,65 @@ def select_domain_interactive() -> str:
     return domain
 
 
+def set_config_value(config_path: Path, table: str, key: str, value: Any) -> None:
+    """Safely set a configuration value in the TOML config file.
+
+    This function reads the existing config, updates only the specified key,
+    and preserves all other configuration values.
+
+    TODO: Move this function to anaconda-cli-base as part of
+    https://github.com/anaconda/anaconda-cli-base/issues/56
+    This implementation is based on the function from:
+    https://github.com/anaconda/assistant-sdk/blob/main/libs/anaconda-assistant-conda/src/anaconda_assistant_conda/core.py#L27-L52
+
+    Args:
+        config_path: Path to the config.toml file
+        table: Dot-separated table path (e.g., "plugin.auth")
+        key: The configuration key to set
+        value: The value to set
+
+    Example:
+        set_config_value(config_path, "plugin.auth", "domain", "anaconda.com")
+    """
+    # Parse the table path
+    expanded = table.split(".")
+
+    # Read existing config or start with empty dict
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            config = tomllib.load(f)
+    else:
+        config = {}
+
+    # Navigate/create the nested table structure
+    config_table = config
+    for table_key in expanded:
+        if table_key not in config_table:
+            config_table[table_key] = {}
+        config_table = config_table[table_key]
+
+    # Set the value (config_table is still referenced in the config dict)
+    config_table[key] = value
+
+    # Ensure parent directory exists
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write the complete config back
+    with open(config_path, "wb") as f:
+        tomli_w.dump(config, f)
+
+
 def write_config(config_path: Path, domain: str) -> None:
     """Write the configuration file with the specified domain.
+
+    This function safely updates only the domain setting while preserving
+    all other existing configuration values.
 
     Args:
         config_path: Path to write the config file
         domain: The domain to configure
     """
-    # Ensure parent directory exists
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write TOML configuration
-    config_content = f'''[plugin.auth]
-domain = "{domain}"
-'''
-    config_path.write_text(config_content)
+    set_config_value(config_path, "plugin.auth", "domain", domain)
 
 
 def quickstart(
