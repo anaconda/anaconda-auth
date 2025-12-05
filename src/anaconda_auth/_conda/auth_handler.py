@@ -66,15 +66,12 @@ def _load_settings_for_channel(channel_name: str) -> dict[str, str]:
 class AnacondaAuthHandler(ChannelAuthBase):
     def __init__(self, channel_name: str, *args, **kwargs):
         super().__init__(channel_name, *args, **kwargs)
-        # print(f"{channel_name=}, {args=}, {kwargs=}")
-        channel = Channel(channel_name)
-        # print(f"{channel=}")
-        # print(f"{channel.location=}")
 
-        settings = _load_settings_for_channel(channel_name)
+        channel = Channel(channel_name)
+        self.channel_domain = channel.location
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
-        self.channel_domain = channel.location
+        settings = _load_settings_for_channel(channel_name)
         self.auth_domain = settings.get("auth_domain") or self.channel_domain
         self.credential_type = settings.get("credential_type", "api-key")
 
