@@ -5,3 +5,5 @@ channel_alias: https://repo-latest.dev-us-east-1.anaconda.cloud/repo
 channel_settings:
   - auth: anaconda-auth
     channel: https://repo-latest.dev-us-east-1.anaconda.cloud/repo/*
+    auth_domain: stage.anaconda.com
+    credential_type: api-key
