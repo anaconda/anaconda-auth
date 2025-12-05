@@ -57,6 +57,8 @@ class AnacondaAuthError(CondaError):
 
 def _load_settings_for_channel(channel_name: str) -> dict[str, str]:
     """Find the correct channel settings from conda's configuration."""
+    # TODO(mattkram): Open conda issue to see if we can pass this into the AuthHandler
+    #                 as part of the plugin protocol.
     for settings in global_context.channel_settings:
         settings_channel = settings.get("channel")
 
