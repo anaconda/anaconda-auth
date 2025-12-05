@@ -78,6 +78,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
                 self.auth_domain, self.credential_type == "api-key"
             )
+        print(f"{TOKEN_DOMAIN_MAP=}")
         lines = []
         lines.append("\n############################################################")
         lines.append(f"{self.channel_name=}")
@@ -114,6 +115,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
+
+        print(f"{token_info=}")
 
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
