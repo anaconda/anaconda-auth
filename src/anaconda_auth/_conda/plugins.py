@@ -74,7 +74,7 @@ def conda_pre_commands() -> Iterable[CondaPreCommand]:
     yield CondaPreCommand(
         name="anaconda-auth",
         action=_merge_auth_configs,
-        run_for=AlwaysContains(),
+        run_for=AlwaysContains(),  # type: ignore
     )
 
 

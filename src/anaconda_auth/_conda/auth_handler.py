@@ -11,6 +11,8 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from conda import CondaError
+from conda.base.context import context as global_context
+from conda.models.channel import Channel
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
@@ -46,7 +48,50 @@ class AnacondaAuthError(CondaError):
     """
 
 
+def _load_settings_for_channel(channel_name: str) -> dict[str, str]:
+    """Find the correct channel settings from conda's configuration."""
+    for settings in global_context.channel_settings:
+        settings_channel = settings.get("channel")
+
+        # TODO(mattkram): This is not robust as it assumes the glob pattern
+        if settings_channel.endswith("*"):
+            prefix = settings_channel[:-1]
+            if channel_name.startswith(prefix):
+                return settings
+
+    # TODO(mattkram): How should we handle this?
+    raise ValueError(f"Couldn't find the settings for channel {channel_name}")
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
+    def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
+        super().__init__(channel_name, *args, **kwargs)
+
+        channel = Channel(channel_name)
+        self.channel_domain = channel.location
+
+        # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
+        settings = _load_settings_for_channel(channel_name)
+        self.auth_domain = (
+            settings.get("auth_domain", self.channel_domain) or "anaconda.com"
+        )
+        self.credential_type = settings.get("credential_type", "api-key")
+
+        # TODO(mattkram): This is brittle, rewrite
+        if self.channel_domain and self.channel_domain not in TOKEN_DOMAIN_MAP:
+            TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
+                self.auth_domain, self.credential_type == "api-key"
+            )
+        print(f"{TOKEN_DOMAIN_MAP=}")
+        lines = []
+        lines.append("\n############################################################")
+        lines.append(f"{self.channel_name=}")
+        lines.append(f"{self.channel_domain=}")
+        lines.append(f"{self.auth_domain=}")
+        lines.append(f"{self.credential_type=}")
+        lines.append("############################################################\n")
+        print("\n".join(lines))
+
     @staticmethod
     def _load_token_from_keyring(url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
@@ -140,9 +185,28 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         return None
 
+    def _build_header(self, url: str) -> Optional[str]:
+        """Build the Authorization header based on the request URL.
+
+        The result can vary in terms of "token" vs. "Bearer" as well as whether the
+        credential is a legacy repo token or an API key.
+
+        """
+        token = self._load_token(url)
+        if token is None:
+            return None
+
+        # TODO(mattkram): This is a heuristic to determine whether token or API key but
+        #                 we should do it better.
+        if len(token) < 200:
+            return f"token {token}"
+
+        return f"Bearer {token}"
+
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
         if response.status_code in {401, 403}:
+            # TODO: We need to make this handle better errors between token vs. api-key instructions
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
@@ -152,6 +216,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
         if response.status_code in {401, 403}:
+            # TODO: We need to make this handle better errors between token vs. api-key instructions
             raise AnacondaAuthError(
                 f"Received authentication error ({response.status_code}) when "
                 f"accessing {self.channel_name}. "
@@ -160,18 +225,35 @@ class AnacondaAuthHandler(ChannelAuthBase):
             )
         return response
 
+    def echo_response(self, response: Response, **_: Any) -> Response:
+        request = response.request
+        lines = [
+            "\n###############################",
+            f"{request.method=}",
+            f"{request.url=}",
+            f"{request.headers=}",
+            f"{response=}",
+        ]
+        if response.ok:
+            try:
+                lines.append(f"{response.json()=}")
+            except Exception:
+                lines.append("Couldn't parse JSON response but status code was ok ...")
+        lines.append("###############################\n")
+        print("\n".join(lines))
+        return response
+
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        token = self._load_token(request.url)
-        if not token:
+        header = self._build_header(request.url) if request.url is not None else None
+        if not header:
             request.register_hook("response", self.handle_missing_token)
             return request
 
-        request.register_hook("response", self.handle_invalid_token)
-        config = AnacondaAuthConfig()
-        if config.use_unified_repo_api_key:
-            request.headers["Authorization"] = f"Bearer {token}"
-        else:
-            request.headers["Authorization"] = f"token {token}"
+        if header is not None:
+            request.headers["Authorization"] = header
 
+        request.register_hook("response", self.handle_invalid_token)
+        # TODO(mattkram): Remove debug print
+        # request.register_hook("response", self.echo_response)
         return request
