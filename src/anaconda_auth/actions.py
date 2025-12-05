@@ -18,6 +18,7 @@ from anaconda_auth.exceptions import AuthenticationError
 from anaconda_auth.exceptions import DeviceFlowError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.handlers import capture_auth_code
+from anaconda_auth.qr_code import qr_to_terminal
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.console import console
 
@@ -132,11 +133,19 @@ def _do_device_flow(config: Optional[AnacondaAuthSite] = None) -> str:
     console.print(device_authorization.user_code)
     console.print()
 
-    # Try to open browser automatically
-    try:
-        webbrowser.open(device_authorization.verification_uri_complete)
-    except Exception:
-        pass
+    # Open browser to complete device flow (if configured)
+    if not config.disable_web_browser:
+        browser_was_opened = webbrowser.open(
+            device_authorization.verification_uri_complete
+        )
+    else:
+        browser_was_opened = False
+
+    # Print the QR code as ASCII art to the terminal either if configured, or if browser
+    # could not be opened
+    if not browser_was_opened:
+        console.print("Or login with any device using the QR code!")
+        console.print(qr_to_terminal(device_authorization.verification_uri_complete))
 
     status = console.status("Waiting for authorization (CTRL-C to cancel)")
 
