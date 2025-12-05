@@ -248,6 +248,12 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def __getitem__(self, key: str) -> AnacondaAuthConfig:
         return AnacondaAuthConfig(site=self._find_at(key))
 
+    def __setitem__(self, name: str, site: AnacondaAuthSite) -> None:
+        self.root[name] = site
+
+    def add(self, site: AnacondaAuthSite) -> None:
+        self[site.site] = site
+
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
