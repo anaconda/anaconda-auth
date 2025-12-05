@@ -224,10 +224,18 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return response
 
     def _build_header(self, url: str) -> str | None:
+        """Build the Authorization header based on the request URL.
+
+        The result can vary in terms of "token" vs. "Bearer" as well as whether the
+        credential is a legacy repo token or an API key.
+
+        """
         token = self._load_token(url)
         if token is None:
             return None
 
+        # TODO(mattkram): This is a heuristic to determine whether token or API key but
+        #                 we should do it better.
         if len(token) < 200:
             return f"token {token}"
 
