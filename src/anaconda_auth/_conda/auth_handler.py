@@ -123,26 +123,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         return None
 
-    def handle_missing_token(self, response: Response, **_: Any) -> Response:
-        """Raise a nice error message if the authentication token is missing."""
-        if response.status_code in {401, 403}:
-            raise AnacondaAuthError(
-                f"Token not found for {self.channel_name}. Please install token with "
-                "`anaconda token install`."
-            )
-        return response
-
-    def handle_invalid_token(self, response: Response, **_: Any) -> Response:
-        """Raise a nice error message if the authentication token is invalid (not missing)."""
-        if response.status_code in {401, 403}:
-            raise AnacondaAuthError(
-                f"Received authentication error ({response.status_code}) when "
-                f"accessing {self.channel_name}. "
-                "If your token is invalid or expired, please re-install with "
-                "`anaconda token install`."
-            )
-        return response
-
     def _build_header(self, url: str) -> Optional[str]:
         """Build the Authorization header based on the request URL.
 
@@ -163,6 +143,26 @@ class AnacondaAuthHandler(ChannelAuthBase):
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
             return None
+
+    def handle_missing_token(self, response: Response, **_: Any) -> Response:
+        """Raise a nice error message if the authentication token is missing."""
+        if response.status_code in {401, 403}:
+            raise AnacondaAuthError(
+                f"Token not found for {self.channel_name}. Please install token with "
+                "`anaconda token install`."
+            )
+        return response
+
+    def handle_invalid_token(self, response: Response, **_: Any) -> Response:
+        """Raise a nice error message if the authentication token is invalid (not missing)."""
+        if response.status_code in {401, 403}:
+            raise AnacondaAuthError(
+                f"Received authentication error ({response.status_code}) when "
+                f"accessing {self.channel_name}. "
+                "If your token is invalid or expired, please re-install with "
+                "`anaconda token install`."
+            )
+        return response
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
