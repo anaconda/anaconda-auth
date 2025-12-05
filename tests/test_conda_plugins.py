@@ -2,6 +2,7 @@ import json
 import subprocess
 
 import pytest
+from pytest import MonkeyPatch
 from requests import PreparedRequest
 from requests import Response
 from requests.hooks import dispatch_hook
@@ -326,3 +327,25 @@ def test_pre_command_plugin_runs():
         "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
         "https://anaconda.com/*": {"auth": "anaconda-auth"},
     }
+
+
+@pytest.mark.parametrize(
+    "disabled, expected_num_settings",
+    [
+        (True, 0),
+        (False, 4),
+    ],
+)
+def test_pre_command_plugin_disabled(
+    disabled: bool,
+    expected_num_settings: int,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Ensure that we can disable pre-command plugin with a config variable."""
+    monkeypatch.setenv("ANACONDA_AUTH_DISABLE_CONDA_AUTO_CONFIG", str(disabled))
+
+    # If auto-config is disabled, we will have 0 channel_settings. Else will be 4.
+    proc = subprocess.run(["conda", "config", "--show", "--json"], capture_output=True)
+    data = json.loads(proc.stdout)
+    config = _parse_config(data.get("channel_settings") or {})
+    assert len(config) == expected_num_settings

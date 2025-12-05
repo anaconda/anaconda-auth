@@ -54,15 +54,16 @@ You can configure `anaconda-auth` by either:
 
 The following parameters in the `plugin.auth` section control the login actions and API requests to Anaconda Services.
 
-| Parameter                  | Env variable                             | Description                                                                                                 | Default value        |
-| -------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
-| `domain`                   | `ANACONDA_AUTH_DOMAIN`                   | Authentication and API request domain                                                                       | `"anaconda.com"`     |
-| `ssl_verify`               | `ANACONDA_AUTH_SSL_VERIFY`               | SSL verification for all requests                                                                           | `True`               |
-| `preferred_token_storage`  | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE`  | Where to store the login token; can be `"anaconda-keyring"` or `"system"`                                   | `"anaconda-keyring"` |
-| `api_key`                  | `ANACONDA_AUTH_API_KEY`                  | API key; if `None`, defaults to keyring storage                                                             | `None`               |
-| `extra_headers`            | `ANACONDA_AUTH_EXTRA_HEADERS`            | Extra request headers in JSON format                                                                        | `None`               |
-| `use_unified_repo_api_key` | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY` | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False`              |
-| `use_device_flow`          | `ANACONDA_AUTH_USE_DEVICE_FLOW`          | Configures `anaconda-auth` to use device flow grant                                                         | `False`              |
+| Parameter                   | Env variable                              | Description                                                                                                 | Default value        |
+| --------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| `domain`                    | `ANACONDA_AUTH_DOMAIN`                    | Authentication and API request domain                                                                       | `"anaconda.com"`     |
+| `ssl_verify`                | `ANACONDA_AUTH_SSL_VERIFY`                | SSL verification for all requests                                                                           | `True`               |
+| `preferred_token_storage`   | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE`   | Where to store the login token; can be `"anaconda-keyring"` or `"system"`                                   | `"anaconda-keyring"` |
+| `api_key`                   | `ANACONDA_AUTH_API_KEY`                   | API key; if `None`, defaults to keyring storage                                                             | `None`               |
+| `extra_headers`             | `ANACONDA_AUTH_EXTRA_HEADERS`             | Extra request headers in JSON format                                                                        | `None`               |
+| `use_unified_repo_api_key`  | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY`  | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False`              |
+| `use_device_flow`           | `ANACONDA_AUTH_USE_DEVICE_FLOW`           | Configures `anaconda-auth` to use device flow grant                                                         | `False`              |
+| `disable_conda_auto_config` | `ANACONDA_AUTH_DISABLE_CONDA_AUTO_CONFIG` | Disable automatic configuration of conda's `channel_settings`                                               | `False`              |
 
 ### Example
 

@@ -34,6 +34,10 @@ def _merge_auth_configs(command: str) -> None:
     unchanged; but all other channels in the list TOKEN_DOMAIN_MAP are pointed
     to this plugin for authentication.
     """
+    config = AnacondaAuthSitesConfig.load_site()
+    if config.disable_conda_auto_config:
+        return
+
     from conda.base.context import context
 
     result = []
