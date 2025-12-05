@@ -123,6 +123,23 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         return None
 
+    def _build_header(self, url: str) -> Optional[str]:
+        """Build the Authorization header based on the request URL.
+
+        The result can vary in terms of "token" vs. "Bearer" as well as whether the
+        credential is a legacy repo token or an API key.
+
+        """
+        token = self._load_token(url)
+        if token is None:
+            return None
+
+        config = AnacondaAuthConfig()
+        if not config.use_unified_repo_api_key:
+            return f"token {token}"
+
+        return f"Bearer {token}"
+
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
         if response.status_code in {401, 403}:
@@ -142,23 +159,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
                 "`anaconda token install`."
             )
         return response
-
-    def _build_header(self, url: str) -> Optional[str]:
-        """Build the Authorization header based on the request URL.
-
-        The result can vary in terms of "token" vs. "Bearer" as well as whether the
-        credential is a legacy repo token or an API key.
-
-        """
-        token = self._load_token(url)
-        if token is None:
-            return None
-
-        config = AnacondaAuthConfig()
-        if not config.use_unified_repo_api_key:
-            return f"token {token}"
-
-        return f"Bearer {token}"
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
