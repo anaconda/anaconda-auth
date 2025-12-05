@@ -48,6 +48,21 @@ class AnacondaAuthError(CondaError):
     """
 
 
+def _load_settings_for_channel(channel_name: str) -> dict[str, str]:
+    """Find the correct channel settings from conda's configuration."""
+    for settings in global_context.channel_settings:
+        settings_channel = settings.get("channel")
+
+        # TODO(mattkram): This is not robust as it assumes the glob pattern
+        if settings_channel.endswith("*"):
+            prefix = settings_channel[:-1]
+            if channel_name.startswith(prefix):
+                return settings
+
+    # TODO(mattkram): How should we handle this?
+    raise ValueError(f"Couldn't find the settings for channel {channel_name}")
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
     def __init__(self, channel_name: str, *args, **kwargs):
         super().__init__(channel_name, *args, **kwargs)
@@ -56,17 +71,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # print(f"{channel=}")
         # print(f"{channel.location=}")
 
-        # TODO(mattkram): This is not robust
-        for settings in global_context.channel_settings:
-            # print(f"maybe_settings: {settings}")
-            settings_channel = settings.get("channel")
-
-            if settings_channel.endswith("*"):
-                prefix = settings_channel[:-1]
-                if channel_name.startswith(prefix):
-                    # print("Found match!")
-                    break
-        # print(f"{settings=}")
+        settings = _load_settings_for_channel(channel_name)
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
         self.channel_domain = channel.location
