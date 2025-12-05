@@ -188,6 +188,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
         if response.status_code in {401, 403}:
+            # TODO: We need to make this handle better errors between token vs. api-key instructions
             raise AnacondaAuthError(
                 f"Token not found for {self.channel_name}. Please install token with "
                 "`anaconda token install`."
@@ -197,6 +198,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def handle_invalid_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is invalid (not missing)."""
         if response.status_code in {401, 403}:
+            # TODO: We need to make this handle better errors between token vs. api-key instructions
             raise AnacondaAuthError(
                 f"Received authentication error ({response.status_code}) when "
                 f"accessing {self.channel_name}. "
@@ -236,16 +238,14 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
         header = self._build_header(request.url)
-        # if not header:
-        #     request.register_hook("response", self.handle_missing_token)
-        #     return request
+        if not header:
+            request.register_hook("response", self.handle_missing_token)
+            return request
 
-        # request.register_hook("response", self.handle_invalid_token)
-        # config = AnacondaAuthConfig()
-        # if config.use_unified_repo_api_key:
-        request.headers["Authorization"] = header
-        # else:
-        # request.headers["Authorization"] = f"token {token}"
+        if header is not None:
+            request.headers["Authorization"] = header
 
+        request.register_hook("response", self.handle_invalid_token)
+        # TODO(mattkram): Remove debug print
         request.register_hook("response", self.echo_response)
         return request
