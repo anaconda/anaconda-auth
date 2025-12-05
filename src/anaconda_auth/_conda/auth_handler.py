@@ -39,9 +39,6 @@ TOKEN_DOMAIN_MAP = {
     "repo.continuum.io": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False),
-    "repo-latest.dev-us-east-1.anaconda.cloud": TokenDomainSetting(
-        "stage.anaconda.com", True
-    ),
 }
 
 
@@ -73,9 +70,14 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
         self.channel_domain = channel.location
-        self.auth_domain = settings.get("auth_domain")
+        self.auth_domain = settings.get("auth_domain") or self.channel_domain
         self.credential_type = settings.get("credential_type", "api-key")
 
+        # TODO(mattkram): This is brittle, rewrite
+        if self.channel_domain and self.channel_domain not in TOKEN_DOMAIN_MAP:
+            TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
+                self.auth_domain, self.credential_type == "api-key"
+            )
         lines = []
         lines.append("\n############################################################")
         lines.append(f"{self.channel_name=}")
@@ -98,6 +100,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         the token will attempt to be read from via conda-token instead.
 
         """
+        print(f"Loading token for {url=}")
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
         if channel_domain in TOKEN_DOMAIN_MAP:
@@ -105,6 +108,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         else:
             token_domain, is_unified = channel_domain, False
 
+        print(f"{token_domain=} {is_unified=}")
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
@@ -216,19 +220,29 @@ class AnacondaAuthHandler(ChannelAuthBase):
         print("\n".join(lines))
         return response
 
+    def _build_header(self, url: str) -> str | None:
+        token = self._load_token(url)
+        if token is None:
+            return None
+
+        if len(token) < 200:
+            return f"token {token}"
+
+        return f"Bearer {token}"
+
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        token = self._load_token(request.url)
-        if not token:
-            request.register_hook("response", self.handle_missing_token)
-            return request
+        header = self._build_header(request.url)
+        # if not header:
+        #     request.register_hook("response", self.handle_missing_token)
+        #     return request
 
-        request.register_hook("response", self.handle_invalid_token)
-        config = AnacondaAuthConfig()
-        if config.use_unified_repo_api_key:
-            request.headers["Authorization"] = f"Bearer {token}"
-        else:
-            request.headers["Authorization"] = f"token {token}"
+        # request.register_hook("response", self.handle_invalid_token)
+        # config = AnacondaAuthConfig()
+        # if config.use_unified_repo_api_key:
+        request.headers["Authorization"] = header
+        # else:
+        # request.headers["Authorization"] = f"token {token}"
 
         request.register_hook("response", self.echo_response)
         return request
