@@ -13,7 +13,7 @@ dependencies = [
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
   "anaconda-cli-base >=0.5.4",
-  "tomli>=1.1.0; python_version<'3.11'",  # TOML reading for Python <3.11
+  "tomli>=1.1.0",  # TOML reading (Python 3.11+ uses built-in tomllib)
   "tomli-w>=1.0.0"  # TOML writing for all versions
 ]
 description = "A client auth library for Anaconda APIs"
