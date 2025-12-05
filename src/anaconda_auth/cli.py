@@ -16,6 +16,7 @@ from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
 from anaconda_auth.exceptions import TokenExpiredError
+from anaconda_auth.quickstart import quickstart
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
@@ -330,3 +331,6 @@ def auth_logout(at: Optional[str] = None) -> None:
     """Logout"""
     _override_default_site(at)
     logout()
+
+
+app.command(name="quickstart")(quickstart)

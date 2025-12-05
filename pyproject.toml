@@ -12,7 +12,9 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.7.0"
+  "anaconda-cli-base >=0.5.4",
+  "tomli>=1.1.0",  # TOML reading (Python 3.11+ uses built-in tomllib)
+  "tomli-w>=1.0.0"  # TOML writing for all versions
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
@@ -220,7 +222,6 @@ python =
     3.11: py311, mypy
     3.12: py312, mypy
     3.13: py313, mypy
-    3.14: py314, mypy
 
 [testenv]
 passenv =
