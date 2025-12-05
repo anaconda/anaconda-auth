@@ -76,8 +76,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
         super().__init__(channel_name, *args, **kwargs)
 
+        # Try to get the channel domain from conda
+        # This doesn't work for things like "defaults"
         channel = Channel(channel_name)
-        self.channel_domain = channel.location
+        self.channel_domain: Optional[str] = channel.location
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
         settings = _load_settings_for_channel(channel_name)
