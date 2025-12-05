@@ -103,7 +103,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
         the token will attempt to be read from via conda-token instead.
 
         """
-        print(f"Loading token for {url=}")
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
         if channel_domain in TOKEN_DOMAIN_MAP:
@@ -111,14 +110,11 @@ class AnacondaAuthHandler(ChannelAuthBase):
         else:
             token_domain, is_unified = channel_domain, False
 
-        print(f"{token_domain=} {is_unified=}")
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
-
-        print(f"{token_info=}")
 
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
@@ -249,5 +245,5 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         request.register_hook("response", self.handle_invalid_token)
         # TODO(mattkram): Remove debug print
-        request.register_hook("response", self.echo_response)
+        # request.register_hook("response", self.echo_response)
         return request
