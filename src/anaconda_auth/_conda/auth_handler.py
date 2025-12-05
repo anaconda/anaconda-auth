@@ -11,6 +11,8 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from conda import CondaError
+from conda.base.context import context as global_context
+from conda.models.channel import Channel
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
@@ -50,6 +52,39 @@ class AnacondaAuthError(CondaError):
 
 
 class AnacondaAuthHandler(ChannelAuthBase):
+    def __init__(self, channel_name: str, *args, **kwargs):
+        super().__init__(channel_name, *args, **kwargs)
+        # print(f"{channel_name=}, {args=}, {kwargs=}")
+        channel = Channel(channel_name)
+        # print(f"{channel=}")
+        # print(f"{channel.location=}")
+
+        # TODO(mattkram): This is not robust
+        for settings in global_context.channel_settings:
+            # print(f"maybe_settings: {settings}")
+            settings_channel = settings.get("channel")
+
+            if settings_channel.endswith("*"):
+                prefix = settings_channel[:-1]
+                if channel_name.startswith(prefix):
+                    # print("Found match!")
+                    break
+        # print(f"{settings=}")
+
+        # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
+        self.channel_domain = channel.location
+        self.auth_domain = settings.get("auth_domain")
+        self.credential_type = settings.get("credential_type", "api-key")
+
+        lines = []
+        lines.append("\n############################################################")
+        lines.append(f"{self.channel_name=}")
+        lines.append(f"{self.channel_domain=}")
+        lines.append(f"{self.auth_domain=}")
+        lines.append(f"{self.credential_type=}")
+        lines.append("############################################################\n")
+        print("\n".join(lines))
+
     @staticmethod
     def _load_token_from_keyring(url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
