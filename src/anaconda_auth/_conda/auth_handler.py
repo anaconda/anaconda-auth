@@ -173,7 +173,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
             f"{response=}",
         ]
         if response.ok:
-            lines.append(f"{response.json()=}")
+            try:
+                lines.append(f"{response.json()=}")
+            except Exception:
+                lines.append("Couldn't parse JSON response but status code was ok ...")
         lines.append("###############################\n")
         print("\n".join(lines))
         return response
