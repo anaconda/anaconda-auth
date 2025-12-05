@@ -64,3 +64,49 @@ def test_quickstart_restore(
 
     assert result.exit_code == 0
     assert config_path.read_text() == backup_content
+
+
+def test_quickstart_preserves_existing_config(
+    invoke_cli: CLIInvoker, tmp_cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that quickstart preserves existing config values."""
+    config_dir = tmp_cwd / ".anaconda"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "config.toml"
+
+    # Create config with existing values that should be preserved
+    existing_config = """[other_plugin]
+some_setting = "important_value"
+
+[plugin.auth]
+existing_setting = "keep_me"
+"""
+    config_path.write_text(existing_config)
+
+    monkeypatch.setattr(
+        "anaconda_auth.quickstart.anaconda_config_path",
+        lambda: config_path,
+    )
+
+    # Mock configured sites and user selection
+    with patch(
+        "anaconda_auth.quickstart.get_configured_sites",
+        return_value=[],  # No configured sites
+    ), patch(
+        "anaconda_auth.quickstart.Prompt.ask",
+        return_value="1",  # Select anaconda.com (first option)
+    ), patch(
+        "anaconda_auth.quickstart.Confirm.ask", side_effect=[True, False]
+    ):  # Apply config, skip login
+        result = invoke_cli(["auth", "quickstart"])
+
+    assert result.exit_code == 0
+    assert config_path.exists()
+
+    content = config_path.read_text()
+    # Check that the new domain was set
+    assert 'domain = "anaconda.com"' in content
+    # Check that existing values were preserved
+    assert 'some_setting = "important_value"' in content
+    assert 'existing_setting = "keep_me"' in content
+    assert "[other_plugin]" in content
