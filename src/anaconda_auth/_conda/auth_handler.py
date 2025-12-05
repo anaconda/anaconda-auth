@@ -64,7 +64,7 @@ def _load_settings_for_channel(channel_name: str) -> dict[str, str]:
 
 
 class AnacondaAuthHandler(ChannelAuthBase):
-    def __init__(self, channel_name: str, *args, **kwargs):
+    def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
         super().__init__(channel_name, *args, **kwargs)
 
         channel = Channel(channel_name)
@@ -72,7 +72,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
         settings = _load_settings_for_channel(channel_name)
-        self.auth_domain = settings.get("auth_domain") or self.channel_domain
+        self.auth_domain = (
+            settings.get("auth_domain", self.channel_domain) or "anaconda.com"
+        )
         self.credential_type = settings.get("credential_type", "api-key")
 
         # TODO(mattkram): This is brittle, rewrite
@@ -183,7 +185,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         return None
 
-    def _build_header(self, url: str) -> str | None:
+    def _build_header(self, url: str) -> Optional[str]:
         """Build the Authorization header based on the request URL.
 
         The result can vary in terms of "token" vs. "Bearer" as well as whether the
@@ -243,7 +245,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        header = self._build_header(request.url)
+        header = self._build_header(request.url) if request.url is not None else None
         if not header:
             request.register_hook("response", self.handle_missing_token)
             return request
