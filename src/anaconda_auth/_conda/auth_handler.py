@@ -22,6 +22,7 @@ from anaconda_auth._conda import repo_config
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
+from anaconda_cli_base.console import console
 
 URI_PREFIX = "/repo/"
 
@@ -90,14 +91,19 @@ class AnacondaAuthHandler(ChannelAuthBase):
             TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
                 self.auth_domain, self.credential_type == CredentialType.API_KEY
             )
-        print(f"{TOKEN_DOMAIN_MAP=}")
+        console.print("\nTOKEN_DOMAIN_MAP:")
+        console.print(TOKEN_DOMAIN_MAP)
         lines = []
-        lines.append("\n############################################################")
+        lines.append(
+            "\n#######################################################################################################################"
+        )
         lines.append(f"{self.channel_name=}")
         lines.append(f"{self.channel_domain=}")
         lines.append(f"{self.auth_domain=}")
         lines.append(f"{self.credential_type=}")
-        lines.append("############################################################\n")
+        lines.append(
+            "#######################################################################################################################\n"
+        )
         print("\n".join(lines))
 
     @staticmethod
