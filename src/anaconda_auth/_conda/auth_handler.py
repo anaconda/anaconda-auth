@@ -83,17 +83,25 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # TODO(mattkram): We need to load some defaults based on TOKEN_DOMAIN_MAP first, and then allow overrides
         settings = _load_settings_for_channel(channel_name)
-        self.auth_domain = (
-            settings.get("auth_domain", self.channel_domain) or "anaconda.com"
+        self.auth_domain: Optional[str] = settings.get(
+            "auth_domain", self.channel_domain
         )
+        # TODO(mattkram): Add test for non-enum values and exception handling
         self.credential_type = CredentialType(
             settings.get("credential_type", "api-key")
         )
 
         # TODO(mattkram): This is brittle, rewrite
-        if self.channel_domain and self.channel_domain not in TOKEN_DOMAIN_MAP:
+        if (
+            self.auth_domain
+            and self.channel_domain
+            and self.channel_domain not in TOKEN_DOMAIN_MAP
+        ):
             TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
-                self.auth_domain, self.credential_type == CredentialType.API_KEY
+                token_domain=self.auth_domain,
+                default_use_unified_api_key=(
+                    self.credential_type == CredentialType.API_KEY
+                ),
             )
         console.print("\nTOKEN_DOMAIN_MAP:")
         console.print(TOKEN_DOMAIN_MAP)
