@@ -4,6 +4,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+from enum import Enum
 from functools import lru_cache
 from typing import Any
 from typing import NamedTuple
@@ -42,6 +43,11 @@ TOKEN_DOMAIN_MAP = {
 }
 
 
+class CredentialType(Enum):
+    API_KEY = "api-key"
+    REPO_TOKEN = "repo-token"
+
+
 class AnacondaAuthError(CondaError):
     """
     A generic error to raise that is a subclass of CondaError so we don't trigger the unhandled exception traceback.
@@ -75,12 +81,14 @@ class AnacondaAuthHandler(ChannelAuthBase):
         self.auth_domain = (
             settings.get("auth_domain", self.channel_domain) or "anaconda.com"
         )
-        self.credential_type = settings.get("credential_type", "api-key")
+        self.credential_type = CredentialType(
+            settings.get("credential_type", "api-key")
+        )
 
         # TODO(mattkram): This is brittle, rewrite
         if self.channel_domain and self.channel_domain not in TOKEN_DOMAIN_MAP:
             TOKEN_DOMAIN_MAP[self.channel_domain] = TokenDomainSetting(
-                self.auth_domain, self.credential_type == "api-key"
+                self.auth_domain, self.credential_type == CredentialType.API_KEY
             )
         print(f"{TOKEN_DOMAIN_MAP=}")
         lines = []
