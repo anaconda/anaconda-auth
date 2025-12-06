@@ -1,8 +1,4 @@
-import json
-import subprocess
-
 import pytest
-from pytest import MonkeyPatch
 from requests import PreparedRequest
 from requests import Response
 from requests.hooks import dispatch_hook
@@ -11,14 +7,13 @@ from anaconda_auth.token import TokenInfo
 
 conda = pytest.importorskip("conda")
 
-from conda.base.context import context  # noqa: E402
-from conda.base.context import frozendict  # noqa: E402
+from conda.base.context import context as conda_context  # noqa: E402
 from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
 
+from anaconda_auth._conda import config as plugin_config  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
-from anaconda_auth._conda.plugins import _merge_auth_configs  # noqa: E402
 
 
 @pytest.fixture()
@@ -241,111 +236,34 @@ def test_inject_no_header_during_request_if_no_token(
     assert request.headers.get("Authorization") is None
 
 
+REFERENCE = {
+    "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
+    "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
+    "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
+    "https://anaconda.com/*": {"auth": "anaconda-auth"},
+}
+
+
 def _parse_config(config):
     result = {}
     for crec in config:
         chan = crec["channel"]
-        drec = result.setdefault(chan, {})
-        drec.update({k: v for k, v in crec.items() if k != "channel"})
+        if chan in REFERENCE:
+            print(chan, crec)
+            drec = result.setdefault(chan, {})
+            drec.update({k: v for k, v in crec.items() if k != "channel"})
     return result
 
 
-def test_default_channel_settings():
-    context.channel_settings = {}
-    _merge_auth_configs("command")
-    assert _parse_config(context.channel_settings) == {
-        "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
-        "https://anaconda.com/*": {"auth": "anaconda-auth"},
-    }
+def test_channel_settings_empty():
+    assert _parse_config(conda_context.channel_settings) == {}
 
 
-def test_override_repo_channel_settings():
-    context.channel_settings = (
-        frozendict({"channel": "https://repo.continuum.io/*", "auth": "override"}),
-    )
-    _merge_auth_configs("command")
-    assert _parse_config(context.channel_settings) == {
-        "https://repo.continuum.io/*": {"auth": "override"},
-        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
-        "https://anaconda.com/*": {"auth": "anaconda-auth"},
-    }
-
-
-def test_override_merge_channel_settings():
-    context.channel_settings = (
-        frozendict(
-            {"channel": "https://repo.anaconda.cloud/*", "token": "test-token1"}
-        ),
-        frozendict(
-            {
-                "channel": "https://repo.anaconda.cloud/repo/main/*",
-                "token": "test-token2",
-            }
-        ),
-    )
-    _merge_auth_configs("command")
-    assert _parse_config(context.channel_settings) == {
-        "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.cloud/*": {
-            "auth": "anaconda-auth",
-            "token": "test-token1",
-        },
-        "https://repo.anaconda.cloud/repo/main/*": {
-            "auth": "anaconda-auth",
-            "token": "test-token2",
-        },
-        "https://anaconda.com/*": {"auth": "anaconda-auth"},
-    }
-
-
-def test_override_single_channel_settings():
-    context.channel_settings = (
-        frozendict(
-            {"channel": "https://repo.continuum.io/pkgs/main/*", "auth": "override"}
-        ),
-    )
-    _merge_auth_configs("command")
-    assert _parse_config(context.channel_settings) == {
-        "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
-        "https://repo.continuum.io/pkgs/main/*": {"auth": "override"},
-        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
-        "https://anaconda.com/*": {"auth": "anaconda-auth"},
-    }
-
-
-def test_pre_command_plugin_runs():
-    proc = subprocess.run(["conda", "config", "--show", "--json"], capture_output=True)
-    data = json.loads(proc.stdout)
-    assert _parse_config(data.get("channel_settings") or {}) == {
-        "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-        "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
-        "https://anaconda.com/*": {"auth": "anaconda-auth"},
-    }
-
-
-@pytest.mark.parametrize(
-    "disabled, expected_num_settings",
-    [
-        (True, 0),
-        (False, 4),
-    ],
-)
-def test_pre_command_plugin_disabled(
-    disabled: bool,
-    expected_num_settings: int,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    """Ensure that we can disable pre-command plugin with a config variable."""
-    monkeypatch.setenv("ANACONDA_AUTH_DISABLE_CONDA_AUTO_CONFIG", str(disabled))
-
-    # If auto-config is disabled, we will have 0 channel_settings. Else will be 4.
-    proc = subprocess.run(["conda", "config", "--show", "--json"], capture_output=True)
-    data = json.loads(proc.stdout)
-    config = _parse_config(data.get("channel_settings") or {})
-    assert len(config) == expected_num_settings
+def test_channel_settings_installed(condarc_path):
+    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
+    assert not fpath.exists() and not fpath.parent.exists()
+    plugin_config._write_condarc_d_settings()
+    assert fpath.exists()
+    assert fpath.read_text().strip()
+    conda_context.__init__()
+    assert _parse_config(conda_context.channel_settings) == REFERENCE
