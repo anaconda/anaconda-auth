@@ -1,8 +1,14 @@
-"""Definitions for conda plugins.
+"""Configuration manager for the conda plugin.
 
-This file should not be imported directly, but instead the parent package will
-conditionally import it in case conda is not installed in the user's environment.
+This file is used as a central location to manage global configuration
+settings and deliver them to the locations where they are needed, including
+other modules and YAML configuration files. It is designed to be callable as
+a standalone script or as a module. It can install a conda configuration file
+in the prefix, and to verify its existence and expected behavioral impact.
+These functions are both used by the conda recipe itself.
 
+It is imperative that this module not include any other anaconda_auth imports
+so that it can be run during the conda build process
 """
 
 import json
