@@ -256,37 +256,49 @@ def _auth_settings(context):
     return result
 
 
-def test_channel_settings_empty():
+def test_channel_settings_empty(conda_search_path):
     assert _auth_settings(conda_context) == {}
 
 
-def test_channel_settings_prefix(condarc_path):
-    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
-    assert not fpath.exists() and not fpath.parent.exists()
+def test_channel_settings_prefix(conda_search_path):
+    fpath = conda_search_path.prefix / "anaconda-auth.yml"
+    assert not fpath.exists()
     plugin_config._write_condarc_d_settings()
-    assert fpath.exists()
-    assert fpath.read_text().strip()
     conda_context.__init__()
     assert _auth_settings(conda_context) == REFERENCE
 
 
-def test_channel_settings_user(condarc_path):
-    condarc = CondaRC(condarc_path)
+def test_channel_settings_user(conda_search_path):
+    fpath = conda_search_path.user
+    assert not fpath.read_text().strip()
+    condarc = CondaRC(fpath)
     condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
     condarc.save()
     conda_context.__init__()
     assert _auth_settings(conda_context) == {"my-test-channel": "anaconda-auth"}
 
 
-def test_channel_settings_merged(condarc_path):
-    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
-    assert not fpath.exists() and not fpath.parent.exists()
-    plugin_config._write_condarc_d_settings()
-    condarc = CondaRC(condarc_path)
-    condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
+def test_channel_settings_site(conda_search_path):
+    condarc = CondaRC(conda_search_path.sites / "anaconda-auth-sites.yml")
+    condarc.update_channel_settings("my-site-channel", "anaconda-auth", username=None)
     condarc.save()
     conda_context.__init__()
+    assert _auth_settings(conda_context) == {"my-site-channel": "anaconda-auth"}
 
+
+def test_channel_settings_merged(conda_search_path):
+    plugin_config._write_condarc_d_settings()
+
+    condarc1 = CondaRC(conda_search_path.user)
+    condarc1.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
+    condarc1.save()
+
+    condarc2 = CondaRC(conda_search_path.sites / "anaconda-auth-sites.yml")
+    condarc2.update_channel_settings("my-site-channel", "anaconda-auth", username=None)
+    condarc2.save()
+
+    conda_context.__init__()
     expected = REFERENCE.copy()
     expected["my-test-channel"] = "anaconda-auth"
+    expected["my-site-channel"] = "anaconda-auth"
     assert _auth_settings(conda_context) == expected

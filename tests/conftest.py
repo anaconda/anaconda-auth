@@ -11,6 +11,7 @@ from typing import IO
 from typing import Any
 from typing import Generator
 from typing import Mapping
+from typing import NamedTuple
 from typing import Protocol
 from typing import Sequence
 from typing import cast
@@ -299,20 +300,36 @@ def config_toml(
     yield config_file
 
 
+class CondaRCPaths(NamedTuple):
+    user: Path
+    prefix: Path
+    sites: Path
+
+
 @pytest.fixture()
-def condarc_path(monkeypatch, tmp_path):
-    condarc = tmp_path / ".condarc"
-    condarc.touch()
+def conda_search_path(monkeypatch, tmp_path):
+    """
+    Build an independent, empty set of conda configuration locations
+    that we can write to to emulate various combinations of user,
+    prefix, and site configuration data, while remaining isolated
+    from the local user's existing configuration.
+    """
+    user_path = tmp_path / ".condarc"
+    prefix_path = tmp_path / "prefix" / "condarc.d"
+    sites_path = tmp_path / ".conda" / "condarc.d"
+    user_path.touch()
+    prefix_path.mkdir(parents=True)
+    sites_path.mkdir(parents=True)
 
     # Patch where the condarc object looks for the user file
     from anaconda_auth._conda import condarc as condarc_module
 
-    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc)
+    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", user_path)
 
     # Patch where the default channel_settings config is written
     from anaconda_auth._conda import config as plugin_config
 
-    config_path = condarc.parent / "condarc.d" / "anaconda-auth.yml"
+    config_path = prefix_path / "anaconda-auth.yml"
     monkeypatch.setattr(plugin_config, "PREFIX_CONDARC_PATH", config_path)
 
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
@@ -321,27 +338,32 @@ def condarc_path(monkeypatch, tmp_path):
     orig_get_condarc_args = repo_config._get_condarc_args
 
     def _new_get_condarc_args(*args, **kwargs) -> None:
-        return orig_get_condarc_args(condarc_file=str(condarc))
+        return orig_get_condarc_args(condarc_file=str(user_path))
 
     monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
 
-    yield condarc
+    if is_conda_installed():
+        # Patch the default conda search path
+        from conda.base import context
+
+        # In the standard conda search path, CONDA_ROOT/condarc.d has
+        search_path = [prefix_path, sites_path, user_path, prefix_path]
+        monkeypatch.setattr(context, "SEARCH_PATH", search_path)
+
+        # Reset the context object with these new settings
+        context.context.__init__()
+        print("CHANNEL SETTINGS:", context.context.channel_settings)
+
+    yield CondaRCPaths(user_path, prefix_path, sites_path)
 
 
-@pytest.fixture(autouse=is_conda_installed())
-def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
-    """Patch operations that modify .condarc to prevent modifying
-    the ~/.condarc of the user running the tests.
+@pytest.fixture()
+def condarc_path(conda_search_path):
     """
-
-    # Patch the default conda search path
-    from conda.base import context
-
-    search_path = [condarc_path.parent / "condarc.d", condarc_path]
-    monkeypatch.setattr(context, "SEARCH_PATH", search_path)
-
-    # Reset the context object with these new settings
-    context.context.__init__()
+    This is the old condarc_path fixture used in a lot of tests that need
+    nothing more than the user condarc pathname.
+    """
+    yield conda_search_path.user
 
 
 @pytest.fixture()
