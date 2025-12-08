@@ -14,6 +14,7 @@ from conda.gateways.connection.session import get_session  # noqa: E402
 from anaconda_auth._conda import config as plugin_config  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
+from anaconda_auth._conda.condarc import CondaRC  # noqa: E402
 
 
 @pytest.fixture()
@@ -267,3 +268,30 @@ def test_default_channel_settings_installed(condarc_path):
     assert fpath.read_text().strip()
     conda_context.__init__()
     assert _parse_config(conda_context.channel_settings) == REFERENCE
+
+
+def test_channel_settings_user_provided(condarc_path):
+    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
+    assert not fpath.exists() and not fpath.parent.exists()
+    plugin_config._write_condarc_d_settings()
+    assert fpath.exists()
+    assert fpath.read_text().strip()
+
+    condarc = CondaRC(condarc_path)
+    condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
+    condarc.save()
+    with condarc_path.open() as fp:
+        data = fp.read()
+        assert "channel: my-test-channel" in data
+
+    conda_context.__init__()
+
+    # The search path should include both the user's condarc and the anaconda-auth.yml
+    search_path = conda_context._search_path
+    assert condarc_path in search_path
+    assert fpath in search_path
+
+    expected = REFERENCE.copy()
+    expected["my-test-channel"] = {"auth": "anaconda-auth"}
+
+    assert _parse_config(conda_context.channel_settings) == expected
