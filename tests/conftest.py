@@ -352,7 +352,6 @@ def conda_search_path(monkeypatch, tmp_path):
 
         # Reset the context object with these new settings
         context.context.__init__()
-        print("CHANNEL SETTINGS:", context.context.channel_settings)
 
     yield CondaRCPaths(user_path, prefix_path, sites_path)
 
