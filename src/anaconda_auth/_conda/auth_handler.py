@@ -7,6 +7,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 from functools import lru_cache
 from typing import Any
 from typing import Optional
+from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
 from conda import CondaError
@@ -30,8 +31,28 @@ class AnacondaAuthError(CondaError):
 
 
 class AnacondaAuthHandler(ChannelAuthBase):
-    @staticmethod
-    def _load_token_from_keyring(url: str) -> Optional[str]:
+    def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, bool]:
+        """Select the appropriate domain for token lookup based on a parsed URL.
+
+        We also determine whether to use API key or legacy repo token. This method
+        handles a default set of rules, as well as user overrides via conda
+        channel_settings.
+
+        """
+        channel_domain = parsed_url.netloc.lower()
+        if channel_domain in TOKEN_DOMAIN_MAP:
+            token_domain, is_unified, _ = TOKEN_DOMAIN_MAP[channel_domain]
+        else:
+            token_domain, is_unified = channel_domain, False
+
+        # Allow users to override default via configuration
+        config = AnacondaAuthConfig(domain=token_domain)
+        if config.use_unified_repo_api_key:
+            is_unified = True
+
+        return token_domain, is_unified
+
+    def _load_token_from_keyring(self, url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
 
         We parse the requested URL, extract what may be an organization ID, and first
@@ -44,11 +65,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
         parsed_url = urlparse(url)
-        channel_domain = parsed_url.netloc.lower()
-        if channel_domain in TOKEN_DOMAIN_MAP:
-            token_domain, is_unified, _ = TOKEN_DOMAIN_MAP[channel_domain]
-        else:
-            token_domain, is_unified = channel_domain, False
+        token_domain, is_unified = self._load_token_domain(parsed_url)
 
         try:
             token_info = TokenInfo.load(token_domain)
@@ -58,15 +75,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
-        if api_key := token_info.api_key:
-            if is_unified:
-                return api_key
-            try:
-                config = AnacondaAuthConfig(domain=token_domain)
-                if config.use_unified_repo_api_key:
-                    return api_key
-            except Exception:
-                pass
+        if token_info.api_key and is_unified:
+            return token_info.api_key
 
         path = parsed_url.path
         if path.startswith(URI_PREFIX):

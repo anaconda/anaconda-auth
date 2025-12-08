@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 import pytest
 from requests import PreparedRequest
 from requests import Response
@@ -303,3 +305,35 @@ def test_channel_settings_merged(conda_search_path):
     expected["my-test-channel"] = "anaconda-auth"
     expected["my-site-channel"] = "anaconda-auth"
     plugin_config._assert_settings(conda_context, expected)
+
+
+def test_load_token_domain_anaconda_dot_com_default(conda_search_path):
+    channel_url = "https://repo.anaconda.com/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert is_unified
+
+
+def test_load_token_domain_anaconda_cloud_default(conda_search_path):
+    channel_url = "https://repo.anaconda.cloud/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert not is_unified
+
+
+def test_load_token_domain_anaconda_cloud_api_key(conda_search_path, monkeypatch):
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "True")
+
+    channel_url = "https://repo.anaconda.cloud/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert is_unified
