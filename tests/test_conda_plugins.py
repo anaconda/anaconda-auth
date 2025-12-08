@@ -259,7 +259,7 @@ def test_channel_settings_empty():
     assert _parse_config(conda_context.channel_settings) == {}
 
 
-def test_channel_settings_installed(condarc_path):
+def test_default_channel_settings_installed(condarc_path):
     fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
     assert not fpath.exists() and not fpath.parent.exists()
     plugin_config._write_condarc_d_settings()
