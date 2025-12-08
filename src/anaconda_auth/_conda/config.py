@@ -45,7 +45,7 @@ TOKEN_DOMAIN_MAP = {
 }
 
 
-def _channel_settings(
+def _build_channel_settings(
     include_defaults: bool = True, include_sites: bool = True
 ) -> List[Dict[str, str]]:
     hosts: Set[str] = set()
@@ -66,7 +66,7 @@ def _write_channel_settings(
     include_sites: bool = True,
     overwrite: bool = False,
 ) -> None:
-    settings = _channel_settings(include_defaults, include_sites)
+    settings = _build_channel_settings(include_defaults, include_sites)
     with Path(fpath).open(mode="w" if overwrite else "x") as fp:
         json.dump({"channel_settings": settings}, fp)
 
@@ -79,7 +79,8 @@ def _write_condarc_d_settings() -> None:
 def _verify_channel_settings() -> None:
     assert PREFIX_CONDARC_PATH.exists()
     expected = {
-        c["channel"]: c.get("auth") for c in _channel_settings(include_sites=False)
+        c["channel"]: c.get("auth")
+        for c in _build_channel_settings(include_sites=False)
     }
     data = json.loads(PREFIX_CONDARC_PATH.read_text())
     found = {c["channel"]: c.get("auth") for c in data["channel_settings"]}

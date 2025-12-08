@@ -31,7 +31,7 @@ from rich.prompt import Confirm
 
 from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.condarc import CondaRC
-from anaconda_auth._conda.config import _channel_settings
+from anaconda_auth._conda.config import _build_channel_settings
 from anaconda_cli_base import console
 
 CONDA_VERSION = version.parse(conda.__version__)
@@ -151,7 +151,7 @@ def configure_plugin(should_set_default_channels: bool = False) -> None:
     all premium repo channels with this auth handler.
 
     """
-    settings = _channel_settings(include_defaults=False)
+    settings = _build_channel_settings(include_defaults=False)
     if not settings:
         return
     condarc = CondaRC()
