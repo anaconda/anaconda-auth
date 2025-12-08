@@ -42,6 +42,8 @@ outputs:
         - conda >=23.9.0
         - conda-token >=0.7.0
     test:
+      requires:
+        - conda
       imports:
         - anaconda_auth
       commands:

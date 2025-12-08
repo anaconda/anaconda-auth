@@ -50,10 +50,10 @@ def _dictify(channel_settings: List[Dict[str, str]]) -> Dict[str, str]:
     Extract the authentication information for each channel
     for better comparison with expectations.
     """
-    return {c["channel"]: c.get("auth") for c in channel_settings}
+    return {c["channel"]: c.get("auth", "") for c in channel_settings}
 
 
-def _assert_settings(context: Any, expected: Dict[str, str], filtered: bool = False):
+def _assert_settings(context: Any, expected: Dict[str, str], filtered: bool = False) -> None:
     """
     Compare just the channel authentication information for each
     channel with the expectation, with order independence
