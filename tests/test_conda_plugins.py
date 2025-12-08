@@ -238,60 +238,55 @@ def test_inject_no_header_during_request_if_no_token(
 
 
 REFERENCE = {
-    "https://repo.continuum.io/*": {"auth": "anaconda-auth"},
-    "https://repo.anaconda.com/*": {"auth": "anaconda-auth"},
-    "https://repo.anaconda.cloud/*": {"auth": "anaconda-auth"},
-    "https://anaconda.com/*": {"auth": "anaconda-auth"},
+    "https://repo.continuum.io/*": "anaconda-auth",
+    "https://repo.anaconda.com/*": "anaconda-auth",
+    "https://repo.anaconda.cloud/*": "anaconda-auth",
+    "https://anaconda.com/*": "anaconda-auth",
 }
 
 
-def _parse_config(config):
+def _auth_settings(context):
+    """
+    Builds a simple dictionary of the channel settings for easier
+    comparison of the effective values.
+    """
     result = {}
-    for crec in config:
-        chan = crec["channel"]
-        if chan in REFERENCE:
-            print(chan, crec)
-            drec = result.setdefault(chan, {})
-            drec.update({k: v for k, v in crec.items() if k != "channel"})
+    for settings_rec in context.channel_settings:
+        result[settings_rec["channel"]] = settings_rec.get("auth")
     return result
 
 
 def test_channel_settings_empty():
-    assert _parse_config(conda_context.channel_settings) == {}
+    assert _auth_settings(conda_context) == {}
 
 
-def test_default_channel_settings_installed(condarc_path):
+def test_channel_settings_prefix(condarc_path):
     fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
     assert not fpath.exists() and not fpath.parent.exists()
     plugin_config._write_condarc_d_settings()
     assert fpath.exists()
     assert fpath.read_text().strip()
     conda_context.__init__()
-    assert _parse_config(conda_context.channel_settings) == REFERENCE
+    assert _auth_settings(conda_context) == REFERENCE
 
 
-def test_channel_settings_user_provided(condarc_path):
-    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
-    assert not fpath.exists() and not fpath.parent.exists()
-    plugin_config._write_condarc_d_settings()
-    assert fpath.exists()
-    assert fpath.read_text().strip()
-
+def test_channel_settings_user(condarc_path):
     condarc = CondaRC(condarc_path)
     condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
     condarc.save()
-    with condarc_path.open() as fp:
-        data = fp.read()
-        assert "channel: my-test-channel" in data
+    conda_context.__init__()
+    assert _auth_settings(conda_context) == {"my-test-channel": "anaconda-auth"}
 
+
+def test_channel_settings_merged(condarc_path):
+    fpath = condarc_path.parent / "condarc.d" / "anaconda-auth.yml"
+    assert not fpath.exists() and not fpath.parent.exists()
+    plugin_config._write_condarc_d_settings()
+    condarc = CondaRC(condarc_path)
+    condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
+    condarc.save()
     conda_context.__init__()
 
-    # The search path should include both the user's condarc and the anaconda-auth.yml
-    search_path = conda_context._search_path
-    assert condarc_path in search_path
-    assert fpath in search_path
-
     expected = REFERENCE.copy()
-    expected["my-test-channel"] = {"auth": "anaconda-auth"}
-
-    assert _parse_config(conda_context.channel_settings) == expected
+    expected["my-test-channel"] = "anaconda-auth"
+    assert _auth_settings(conda_context) == expected
