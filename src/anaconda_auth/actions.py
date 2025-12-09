@@ -8,9 +8,9 @@ from typing import Union
 from urllib.parse import urlencode
 
 import pkce
-import requests
 
 from anaconda_auth import __version__
+from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.device_flow import DeviceCodeFlow
@@ -61,7 +61,8 @@ def _send_auth_code_request(
 
 def refresh_access_token(refresh_token: str, config: AnacondaAuthSite) -> str:
     """Refresh and save the tokens."""
-    response = requests.post(
+    client = BaseClient(site=config)
+    response = client.post(
         config.oidc.token_endpoint,
         data={
             "grant_type": "refresh_token",
@@ -69,6 +70,7 @@ def refresh_access_token(refresh_token: str, config: AnacondaAuthSite) -> str:
             "client_id": config.client_id,
         },
         verify=config.ssl_verify,
+        auth=False,
     )
     response.raise_for_status()
     response_data = response.json()
@@ -85,7 +87,8 @@ def request_access_token(
     client_id = config.client_id
     redirect_uri = config.redirect_uri
 
-    response = requests.post(
+    client = BaseClient(site=config)
+    response = client.post(
         token_endpoint,
         data=dict(
             grant_type="authorization_code",
@@ -95,6 +98,7 @@ def request_access_token(
             code_verifier=code_verifier,
         ),
         verify=config.ssl_verify,
+        auth=False,
     )
     result = response.json()
 
@@ -186,7 +190,9 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
 
     username = console.input("Please enter your email: ")
     password = console.input("Please enter your password: ", password=True)
-    response = requests.post(
+
+    client = BaseClient(site=config)
+    response = client.post(
         config.oidc.token_endpoint,
         data={
             "grant_type": "password",
@@ -194,6 +200,7 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
             "password": password,
         },
         verify=config.ssl_verify,
+        auth=False,
     )
     response_data = response.json()
     response.raise_for_status()
@@ -229,6 +236,7 @@ def get_api_key(
         ssl_verify = True
 
     config = config or AnacondaAuthConfig()
+    client = BaseClient(site=config)
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -242,7 +250,7 @@ def get_api_key(
         f"https://{config.domain}/api/iam/api-keys",
     ]
     for url in urls:
-        response = requests.post(
+        response = client.post(
             url,
             json=dict(
                 scopes=["cloud:read", "cloud:write", "repo:read"],
@@ -250,6 +258,7 @@ def get_api_key(
             ),
             headers=headers,
             verify=ssl_verify,
+            auth=False,
         )
         if response.status_code == 201:
             break

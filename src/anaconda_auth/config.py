@@ -12,7 +12,6 @@ from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
-import requests
 from pydantic import BaseModel
 from pydantic import RootModel
 from pydantic.fields import FieldInfo
@@ -96,10 +95,14 @@ class AnacondaAuthSite(BaseModel):
     @property
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
-        res = requests.get(
+        from anaconda_auth.client import BaseClient
+
+        client = BaseClient(site=self)
+        res = client.get(
             self.well_known_url,
             headers=self.oidc_request_headers,
             verify=self.ssl_verify,
+            auth=False,
         )
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())
