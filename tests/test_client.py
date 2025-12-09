@@ -286,8 +286,12 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
+
     client = BaseClient()
+    get = mocker.spy(BaseClient, "get")
     assert client.avatar is not None
+
+    assert not get.call_args.kwargs["auth"]
 
 
 def test_extra_headers_dict() -> None:

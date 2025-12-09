@@ -2,11 +2,11 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-import requests
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
+from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
@@ -40,16 +40,13 @@ def mock_openid_configuration(request, requests_mock: RequestMocker):
 
 
 def test_well_known_headers(mocker: MockerFixture) -> None:
-    spy = mocker.spy(requests, "get")
+    spy = mocker.spy(BaseClient, "get")
 
     config = AnacondaAuthConfig()
     assert config.oidc
     spy.assert_called_once()
-    assert (
-        spy.call_args.kwargs.get("headers", {})
-        .get("User-Agent")
-        .startswith("anaconda-auth")
-    )
+    assert spy.spy_return.request.headers.get("User-Agent").startswith("anaconda-auth")
+    assert not spy.call_args.kwargs["auth"]
 
 
 @pytest.mark.parametrize("prefix", ["ANACONDA_AUTH", "ANACONDA_CLOUD"])
