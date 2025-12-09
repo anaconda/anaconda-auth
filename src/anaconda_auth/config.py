@@ -204,9 +204,9 @@ class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="au
             file_secret_settings,
             dotenv_settings,
             AnacondaSiteSettingsSource(cls),
-            CondaContextSettingsSource(cls),
             AnacondaCloudSettingsSource(cls),
             AnacondaConfigTomlSettingsSource(settings_cls, anaconda_config_path()),
+            CondaContextSettingsSource(cls),
         )
 
 

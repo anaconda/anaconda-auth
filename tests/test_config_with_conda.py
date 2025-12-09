@@ -30,7 +30,53 @@ def test_conda_context_apply_to_default_site(
 
 
 @pytest.mark.usefixtures("disable_dot_env")
-def test_conda_context_priority(
+def test_conda_context_priority_config_toml(
+    patch_conda_config_to_use_temp_condarc: Path,
+    config_toml: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    condarc = patch_conda_config_to_use_temp_condarc
+    condarc.write_text(
+        dedent("""\
+        ssl_verify: false
+        proxy_servers:
+            http: 127.0.0.1:80
+            https: 127.0.0.1:80
+    """)
+    )
+
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        ssl_verify = true
+    """)
+    )
+
+    # ~/.anaconda/config.toml overrides inherited settings
+    default = AnacondaAuthConfig()
+    assert default.ssl_verify
+    assert default.proxy_servers == {"http": "127.0.0.1:80", "https": "127.0.0.1:80"}
+    assert default.client_cert is None
+    assert default.client_cert_key is None
+
+    # Anaconda Auth secrets and env vars are higher priority
+    monkeypatch.setenv("ANACONDA_AUTH_CLIENT_CERT", "/path/to/cert")
+    default = AnacondaAuthConfig()
+    assert default.ssl_verify
+    assert default.proxy_servers == {"http": "127.0.0.1:80", "https": "127.0.0.1:80"}
+    assert default.client_cert == "/path/to/cert"
+    assert default.client_cert_key is None
+
+    # Finally, init kwargs are highest priority
+    yes_verified = AnacondaAuthConfig(ssl_verify=False, proxy_servers=None)
+    assert not yes_verified.ssl_verify
+    assert yes_verified.proxy_servers is None
+    assert yes_verified.client_cert == "/path/to/cert"
+    assert yes_verified.client_cert_key is None
+
+
+@pytest.mark.usefixtures("disable_dot_env")
+def test_conda_context_priority_sites(
     patch_conda_config_to_use_temp_condarc: Path,
     config_toml: Path,
     monkeypatch: MonkeyPatch,
