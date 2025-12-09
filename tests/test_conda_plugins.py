@@ -263,6 +263,9 @@ def test_channel_settings_prefix(conda_search_path):
     fpath = conda_search_path.prefix / "anaconda-auth.yml"
     assert not fpath.exists()
     plugin_config._write_condarc_d_settings()
+    with pytest.raises(FileExistsError):
+        plugin_config._write_condarc_d_settings()
+    plugin_config._write_condarc_d_settings(overwrite=True)
     plugin_config._verify_channel_settings(filtered=False)
     conda_context.__init__()
     plugin_config._assert_settings(conda_context, REFERENCE)
