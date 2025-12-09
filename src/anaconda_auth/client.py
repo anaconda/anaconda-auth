@@ -11,7 +11,6 @@ from typing import cast
 from urllib.parse import urljoin
 
 import requests
-from pydantic import BaseModel
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
@@ -53,12 +52,6 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
                 )
 
     return response
-
-
-class CondaConfig(BaseModel):
-    proxy_servers: Optional[MutableMapping[str, str]] = None
-    ssl_verify: Optional[Union[bool, str]] = None
-    cert: Optional[Union[str, tuple[str, str]]] = None
 
 
 class BearerAuth(AuthBase):
@@ -139,11 +132,10 @@ class BaseClient(requests.Session):
         if client_cert is not None:
             kwargs["client_cert"] = client_cert
 
-        conda_config = self.retrieve_base_conda_ssl_config()
-
         self.config = config.model_copy(update=kwargs)
 
-        self.configure_ssl(conda_config)
+        self.proxies = self.config.proxy_servers
+        self.configure_ssl()
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -171,15 +163,10 @@ class BaseClient(requests.Session):
         self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
 
-    def configure_ssl(self, cfg: CondaConfig) -> None:
-        if cfg.proxy_servers and self.config.proxy_servers is None:
-            self.proxies = cfg.proxy_servers
-        elif self.config.proxy_servers:
-            self.proxies = self.config.proxy_servers
-
+    def configure_ssl(self) -> None:
         ssl_context = None
 
-        if self.config.ssl_verify == "truststore" or cfg.ssl_verify == "truststore":
+        if self.config.ssl_verify == "truststore":
             try:
                 import ssl
 
@@ -204,31 +191,6 @@ class BaseClient(requests.Session):
             self.cert = (self.config.client_cert, self.config.client_cert_key)
         elif self.config.client_cert:
             self.cert = self.config.client_cert
-        else:
-            self.cert = cfg.cert
-
-    def retrieve_base_conda_ssl_config(self) -> CondaConfig:
-        conda_config = CondaConfig()
-        try:
-            from anaconda_auth._conda.repo_config import get_conda_context
-
-            context = get_conda_context()
-
-            conda_config.proxy_servers = context.proxy_servers
-            conda_config.ssl_verify = context.ssl_verify
-
-            if context.client_ssl_cert_key:
-                conda_config.cert = (
-                    context.client_ssl_cert,
-                    context.client_ssl_cert_key,
-                )
-            elif context.client_ssl_cert:
-                conda_config.cert = context.client_ssl_cert
-
-        except ImportError:
-            pass
-
-        return conda_config
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
