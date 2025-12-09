@@ -134,7 +134,7 @@ class BaseClient(requests.Session):
 
         self.config = config.model_copy(update=kwargs)
 
-        self.proxies = self.config.proxy_servers
+        self.proxies = self.config.proxy_servers or {}
         self.configure_ssl()
 
         # base_url overrides domain
@@ -253,7 +253,7 @@ class BaseClient(requests.Session):
         res = self.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
-            auth=False,
+            auth=False,  # type: ignore
         )
         if res.ok:
             return res.content

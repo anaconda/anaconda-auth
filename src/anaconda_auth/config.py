@@ -102,7 +102,7 @@ class AnacondaAuthSite(BaseModel):
             self.well_known_url,
             headers=self.oidc_request_headers,
             verify=self.ssl_verify,
-            auth=False,
+            auth=False,  # type: ignore
         )
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())

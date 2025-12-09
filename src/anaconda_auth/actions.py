@@ -70,7 +70,7 @@ def refresh_access_token(refresh_token: str, config: AnacondaAuthSite) -> str:
             "client_id": config.client_id,
         },
         verify=config.ssl_verify,
-        auth=False,
+        auth=False,  # type: ignore
     )
     response.raise_for_status()
     response_data = response.json()
@@ -98,7 +98,7 @@ def request_access_token(
             code_verifier=code_verifier,
         ),
         verify=config.ssl_verify,
-        auth=False,
+        auth=False,  # type: ignore
     )
     result = response.json()
 
@@ -200,7 +200,7 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
             "password": password,
         },
         verify=config.ssl_verify,
-        auth=False,
+        auth=False,  # type: ignore
     )
     response_data = response.json()
     response.raise_for_status()
@@ -258,7 +258,7 @@ def get_api_key(
             ),
             headers=headers,
             verify=ssl_verify,
-            auth=False,
+            auth=False,  # type: ignore
         )
         if response.status_code == 201:
             break
