@@ -6,6 +6,7 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests_mock import Mocker as RequestMocker
 
+from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
@@ -39,8 +40,6 @@ def mock_openid_configuration(request, requests_mock: RequestMocker):
 
 
 def test_well_known_headers(mocker: MockerFixture) -> None:
-    from anaconda_auth.client import BaseClient
-
     spy = mocker.spy(BaseClient, "get")
 
     config = AnacondaAuthConfig()
