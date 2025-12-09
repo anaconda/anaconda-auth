@@ -139,7 +139,7 @@ class CondaContextSettingsSource(AnacondaSettingsSource):
             context = get_conda_context()
 
             if context.proxy_servers:
-                values["proxy_servers"] = context.proxy_servers
+                values["proxy_servers"] = dict(context.proxy_servers)
             if context.client_ssl_cert:
                 values["client_cert"] = context.client_ssl_cert
             if context.client_ssl_cert_key:
