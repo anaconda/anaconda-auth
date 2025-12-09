@@ -488,6 +488,17 @@ def user_has_starter_subscription(
     )
 
 
+@pytest.fixture(autouse=True)
+def disable_requests_helper_functions(monkeypatch):
+    import requests
+
+    def _do_nothing(*args, **kwargs):
+        raise ValueError("Don't call requests methods directly!")
+
+    for method in ["get", "post", "head", "patch", "put", "delete"]:
+        monkeypatch.setattr(requests, "get", _do_nothing)
+
+
 @pytest.fixture()
 def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
     requests_mock.get("https://anaconda.com/api/account", json={})
