@@ -65,7 +65,6 @@ class AnacondaAuthSite(BaseModel):
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
-    disable_conda_auto_config: bool = False
     _merged: bool = False
 
     @property
