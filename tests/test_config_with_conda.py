@@ -11,11 +11,10 @@ conda = pytest.importorskip("conda")
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_conda_context_apply_to_default_site(
-    patch_conda_config_to_use_temp_condarc: Path,
+    condarc_path: Path,
     config_toml: Path,
 ) -> None:
-    condarc = patch_conda_config_to_use_temp_condarc
-    condarc.write_text(
+    condarc_path.write_text(
         dedent("""\
         ssl_verify: false
         proxy_servers:
@@ -31,12 +30,11 @@ def test_conda_context_apply_to_default_site(
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_conda_context_priority_config_toml(
-    patch_conda_config_to_use_temp_condarc: Path,
+    condarc_path: Path,
     config_toml: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    condarc = patch_conda_config_to_use_temp_condarc
-    condarc.write_text(
+    condarc_path.write_text(
         dedent("""\
         ssl_verify: false
         proxy_servers:
@@ -77,12 +75,11 @@ def test_conda_context_priority_config_toml(
 
 @pytest.mark.usefixtures("disable_dot_env")
 def test_conda_context_priority_sites(
-    patch_conda_config_to_use_temp_condarc: Path,
+    condarc_path: Path,
     config_toml: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    condarc = patch_conda_config_to_use_temp_condarc
-    condarc.write_text(
+    condarc_path.write_text(
         dedent("""\
         ssl_verify: false
         proxy_servers:
