@@ -131,5 +131,9 @@ if __name__ == "__main__":
 
     if "--install" in sys.argv:
         _write_condarc_d_settings()
-    if "--verify" in sys.argv:
+    elif "--verify" in sys.argv:
         _verify_channel_settings()
+    else:
+        raise ValueError(
+            "Must provide either '--install' or '--verify' flag when running as as script"
+        )
