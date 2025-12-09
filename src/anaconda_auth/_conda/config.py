@@ -113,9 +113,11 @@ def _write_channel_settings(
         fp.write(_build_channel_yaml(include_defaults, include_sites))
 
 
-def _write_condarc_d_settings() -> None:
+def _write_condarc_d_settings(overwrite: bool = False) -> None:
     PREFIX_CONDARC_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _write_channel_settings(PREFIX_CONDARC_PATH, include_sites=False)
+    _write_channel_settings(
+        PREFIX_CONDARC_PATH, include_sites=False, overwrite=overwrite
+    )
 
 
 def _verify_channel_settings(filtered: bool = True) -> None:
@@ -129,11 +131,18 @@ def _verify_channel_settings(filtered: bool = True) -> None:
 if __name__ == "__main__":
     import sys
 
-    if "--install" in sys.argv:
-        _write_condarc_d_settings()
-    elif "--verify" in sys.argv:
-        _verify_channel_settings()
-    else:
-        raise ValueError(
-            "Must provide either '--install' or '--verify' flag when running as as script"
+    invalid = [
+        x for x in sys.argv[1:] if x not in ("--install", "--verify", "--overwrite")
+    ]
+    if len(sys.argv) == 1 or invalid:
+        print(
+            f"Usage: {sys.argv[0]} [--install] [--verify] [--overwrite]",
+            file=sys.stderr,
         )
+        if invalid:
+            print(f"Invalid option(s): {' '.join(invalid)}", file=sys.stderr)
+        sys.exit(1)
+    if "--install" in sys.argv:
+        _write_condarc_d_settings(overwrite="--overwrite" in sys.argv)
+    if "--verify" in sys.argv:
+        _verify_channel_settings()
