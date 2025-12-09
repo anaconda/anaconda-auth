@@ -100,8 +100,6 @@ class AnacondaAuthSite(BaseModel):
         client = BaseClient(site=self)
         res = client.get(
             self.well_known_url,
-            headers=self.oidc_request_headers,
-            verify=self.ssl_verify,
             auth=False,  # type: ignore
         )
         res.raise_for_status()

@@ -45,11 +45,7 @@ def test_well_known_headers(mocker: MockerFixture) -> None:
     config = AnacondaAuthConfig()
     assert config.oidc
     spy.assert_called_once()
-    assert (
-        spy.call_args.kwargs.get("headers", {})
-        .get("User-Agent")
-        .startswith("anaconda-auth")
-    )
+    assert spy.spy_return.request.headers.get("User-Agent").startswith("anaconda-auth")
     assert not spy.call_args.kwargs["auth"]
 
 

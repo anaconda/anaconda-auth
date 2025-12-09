@@ -2,7 +2,6 @@ import logging
 import uuid
 import warnings
 import webbrowser
-from typing import Literal
 from typing import Optional
 from typing import Union
 from urllib.parse import urlencode
@@ -69,7 +68,6 @@ def refresh_access_token(refresh_token: str, config: AnacondaAuthSite) -> str:
             "refresh_token": refresh_token,
             "client_id": config.client_id,
         },
-        verify=config.ssl_verify,
         auth=False,  # type: ignore
     )
     response.raise_for_status()
@@ -97,7 +95,6 @@ def request_access_token(
             redirect_uri=redirect_uri,
             code_verifier=code_verifier,
         ),
-        verify=config.ssl_verify,
         auth=False,  # type: ignore
     )
     result = response.json()
@@ -199,7 +196,6 @@ def _login_with_username(config: Optional[AnacondaAuthSite] = None) -> str:
             "username": username,
             "password": password,
         },
-        verify=config.ssl_verify,
         auth=False,  # type: ignore
     )
     response_data = response.json()
@@ -219,7 +215,6 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
 
     api_key = get_api_key(
         access_token,
-        config.ssl_verify,
         config=config,
     )
 
@@ -229,12 +224,8 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
 
 def get_api_key(
     access_token: str,
-    ssl_verify: Union[Literal["truststore"], bool] = True,
     config: Optional[AnacondaAuthSite] = None,
 ) -> str:
-    if isinstance(ssl_verify, str):
-        ssl_verify = True
-
     config = config or AnacondaAuthConfig()
     client = BaseClient(site=config)
 
@@ -257,7 +248,6 @@ def get_api_key(
                 tags=[f"anaconda-auth/v{__version__}"],
             ),
             headers=headers,
-            verify=ssl_verify,
             auth=False,  # type: ignore
         )
         if response.status_code == 201:
