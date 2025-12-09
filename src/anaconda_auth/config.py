@@ -8,13 +8,14 @@ from typing import Literal
 from typing import MutableMapping
 from typing import Optional
 from typing import Tuple
+from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
-import requests
 from pydantic import BaseModel
 from pydantic import RootModel
 from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings
 from pydantic_settings import PydanticBaseSettingsSource
 
 from anaconda_auth import __version__ as version
@@ -63,7 +64,6 @@ class AnacondaAuthSite(BaseModel):
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
-    disable_conda_auto_config: bool = False
     _merged: bool = False
 
     @property
@@ -95,10 +95,12 @@ class AnacondaAuthSite(BaseModel):
     @property
     def oidc(self) -> "OpenIDConfiguration":
         """The OIDC configuration, cached as a regular instance attribute."""
-        res = requests.get(
+        from anaconda_auth.client import BaseClient
+
+        client = BaseClient(site=self)
+        res = client.get(
             self.well_known_url,
-            headers=self.oidc_request_headers,
-            verify=self.ssl_verify,
+            auth=False,  # type: ignore
         )
         res.raise_for_status()
         oidc_config = OpenIDConfiguration(**res.json())
@@ -126,6 +128,30 @@ class AnacondaSettingsSource(PydanticBaseSettingsSource):
     ) -> tuple[Any, str, bool]:
         # Nothing to do here. Only implement the return statement to make mypy happy
         return None, "", False
+
+
+class CondaContextSettingsSource(AnacondaSettingsSource):
+    def __call__(self) -> Dict[str, Any]:
+        values = {}
+
+        try:
+            from anaconda_auth._conda.repo_config import get_conda_context
+
+            context = get_conda_context()
+
+            if context.proxy_servers:
+                values["proxy_servers"] = dict(context.proxy_servers)
+            if context.client_ssl_cert:
+                values["client_cert"] = context.client_ssl_cert
+            if context.client_ssl_cert_key:
+                values["client_cert_key"] = context.client_ssl_cert_key
+
+            values["ssl_verify"] = context.ssl_verify
+
+        except ImportError:
+            pass
+
+        return values
 
 
 class AnacondaCloudSettingsSource(AnacondaSettingsSource):
@@ -165,15 +191,22 @@ class AnacondaSiteSettingsSource(AnacondaSettingsSource):
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):
     @classmethod
     def settings_customise_sources(
-        cls, *args: Any, **kwargs: Any
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        settings = super().settings_customise_sources(*args, **kwargs)
-        assert isinstance(settings[-1], AnacondaConfigTomlSettingsSource)
         return (
-            *settings[:-1],
+            init_settings,
+            env_settings,
+            file_secret_settings,
+            dotenv_settings,
             AnacondaSiteSettingsSource(cls),
             AnacondaCloudSettingsSource(cls),
-            settings[-1],
+            AnacondaConfigTomlSettingsSource(settings_cls, anaconda_config_path()),
+            CondaContextSettingsSource(cls),
         )
 
 
