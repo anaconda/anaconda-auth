@@ -8,6 +8,7 @@ from typing import Literal
 from typing import MutableMapping
 from typing import Optional
 from typing import Tuple
+from typing import Type
 from typing import Union
 from urllib.parse import urljoin
 
@@ -15,6 +16,7 @@ import requests
 from pydantic import BaseModel
 from pydantic import RootModel
 from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings
 from pydantic_settings import PydanticBaseSettingsSource
 
 from anaconda_auth import __version__ as version
@@ -128,6 +130,30 @@ class AnacondaSettingsSource(PydanticBaseSettingsSource):
         return None, "", False
 
 
+class CondaContextSettingsSource(AnacondaSettingsSource):
+    def __call__(self) -> Dict[str, Any]:
+        values = {}
+
+        try:
+            from anaconda_auth._conda.repo_config import get_conda_context
+
+            context = get_conda_context()
+
+            if context.proxy_servers:
+                values["proxy_servers"] = context.proxy_servers
+            if context.client_ssl_cert:
+                values["client_cert"] = context.client_ssl_cert
+            if context.client_ssl_cert_key:
+                values["client_cert_key"] = context.client_ssl_cert_key
+
+            values["ssl_verify"] = context.ssl_verify
+
+        except ImportError:
+            pass
+
+        return values
+
+
 class AnacondaCloudSettingsSource(AnacondaSettingsSource):
     def __call__(self) -> Dict[str, Any]:
         cloud_config = AnacondaCloudConfig(raise_deprecation_warning=False)
@@ -165,15 +191,22 @@ class AnacondaSiteSettingsSource(AnacondaSettingsSource):
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):
     @classmethod
     def settings_customise_sources(
-        cls, *args: Any, **kwargs: Any
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        settings = super().settings_customise_sources(*args, **kwargs)
-        assert isinstance(settings[-1], AnacondaConfigTomlSettingsSource)
         return (
-            *settings[:-1],
+            init_settings,
+            env_settings,
+            file_secret_settings,
+            dotenv_settings,
             AnacondaSiteSettingsSource(cls),
+            CondaContextSettingsSource(cls),
             AnacondaCloudSettingsSource(cls),
-            settings[-1],
+            AnacondaConfigTomlSettingsSource(settings_cls, anaconda_config_path()),
         )
 
 
