@@ -45,7 +45,7 @@ class DeviceCodeFlow:
             config: Configuration for the client
         """
         self.config = config
-        self.client = BaseClient(config=config)
+        self.client = BaseClient(site=config)
 
         # Device authorization response data
         self.authorize_response = None
