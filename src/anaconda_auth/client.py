@@ -250,9 +250,10 @@ class BaseClient(requests.Session):
     @cached_property
     def avatar(self) -> Union[bytes, None]:
         hashed = md5(self.email.encode("utf-8")).hexdigest()
-        res = requests.get(
+        res = self.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
+            auth=False,
         )
         if res.ok:
             return res.content
