@@ -496,7 +496,7 @@ def disable_requests_helper_functions(monkeypatch):
         raise ValueError("Don't call requests methods directly!")
 
     for method in ["get", "post", "head", "patch", "put", "delete"]:
-        monkeypatch.setattr(requests, "get", _do_nothing)
+        monkeypatch.setattr(requests, method, _do_nothing)
 
 
 @pytest.fixture()
