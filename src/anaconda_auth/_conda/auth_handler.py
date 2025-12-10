@@ -156,10 +156,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
                 return None
 
             config = AnacondaAuthConfig()
-            if config.use_unified_repo_api_key:
-                return f"Bearer {token}"
+            if not config.use_unified_repo_api_key:
+                return f"token {token}"
 
-            return f"token {token}"
+            return f"Bearer {token}"
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
             return None
