@@ -18,6 +18,7 @@ from anaconda_auth._conda import config as plugin_config  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
 from anaconda_auth._conda.condarc import CondaRC  # noqa: E402
+from anaconda_auth._conda.config import CredentialType  # noqa: E402
 
 
 @pytest.fixture()
@@ -311,20 +312,20 @@ def test_load_token_domain_anaconda_dot_com_default(conda_search_path):
     channel_url = "https://repo.anaconda.com/repo/some-channel"
     handler = AnacondaAuthHandler(channel_name=channel_url)
     url = channel_url + "/noarch/repodata.json"
-    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
 
     assert token_domain == "anaconda.com"
-    assert is_unified
+    assert credential_type == CredentialType.API_KEY
 
 
 def test_load_token_domain_anaconda_cloud_default(conda_search_path):
     channel_url = "https://repo.anaconda.cloud/repo/some-channel"
     handler = AnacondaAuthHandler(channel_name=channel_url)
     url = channel_url + "/noarch/repodata.json"
-    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
 
     assert token_domain == "anaconda.com"
-    assert not is_unified
+    assert credential_type == CredentialType.REPO_TOKEN
 
 
 def test_load_token_domain_anaconda_cloud_api_key(conda_search_path, monkeypatch):
@@ -333,7 +334,7 @@ def test_load_token_domain_anaconda_cloud_api_key(conda_search_path, monkeypatch
     channel_url = "https://repo.anaconda.cloud/repo/some-channel"
     handler = AnacondaAuthHandler(channel_name=channel_url)
     url = channel_url + "/noarch/repodata.json"
-    token_domain, is_unified = handler._load_token_domain(parsed_url=urlparse(url))
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
 
     assert token_domain == "anaconda.com"
-    assert is_unified
+    assert credential_type == CredentialType.API_KEY
