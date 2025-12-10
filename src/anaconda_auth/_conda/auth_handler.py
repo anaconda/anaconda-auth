@@ -6,6 +6,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 from functools import lru_cache
 from typing import Any
+from typing import NamedTuple
 from typing import Optional
 from urllib.parse import ParseResult
 from urllib.parse import urlparse
@@ -23,6 +24,14 @@ from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
+
+
+class AccessCredential(NamedTuple):
+    """Represents a typed string containing an access credential (of CredentialType)."""
+
+    # This is essentially a tagged union, which felt lightweight and appropriate for our needs
+    value: str
+    type: CredentialType
 
 
 class AnacondaAuthError(CondaError):
@@ -53,7 +62,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         return token_domain, credential_type
 
-    def _load_token_from_keyring(self, url: str) -> Optional[str]:
+    def _load_token_from_keyring(self, url: str) -> Optional[AccessCredential]:
         """Attempt to load an appropriate token from the keyring.
 
         We parse the requested URL, extract what may be an organization ID, and first
@@ -77,8 +86,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
         if token_info.api_key and credential_type == CredentialType.API_KEY:
-            return token_info.api_key
+            return AccessCredential(token_info.api_key, CredentialType.API_KEY)
 
+        # We attempt to parse the URL and extract the org slug (for repo.anaconda.cloud)
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
             path = path[len(URI_PREFIX) :]
@@ -86,20 +96,24 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # First we attempt to return an organization-specific token
         try:
-            return token_info.get_repo_token(maybe_org)
+            return AccessCredential(
+                token_info.get_repo_token(maybe_org), CredentialType.REPO_TOKEN
+            )
         except TokenNotFoundError:
             pass
 
         # Return the first one, assuming this is not an org-specific channel
         try:
-            return token_info.repo_tokens[0].token
+            return AccessCredential(
+                token_info.repo_tokens[0].token, CredentialType.REPO_TOKEN
+            )
         except IndexError:
             pass
 
         return None
 
     @staticmethod
-    def _load_token_via_conda_token(url: str) -> Optional[str]:
+    def _load_token_via_conda_token(url: str) -> Optional[AccessCredential]:
         domain = urlparse(url).netloc.lower()
         # Try to load the token via conda-token if that is installed
         if repo_config is not None:
@@ -107,11 +121,11 @@ class AnacondaAuthHandler(ChannelAuthBase):
             for token_url, token in tokens.items():
                 token_netloc = urlparse(token_url).netloc
                 if token_netloc.lower() == domain and token is not None:
-                    return token
+                    return AccessCredential(token, CredentialType.REPO_TOKEN)
         return None
 
     @lru_cache
-    def _load_token(self, url: str) -> Optional[str]:
+    def _load_token(self, url: str) -> Optional[AccessCredential]:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
@@ -146,11 +160,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
             if token is None:
                 return None
 
-            config = AnacondaAuthConfig()
-            if not config.use_unified_repo_api_key:
-                return f"token {token}"
+            if token.type == CredentialType.REPO_TOKEN:
+                return f"token {token.value}"
 
-            return f"Bearer {token}"
+            return f"Bearer {token.value}"
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
             return None
