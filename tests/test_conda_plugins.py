@@ -15,6 +15,7 @@ from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
 
 from anaconda_auth._conda import config as plugin_config  # noqa: E402
+from anaconda_auth._conda.auth_handler import AccessCredential  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
 from anaconda_auth._conda.condarc import CondaRC  # noqa: E402
@@ -84,7 +85,7 @@ def test_get_token_via_conda_token(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-token"
+    assert token == AccessCredential("my-test-token", CredentialType.REPO_TOKEN)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -92,7 +93,9 @@ def test_get_repo_token_via_keyring(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-token-in-token-info"
+    assert token == AccessCredential(
+        "my-test-token-in-token-info", CredentialType.REPO_TOKEN
+    )
 
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
@@ -101,7 +104,7 @@ def test_get_unified_api_token_for_dotcom(handler, monkeypatch):
     monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "False")
     for host in ("repo.anaconda.com", "repo.continuum.io"):
         token = handler._load_token(f"https://{host}/pkgs/main/noarch/repodata.json")
-        assert token == "my-test-api-key"
+        assert token == AccessCredential("my-test-api-key", CredentialType.API_KEY)
 
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
@@ -110,7 +113,7 @@ def test_get_unified_api_token_via_keyring(handler, monkeypatch):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-api-key"
+    assert token == AccessCredential("my-test-api-key", CredentialType.API_KEY)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -150,7 +153,9 @@ def test_get_token_for_main_finds_first_token(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/main/noarch/repodata.json"
     )
-    assert token == "my-first-test-token-in-token-info"
+    assert token == AccessCredential(
+        "my-first-test-token-in-token-info", CredentialType.REPO_TOKEN
+    )
 
 
 @pytest.mark.usefixtures("mocked_empty_conda_token")
