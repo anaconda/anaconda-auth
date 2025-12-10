@@ -50,10 +50,14 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
         channel_domain = parsed_url.netloc.lower()
+
+        # Set defaults for behavior when not overridden by configuration
+        token_domain = channel_domain
+        credential_type = CredentialType.REPO_TOKEN
+
+        # For specific channel domains, we override the defaults
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, credential_type = TOKEN_DOMAIN_MAP[channel_domain]
-        else:
-            token_domain, credential_type = channel_domain, CredentialType.REPO_TOKEN
 
         # Allow users to override default via configuration
         config = AnacondaAuthConfig(domain=token_domain)
