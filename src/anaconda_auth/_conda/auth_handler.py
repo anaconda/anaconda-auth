@@ -59,10 +59,13 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, credential_type = TOKEN_DOMAIN_MAP[channel_domain]
 
-        # Allow users to override default via configuration
-        config = AnacondaAuthConfig(domain=token_domain)
-        if config.use_unified_repo_api_key:
-            credential_type = CredentialType.API_KEY
+            # Respect the global configuration override to force API key
+            # This is relevant for channels who are configured by default to
+            # use repo tokens, but not available unless for a specific domain
+            # like repo.anaconda.cloud.
+            config = AnacondaAuthConfig(domain=token_domain)
+            if config.use_unified_repo_api_key:
+                credential_type = CredentialType.API_KEY
 
         return token_domain, credential_type
 
