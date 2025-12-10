@@ -17,6 +17,7 @@ from requests import Response
 
 from anaconda_auth._conda import repo_config
 from anaconda_auth._conda.config import TOKEN_DOMAIN_MAP
+from anaconda_auth._conda.config import CredentialType
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.token import TokenInfo
@@ -41,16 +42,16 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """
         channel_domain = parsed_url.netloc.lower()
         if channel_domain in TOKEN_DOMAIN_MAP:
-            token_domain, is_unified, _ = TOKEN_DOMAIN_MAP[channel_domain]
+            token_domain, credential_type, _ = TOKEN_DOMAIN_MAP[channel_domain]
         else:
-            token_domain, is_unified = channel_domain, False
+            token_domain, credential_type = channel_domain, CredentialType.REPO_TOKEN
 
         # Allow users to override default via configuration
         config = AnacondaAuthConfig(domain=token_domain)
         if config.use_unified_repo_api_key:
-            is_unified = True
+            credential_type = CredentialType.API_KEY
 
-        return token_domain, is_unified
+        return token_domain, credential_type == CredentialType.API_KEY
 
     def _load_token_from_keyring(self, url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
