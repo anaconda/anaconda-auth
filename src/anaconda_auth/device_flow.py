@@ -10,6 +10,7 @@ from typing import Optional
 import requests
 from pydantic import BaseModel
 
+from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.exceptions import DeviceFlowDenied
 from anaconda_auth.exceptions import DeviceFlowError
@@ -44,6 +45,7 @@ class DeviceCodeFlow:
             config: Configuration for the client
         """
         self.config = config
+        self.client = BaseClient(site=config)
 
         # Device authorization response data
         self.authorize_response = None
@@ -62,7 +64,7 @@ class DeviceCodeFlow:
             raise DeviceFlowError("Server does not support device authorization")
 
         try:
-            response = requests.post(
+            response = self.client.post(
                 self.config.oidc.device_authorization_endpoint,
                 data=data,
                 verify=self.config.ssl_verify,
@@ -129,7 +131,7 @@ class DeviceCodeFlow:
             "client_id": self.config.client_id,
         }
 
-        response = requests.post(
+        response = self.client.post(
             self.config.oidc.token_endpoint,
             data=data,
             verify=self.config.ssl_verify,

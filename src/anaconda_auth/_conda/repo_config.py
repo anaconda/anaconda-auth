@@ -31,6 +31,7 @@ from rich.prompt import Confirm
 
 from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.condarc import CondaRC
+from anaconda_auth._conda.config import _build_channel_settings
 from anaconda_cli_base import console
 
 CONDA_VERSION = version.parse(conda.__version__)
@@ -86,7 +87,9 @@ def can_restore_free_channel() -> bool:
 
 
 def get_conda_context() -> context_module.Context:
-    return context_module.reset_context()
+    obj = context_module.context
+    obj.__init__()
+    return obj
 
 
 def get_ssl_verify() -> bool:
@@ -148,11 +151,13 @@ def configure_plugin(should_set_default_channels: bool = False) -> None:
     all premium repo channels with this auth handler.
 
     """
+    settings = _build_channel_settings(include_defaults=False)
+    if not settings:
+        return
     condarc = CondaRC()
     condarc.backup()
-    condarc.update_channel_settings(
-        "https://repo.anaconda.cloud/*", "anaconda-auth", username=None
-    )
+    for s in settings:
+        condarc.update_channel_settings(s["channel"], s["auth"], username=None)
     condarc.save()
 
 

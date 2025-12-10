@@ -16,6 +16,8 @@ outputs:
     build:
       script:
         - SETUPTOOLS_SCM_PRETEND_VERSION={{version}} python -m pip install . -vv
+        # Do not use python -m ... here to avoid unnecessary imports
+        - python ./src/anaconda_auth/_conda/config.py --install
       noarch: python
 
     requirements:
@@ -28,17 +30,25 @@ outputs:
       run:
         - python {{ project['requires-python'] }}
         {% for dep in project['dependencies'] %}
+        {% if not dep.startswith('anaconda-cli-base') %}
         - {{ dep.lower() }}
+        {% else %}
+        # TODO(mattkram): This is here because of coordinated rollout. Remove after releases.
+        - anaconda-cli-base >=0.7.0rc0
+        {% endif %}
         {% endfor %}
       run_constrained:
         - {{ pin_subpackage("anaconda-cloud-auth", exact=True) }}
         - conda >=23.9.0
         - conda-token >=0.7.0
     test:
+      requires:
+        - conda
       imports:
         - anaconda_auth
       commands:
         - python -c "from anaconda_auth import __version__; assert __version__ == '{{ version }}'"
+        - python -m anaconda_auth._conda.config --verify
 
   - name: anaconda-cloud-auth
     build:
