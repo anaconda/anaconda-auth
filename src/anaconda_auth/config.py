@@ -287,6 +287,14 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def add(self, site: AnacondaAuthSite) -> None:
         self[site.site] = site
 
+    def remove(self, name: str) -> None:
+        try:
+            key = self._find_key(name)
+        except UnknownSiteName:
+            key = self._find_domain(name)
+
+        del self.root[key]
+
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None

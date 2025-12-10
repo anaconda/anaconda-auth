@@ -533,4 +533,18 @@ def sites_add(
     sites.write_config(dry_run=dry_run)
 
 
+@sites_app.command(name="remove")
+def sites_remove(
+    site: str = typer.Argument(help="Site name or domain name to remove."),
+    dry_run: bool = typer.Option(
+        default=False,
+        help=f"Show proposed changes to {anaconda_config_path()} and exit",
+    ),
+) -> None:
+    sites = AnacondaAuthSitesConfig()
+    sites.sites.remove(site)
+
+    sites.write_config(dry_run=dry_run)
+
+
 sites_add.__doc__ = sites_add.__doc__.format(config_toml=anaconda_config_path())
