@@ -32,7 +32,7 @@ class AnacondaAuthError(CondaError):
 
 
 class AnacondaAuthHandler(ChannelAuthBase):
-    def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, bool]:
+    def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, CredentialType]:
         """Select the appropriate domain for token lookup based on a parsed URL.
 
         We also determine whether to use API key or legacy repo token. This method
@@ -51,7 +51,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if config.use_unified_repo_api_key:
             credential_type = CredentialType.API_KEY
 
-        return token_domain, credential_type == CredentialType.API_KEY
+        return token_domain, credential_type
 
     def _load_token_from_keyring(self, url: str) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
@@ -66,7 +66,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
         parsed_url = urlparse(url)
-        token_domain, is_unified = self._load_token_domain(parsed_url)
+        token_domain, credential_type = self._load_token_domain(parsed_url)
 
         try:
             token_info = TokenInfo.load(token_domain)
@@ -76,7 +76,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # Check configuration to use unified api key,
         # otherwise continue and attempt to utilize repo token
-        if token_info.api_key and is_unified:
+        if token_info.api_key and credential_type == CredentialType.API_KEY:
             return token_info.api_key
 
         path = parsed_url.path
