@@ -155,10 +155,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return None
 
         config = AnacondaAuthConfig()
-        if config.use_unified_repo_api_key:
-            return f"Bearer {token}"
+        if not config.use_unified_repo_api_key:
+            return f"token {token}"
 
-        return f"token {token}"
+        return f"Bearer {token}"
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
