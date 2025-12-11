@@ -56,14 +56,17 @@ class CondaRC:
         """
         Update the condarc file's "channel_settings" section
         """
-        if username is None:
-            updated_settings = {"channel": channel, "auth": auth_type}
-        else:
-            updated_settings = {
-                "channel": channel,
-                "auth": auth_type,
-                "username": username,
-            }
+        updated_settings = {
+            "channel": channel,
+            "auth": auth_type,
+            "username": username,
+            "auth_domain": auth_domain,
+        }
+
+        # Filter out any None values
+        updated_settings = {
+            key: value for key, value in updated_settings.items() if value is not None
+        }
 
         channel_settings = self._loaded_yaml.get("channel_settings", []) or []
 
