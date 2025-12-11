@@ -359,7 +359,7 @@ def conda_search_path(monkeypatch, tmp_path):
         monkeypatch.setattr(context, "reset_context", _new_reset_context)
 
         # Reset the context object with these new settings
-        context.context.__init__()
+        context.reset_context()
 
     yield CondaRCPaths(user_path, prefix_path, sites_path)
 

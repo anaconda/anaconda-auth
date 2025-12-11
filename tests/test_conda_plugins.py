@@ -7,6 +7,7 @@ from anaconda_auth.token import TokenInfo
 
 conda = pytest.importorskip("conda")
 
+from conda.base import context  # noqa: E402
 from conda.base.context import context as conda_context  # noqa: E402
 from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
@@ -267,7 +268,7 @@ def test_channel_settings_prefix(conda_search_path):
         plugin_config._write_condarc_d_settings()
     plugin_config._write_condarc_d_settings(overwrite=True)
     plugin_config._verify_channel_settings(filtered=False)
-    conda_context.__init__()
+    context.reset_context()
     plugin_config._assert_settings(conda_context, REFERENCE)
 
 
@@ -277,7 +278,7 @@ def test_channel_settings_user(conda_search_path):
     condarc = CondaRC(fpath)
     condarc.update_channel_settings("my-test-channel", "anaconda-auth", username=None)
     condarc.save()
-    conda_context.__init__()
+    context.reset_context()
     plugin_config._assert_settings(conda_context, {"my-test-channel": "anaconda-auth"})
 
 
@@ -285,7 +286,7 @@ def test_channel_settings_site(conda_search_path):
     condarc = CondaRC(conda_search_path.sites / "anaconda-auth-sites.yml")
     condarc.update_channel_settings("my-site-channel", "anaconda-auth", username=None)
     condarc.save()
-    conda_context.__init__()
+    context.reset_context()
     plugin_config._assert_settings(conda_context, {"my-site-channel": "anaconda-auth"})
 
 
@@ -300,7 +301,7 @@ def test_channel_settings_merged(conda_search_path):
     condarc2.update_channel_settings("my-site-channel", "anaconda-auth", username=None)
     condarc2.save()
 
-    conda_context.__init__()
+    context.reset_context()
     expected = REFERENCE.copy()
     expected["my-test-channel"] = "anaconda-auth"
     expected["my-site-channel"] = "anaconda-auth"
