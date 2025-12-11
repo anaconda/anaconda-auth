@@ -5,7 +5,6 @@ import warnings
 from textwrap import dedent
 from typing import List
 from typing import Optional
-from typing import Union
 from typing import cast
 
 import typer
@@ -457,10 +456,8 @@ def sites_add(
         default=False,
         help=f"Show proposed changes to {anaconda_config_path()} and exit",
     ),
-):
-    """Add new site or modify existing configuration in {config_toml}"""
-
-    ssl_verify: Union[str, bool] = "truststore" if use_truststore else ssl_verify
+) -> None:
+    ssl_verify = "truststore" if use_truststore else ssl_verify
 
     kwargs = dict[str, bool | str](
         ssl_verify=ssl_verify,
@@ -475,11 +472,11 @@ def sites_add(
     if api_key is not None:
         kwargs["api_key"] = api_key
     if extra_headers is not None:
-        extra_headers = cast(dict, json.loads(extra_headers))
-        kwargs["extra_headers"] = extra_headers
+        parsed_extra_headers = cast(dict, json.loads(extra_headers))
+        kwargs["extra_headers"] = parsed_extra_headers
     if proxy_servers is not None:
-        proxy_servers = cast(dict, json.loads(proxy_servers))
-        kwargs["proxy_servers"] = proxy_servers
+        parsed_proxy_servers = cast(dict, json.loads(proxy_servers))
+        kwargs["proxy_servers"] = parsed_proxy_servers
     if client_cert is not None:
         kwargs["client_cert"] = client_cert
     if client_cert_key is not None:
@@ -558,6 +555,11 @@ def sites_add(
     sites.write_config(dry_run=dry_run)
 
 
+sites_add.__doc__ = (
+    f"Add new site or modify existing configuration in {anaconda_config_path()}"
+)
+
+
 @sites_app.command(name="remove")
 def sites_remove(
     site: str = typer.Argument(help="Site name or domain name to remove."),
@@ -570,6 +572,3 @@ def sites_remove(
     sites.sites.remove(site)
 
     sites.write_config(dry_run=dry_run)
-
-
-sites_add.__doc__ = sites_add.__doc__.format(config_toml=anaconda_config_path())

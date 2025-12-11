@@ -285,7 +285,8 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
             return self._find_domain(key)
 
     def __getitem__(self, key: str) -> AnacondaAuthConfig:
-        return AnacondaAuthConfig(site=self._find_at(key))
+        lookup = self._find_at(key)
+        return AnacondaAuthConfig(site=lookup)
 
     def __setitem__(self, name: str, site: AnacondaAuthSite) -> None:
         self.root[name] = site
