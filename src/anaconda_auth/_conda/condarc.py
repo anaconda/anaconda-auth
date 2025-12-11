@@ -6,6 +6,7 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
 
+from anaconda_auth._conda.config import CredentialType
 from anaconda_cli_base import console
 
 DEFAULT_CONDARC_PATH = Path("~/.condarc").expanduser()
@@ -52,6 +53,7 @@ class CondaRC:
         username: str | None = None,
         *,
         auth_domain: str | None = None,
+        credential_type: CredentialType | None = None,
     ) -> None:
         """
         Update the condarc file's "channel_settings" section
@@ -61,6 +63,7 @@ class CondaRC:
             "auth": auth_type,
             "username": username,
             "auth_domain": auth_domain,
+            "credential_type": credential_type.value if credential_type else None,
         }
 
         # Filter out any None values
