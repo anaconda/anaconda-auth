@@ -305,7 +305,7 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     )
     sites: Sites = Sites({})
 
-    def __new__(cls) -> "AnacondaAuthSitesConfig":
+    def __new__(cls, **kwargs: Any) -> "AnacondaAuthSitesConfig":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
