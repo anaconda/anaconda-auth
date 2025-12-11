@@ -10,6 +10,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Type
 from typing import Union
+from typing import cast
 from urllib.parse import urljoin
 
 from pydantic import BaseModel
@@ -146,7 +147,7 @@ class CondaContextSettingsSource(AnacondaSettingsSource):
         self.enabled = not settings_cls.model_config.get("disable_conda_context", False)
 
     def __call__(self) -> Dict[str, Any]:
-        values = {}
+        values: Dict[str, Any] = {}
         if not self.enabled:
             return values
 
@@ -292,7 +293,7 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
         self.root[name] = site
 
     def add(self, site: AnacondaAuthSite) -> None:
-        self[site.site] = site
+        self[cast(str, site.site)] = site
 
     def remove(self, name: str) -> None:
         try:
