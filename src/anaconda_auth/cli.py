@@ -12,6 +12,7 @@ from requests.exceptions import HTTPError
 from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
+from rich.table import Table
 
 from anaconda_auth import __version__
 from anaconda_auth.actions import login
@@ -28,6 +29,8 @@ from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+
+CHECK_MARK = "[bold green]✔︎[/bold green]"
 
 
 def _continue_with_login() -> int:
@@ -353,21 +356,16 @@ sites_app = typer.Typer(
 
 @sites_app.command(name="list")
 def sites_list() -> None:
+    """List configured sites by name and domain."""
     sites_config = AnacondaAuthSitesConfig()
 
-    sites = []
+    table = Table("Site name", "Domain name", "Default site", header_style="bold green")
+
     for site_name, site in sites_config.sites.root.items():
-        display_name = f"* {site_name}"
-        if site_name != site.domain:
-            display_name += f" ({site.domain})"
+        is_default = CHECK_MARK if site_name == sites_config.default_site else ""
+        table.add_row(site_name, site.domain, is_default)
 
-        if site_name == sites_config.default_site:
-            display_name += " [cyan]\\[default][/cyan]"
-
-        sites.append(display_name)
-
-    all_sites = "\n".join(sites)
-    console.print(all_sites)
+    console.print(table)
 
 
 @sites_app.command(name="show")
@@ -381,6 +379,8 @@ def sites_show(
     ),
     show_hidden: bool = typer.Option(False, help="Show hidden fields"),
 ) -> None:
+    """Show the site configuration for the default site or look up by the provided name or domain."""
+
     hidden = {
         "preferred_token_storage",
         "auth_domain_override",
