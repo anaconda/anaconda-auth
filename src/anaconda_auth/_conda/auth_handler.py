@@ -40,7 +40,16 @@ class AnacondaAuthError(CondaError):
     """
 
 
+def _load_channel_settings(channel_name: str) -> dict[str, Any]:
+    return {"auth_domain": "auth.some-domain.com"}
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
+    def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
+        super().__init__(channel_name, *args, **kwargs)
+        settings = _load_channel_settings(channel_name)
+        self._override_auth_domain = settings.get("auth_domain")
+
     def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, CredentialType]:
         """Select the appropriate domain for token lookup based on a parsed URL.
 
@@ -66,6 +75,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
             config = AnacondaAuthConfig(domain=token_domain)
             if config.use_unified_repo_api_key:
                 credential_type = CredentialType.API_KEY
+
+        if self._override_auth_domain:
+            token_domain = self._override_auth_domain
 
         return token_domain, credential_type
 

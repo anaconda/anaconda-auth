@@ -46,7 +46,12 @@ class CondaRC:
             raise CondaRCError(f"Could not parse condarc: {exc}")
 
     def update_channel_settings(
-        self, channel: str, auth_type: str, username: str | None = None
+        self,
+        channel: str,
+        auth_type: str,
+        username: str | None = None,
+        *,
+        auth_domain: str | None = None,
     ) -> None:
         """
         Update the condarc file's "channel_settings" section
