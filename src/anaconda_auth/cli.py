@@ -457,12 +457,11 @@ def sites_add(
         help=f"Show proposed changes to {anaconda_config_path()} and exit",
     ),
 ) -> None:
-    ssl_verify = "truststore" if use_truststore else ssl_verify
+    if use_truststore and not ssl_verify:
+        raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
 
     kwargs = dict[str, bool | str](
-        ssl_verify=ssl_verify,
-        # use_unified_repo_api_key=use_unified_repo_api_key,
-        # disable_conda_auto_config=disable_conda_auto_config
+        ssl_verify="truststore" if use_truststore else ssl_verify,
     )
 
     if site is not None:
