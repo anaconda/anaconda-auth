@@ -53,13 +53,13 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # Set defaults for behavior when not overridden by configuration
         token_domain = channel_domain
-        credential_type = CredentialType.REPO_TOKEN
+        credential_type = CredentialType.API_KEY
 
         # For specific channel domains, we override the defaults
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, credential_type, _ = TOKEN_DOMAIN_MAP[channel_domain]
         else:
-            token_domain, credential_type = channel_domain, CredentialType.REPO_TOKEN
+            token_domain, credential_type = channel_domain, CredentialType.API_KEY
 
         # Allow users to override default via configuration
         config = AnacondaAuthConfig(domain=token_domain)
