@@ -21,6 +21,7 @@ from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
+from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -509,6 +510,18 @@ def sites_add(
         kwargs["login_error_path"] = login_error_path
     if hash_hostname is not None:
         kwargs["hash_hostname"] = hash_hostname
+
+    # Do not allow env vars or secrets to leak
+    # into the config.toml
+    AnacondaAuthConfig.model_config.update(
+        env_file=None, env_prefix="__ANACONDA_HIDDEN_AUTH_", secrets_dir=None
+    )
+    AnacondaCloudConfig.model_config.update(
+        env_file=None, env_prefix="__ANACONDA_HIDDEN_CLOUD_", secrets_dir=None
+    )
+    AnacondaAuthSitesConfig.model_config.update(
+        env_file=None, env_prefix="__ANACONDA_HIDDEN_SITES_", secrets_dir=None
+    )
 
     if globally:
         _ = kwargs.pop("site", None)
