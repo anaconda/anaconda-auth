@@ -516,9 +516,11 @@ def sites_add(
     AnacondaAuthConfig.model_config.update(
         env_file=None, env_prefix="__ANACONDA_HIDDEN_AUTH_", secrets_dir=None
     )
+
     AnacondaCloudConfig.model_config.update(
         env_file=None, env_prefix="__ANACONDA_HIDDEN_CLOUD_", secrets_dir=None
     )
+
     AnacondaAuthSitesConfig.model_config.update(
         env_file=None, env_prefix="__ANACONDA_HIDDEN_SITES_", secrets_dir=None
     )
