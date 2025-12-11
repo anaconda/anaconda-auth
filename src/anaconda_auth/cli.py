@@ -511,18 +511,29 @@ def sites_add(
     if hash_hostname is not None:
         kwargs["hash_hostname"] = hash_hostname
 
-    # Do not allow env vars or secrets to leak
-    # into the config.toml
+    # Do not allow these to leak into the config.toml
+    # * condarc config
+    # * env vars (including .env file)
+    # * secrets
     AnacondaAuthConfig.model_config.update(
-        env_file=None, env_prefix="__ANACONDA_HIDDEN_AUTH_", secrets_dir=None
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_AUTH_",
+        secrets_dir=None,
+        disable_conda_context=True,
     )
 
     AnacondaCloudConfig.model_config.update(
-        env_file=None, env_prefix="__ANACONDA_HIDDEN_CLOUD_", secrets_dir=None
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_CLOUD_",
+        secrets_dir=None,
+        disable_conda_context=True,
     )
 
     AnacondaAuthSitesConfig.model_config.update(
-        env_file=None, env_prefix="__ANACONDA_HIDDEN_SITES_", secrets_dir=None
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_SITES_",
+        secrets_dir=None,
+        disable_conda_context=True,
     )
 
     if globally:

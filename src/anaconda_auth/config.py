@@ -141,8 +141,14 @@ class AnacondaSettingsSource(PydanticBaseSettingsSource):
 
 
 class CondaContextSettingsSource(AnacondaSettingsSource):
+    def __init__(self, settings_cls: type[BaseSettings]):
+        super().__init__(settings_cls)
+        self.enabled = not settings_cls.model_config.get("disable_conda_context", False)
+
     def __call__(self) -> Dict[str, Any]:
         values = {}
+        if not self.enabled:
+            return values
 
         try:
             from anaconda_auth._conda.repo_config import get_conda_context
