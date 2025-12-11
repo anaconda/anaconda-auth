@@ -4,6 +4,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+from fnmatch import fnmatch
 from functools import lru_cache
 from typing import Any
 from typing import NamedTuple
@@ -13,6 +14,7 @@ from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
 from conda import CondaError
+from conda.base.context import context as conda_context
 from conda.plugins.types import ChannelAuthBase
 from requests import PreparedRequest
 from requests import Response
@@ -46,7 +48,56 @@ class AnacondaAuthError(CondaError):
     """
 
 
+def _load_channel_settings(channel_name: str) -> dict[str, Any]:
+    """Find the correct channel settings from conda's configuration."""
+    # TODO(mattkram): Open conda issue to see if we can pass this into the AuthHandler
+    #                 as part of the plugin protocol.
+
+    # Since the conda logic uses a url, we derive a url from the channel name
+    # this will not work for multi_channels like "defaults", but we restrict the
+    # extra fields we need to URL-based channel_settings, which should be sufficient.
+    url = channel_name
+    if not url.endswith("/"):
+        url += "/"
+
+    parsed_url = urlparse(url)
+    if not parsed_url.scheme or not parsed_url.netloc:
+        return {}
+
+    # The following implementation has mostly been copied from conda, with one noted exception.
+    # Ideally, we can receive the settings in the plugin instantiation.
+    # See: https://github.com/conda/conda/blob/2af8e0f7255e1d06ea0bfcb6076c7427d101feee/conda/gateways/connection/session.py#L91-L112
+
+    # We ensure here if there are duplicates defined, we choose the last one
+    channel_settings = {}
+    for settings in conda_context.channel_settings:
+        channel = settings.get("channel", "")
+        if channel == channel_name:
+            # First we check for exact match
+            channel_settings = settings
+            continue
+
+        parsed_setting = urlparse(channel)
+
+        # We require that the schemes must be identical to prevent downgrade attacks.
+        # This includes the case of a scheme-less pattern like "*", which is not allowed.
+        if parsed_setting.scheme != parsed_url.scheme:
+            continue
+
+        url_without_schema = parsed_url.netloc + parsed_url.path
+        pattern = parsed_setting.netloc + parsed_setting.path
+        if fnmatch(url_without_schema, pattern):
+            channel_settings = settings
+
+    return channel_settings
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
+    def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
+        super().__init__(channel_name, *args, **kwargs)
+        settings = _load_channel_settings(channel_name)
+        self._override_auth_domain = settings.get("auth_domain")
+
     def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, CredentialType]:
         """Select the appropriate domain for token lookup based on a parsed URL.
 
@@ -69,6 +120,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
         config = AnacondaAuthConfig(domain=token_domain)
         if config.use_unified_repo_api_key:
             credential_type = CredentialType.API_KEY
+
+        if self._override_auth_domain:
+            token_domain = self._override_auth_domain
 
         return token_domain, credential_type
 

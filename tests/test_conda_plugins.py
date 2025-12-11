@@ -411,3 +411,22 @@ def test_load_token_domain_user_provided_default(conda_search_path):
 
     assert token_domain == "some-domain.com"
     assert credential_type == CredentialType.API_KEY
+
+
+def test_load_token_domain_user_provided_auth_domain_override(conda_search_path):
+    channel_url = "https://some-domain.com/repo/some-channel"
+    condarc = CondaRC()
+    condarc.update_channel_settings(
+        channel=channel_url + "/*",
+        auth_type="anaconda-auth",
+        auth_domain="auth.some-domain.com",
+    )
+    condarc.save()
+    context.reset_context()
+
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "auth.some-domain.com"
+    assert credential_type == CredentialType.API_KEY
