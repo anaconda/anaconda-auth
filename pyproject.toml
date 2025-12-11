@@ -180,7 +180,7 @@ target-version = "py38"
 [tool.ruff.lint]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
-ignore = ["E501"]
+ignore = ["E501", "UP007"]
 # see https://docs.astral.sh/ruff/rules/
 select = ["F", "E", "W", "I", "UP", "TID"]
 
