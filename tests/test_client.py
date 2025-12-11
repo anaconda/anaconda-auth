@@ -7,7 +7,6 @@ from textwrap import dedent
 from uuid import uuid4
 
 import pytest
-from conda.base.context import context
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests import Request
@@ -22,6 +21,11 @@ from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
 from .conftest import is_conda_installed
+
+try:
+    from conda.base.context import context
+except Exception:
+    context = None
 
 HERE = os.path.dirname(__file__)
 
