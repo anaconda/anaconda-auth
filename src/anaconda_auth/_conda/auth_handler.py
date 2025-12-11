@@ -97,6 +97,9 @@ def _load_channel_settings(channel_name: str) -> dict[str, Any]:
 
 class AnacondaAuthHandlerExtraSettings(BaseModel):
     override_auth_domain: Optional[str] = Field(default=None, alias="auth_domain")
+    override_credential_type: Optional[CredentialType] = Field(
+        default=None, alias="credential_type"
+    )
 
     @classmethod
     def from_channel_name(cls, channel_name: str) -> "AnacondaAuthHandlerExtraSettings":
@@ -140,6 +143,9 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         if self._extras.override_auth_domain:
             token_domain = self._extras.override_auth_domain
+
+        if self._extras.override_credential_type:
+            credential_type = self._extras.override_credential_type
 
         return token_domain, credential_type
 
