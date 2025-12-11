@@ -7,7 +7,6 @@ from textwrap import dedent
 from uuid import uuid4
 
 import pytest
-from conda.base import context
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests import Request
@@ -22,6 +21,11 @@ from anaconda_auth.token import TokenInfo
 
 from .conftest import MockedRequest
 from .conftest import is_conda_installed
+
+try:
+    from conda.base import context
+except ImportError:
+    context = None
 
 HERE = os.path.dirname(__file__)
 
@@ -473,8 +477,8 @@ def test_client_condarc_base_defaults(condarc_path: Path) -> None:
             """
         )
     )
-
     context.reset_context()
+
     client = BaseClient()
     assert client.config.ssl_verify
     assert client.proxies["http"] == "condarc"
@@ -618,6 +622,7 @@ def test_client_ssl_context(config_toml: Path, condarc_path: Path) -> None:
             """
         )
     )
+    context.reset_context()
 
     import ssl
 
@@ -625,7 +630,6 @@ def test_client_ssl_context(config_toml: Path, condarc_path: Path) -> None:
 
     ssl_context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-    context.reset_context()
     client = BaseClient()
     assert client.config.ssl_verify
     # TODO change this to some type of equality operator
@@ -663,6 +667,7 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
         )
     )
     context.reset_context()
+
     client = BaseClient()
     assert client.cert == ("client_cert.pem", "client_cert_key")
 
