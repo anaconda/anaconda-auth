@@ -275,7 +275,9 @@ def login(
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
-        config = AnacondaAuthConfig().model_copy(update=dict(ssl_verify=ssl_verify))
+        config = AnacondaAuthConfig().model_copy(
+            update=dict(ssl_verify=ssl_verify), deep=True
+        )
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
