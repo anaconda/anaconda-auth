@@ -570,7 +570,7 @@ sites_set.__doc__ = (
 )
 
 
-@sites_app.command(name="remove")
+@sites_app.command(name="remove", no_args_is_help=True)
 def sites_remove(
     site: str = typer.Argument(help="Site name or domain name to remove."),
     dry_run: bool = typer.Option(
