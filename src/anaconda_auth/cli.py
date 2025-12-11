@@ -278,7 +278,9 @@ def main(
 
 @app.command("login")
 def auth_login(
-    force: bool = False, ssl_verify: bool = True, at: Optional[str] = None
+    force: bool = False,
+    ssl_verify: Optional[bool] = typer.Option(None, "--ssl-verify/--no-ssl-verify"),
+    at: Optional[str] = None,
 ) -> None:
     """Login"""
     _override_default_site(at)

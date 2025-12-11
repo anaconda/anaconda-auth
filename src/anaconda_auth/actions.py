@@ -269,13 +269,15 @@ def _api_key_is_valid(config: AnacondaAuthSite) -> bool:
 
 def login(
     config: Optional[AnacondaAuthSite] = None,
+    ssl_verify: Optional[bool] = None,
     basic: bool = False,
     force: bool = False,
-    ssl_verify: bool = True,
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
     if config is None:
-        config = AnacondaAuthConfig().model_copy(update=dict(ssl_verify=ssl_verify))
+        config = AnacondaAuthConfig()
+        if ssl_verify is not None:
+            config = config.model_copy(update={"ssl_verify": ssl_verify})
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
