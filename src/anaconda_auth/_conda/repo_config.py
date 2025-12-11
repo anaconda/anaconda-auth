@@ -87,9 +87,7 @@ def can_restore_free_channel() -> bool:
 
 
 def get_conda_context() -> context_module.Context:
-    obj = context_module.context
-    obj.__init__()
-    return obj
+    return context_module.reset_context()
 
 
 def get_ssl_verify() -> bool:
