@@ -382,16 +382,17 @@ def sites_show(
     """Show the site configuration for the default site or look up by the provided name or domain."""
 
     hidden = {
-        "preferred_token_storage",
+        "api_key",
         "auth_domain_override",
-        "keyring",
         "client_id",
-        "redirect_uri",
-        "openid_config_path",
-        "oidc_request_headers",
+        "hash_hostname",
+        "keyring",
+        "preferred_token_storage",
         "login_success_path",
         "login_error_path",
-        "hash_hostname",
+        "openid_config_path",
+        "oidc_request_headers",
+        "redirect_uri",
     }
 
     exclude = None if show_hidden else hidden
