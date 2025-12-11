@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 from conda import CondaError
 from conda.base.context import context as conda_context
 from conda.plugins.types import ChannelAuthBase
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import ValidationError
 from requests import PreparedRequest
 from requests import Response
 
@@ -92,11 +95,25 @@ def _load_channel_settings(channel_name: str) -> dict[str, Any]:
     return channel_settings
 
 
+class AnacondaAuthHandlerExtraSettings(BaseModel):
+    override_auth_domain: Optional[str] = Field(default=None, alias="auth_domain")
+
+    @classmethod
+    def from_channel_name(cls, channel_name: str) -> "AnacondaAuthHandlerExtraSettings":
+        """Load extra settings for a channel, with validation."""
+        settings = _load_channel_settings(channel_name)
+        try:
+            return cls(**settings)
+        except ValidationError as e:
+            raise AnacondaAuthError(
+                f"""Error when loading anaconda-auth extra configuration from your condarc.\n\n{e}"""
+            )
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
     def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
         super().__init__(channel_name, *args, **kwargs)
-        settings = _load_channel_settings(channel_name)
-        self._override_auth_domain = settings.get("auth_domain")
+        self._extras = AnacondaAuthHandlerExtraSettings.from_channel_name(channel_name)
 
     def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, CredentialType]:
         """Select the appropriate domain for token lookup based on a parsed URL.
@@ -121,8 +138,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if config.use_unified_repo_api_key:
             credential_type = CredentialType.API_KEY
 
-        if self._override_auth_domain:
-            token_domain = self._override_auth_domain
+        if self._extras.override_auth_domain:
+            token_domain = self._extras.override_auth_domain
 
         return token_domain, credential_type
 
