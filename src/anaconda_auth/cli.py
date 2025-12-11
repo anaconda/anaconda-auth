@@ -512,8 +512,7 @@ def sites_add(
 
     if globally:
         _ = kwargs.pop("site", None)
-        _ = kwargs.pop("domain", None)
-        config = AnacondaAuthConfig(**kwargs)
+        config = AnacondaAuthConfig().model_copy(update=kwargs, deep=True)
         config.write_config(dry_run=dry_run)
         return
 
@@ -521,11 +520,11 @@ def sites_add(
 
     try:
         config = AnacondaAuthSitesConfig.load_site(site or domain)
-        config = config.model_copy(update=kwargs)
-        sites.sites[config.site] = config
+        config = config.model_copy(update=kwargs, deep=True)
     except UnknownSiteName:
         config = AnacondaAuthSite(**kwargs)
-        sites.sites.add(config)
+
+    sites.sites[config.site] = config
 
     if default:
         sites.default_site = config.site
