@@ -350,8 +350,16 @@ def conda_search_path(monkeypatch, tmp_path):
         search_path = [prefix_path, sites_path, user_path, prefix_path]
         monkeypatch.setattr(context, "SEARCH_PATH", search_path)
 
+        # Patch reset_context function such that it only loads config from our temp file
+        orig_reset_context = context.reset_context
+
+        def _new_reset_context(*args, **kwargs):
+            return orig_reset_context(search_path)
+
+        monkeypatch.setattr(context, "reset_context", _new_reset_context)
+
         # Reset the context object with these new settings
-        context.context.__init__()
+        context.reset_context()
 
     yield CondaRCPaths(user_path, prefix_path, sites_path)
 
