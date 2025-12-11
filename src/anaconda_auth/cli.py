@@ -5,7 +5,6 @@ import warnings
 from textwrap import dedent
 from typing import List
 from typing import Optional
-from typing import cast
 
 import typer
 from requests.exceptions import HTTPError
@@ -412,7 +411,7 @@ def sites_show(
 
 
 @sites_app.command(name="set", no_args_is_help=True)
-def sites_add(
+def sites_set(
     site: Optional[str] = typer.Argument(
         default=None, help="Name for site, defaults to domain if not supplied"
     ),
@@ -430,7 +429,7 @@ def sites_add(
     ssl_verify: bool = True,
     use_truststore: bool = False,
     extra_headers: Optional[str] = typer.Option(
-        default=None, help="Headers in JSON format for all requests"
+        default=None, help="Extra headers in JSON format to use for all requests"
     ),
     client_id: Optional[str] = typer.Option(default=None, hidden=True),
     redirect_uri: str = typer.Option(default=None, hidden=True),
@@ -451,7 +450,7 @@ def sites_add(
         False,
         "--global",
         "-g",
-        help="Apply configuration for all sites by editing [plugin.auth]",
+        help="Apply configuration for all sites by editing [plugin.auth], ignores site name if provided",
     ),
     dry_run: bool = typer.Option(
         default=False,
@@ -477,10 +476,10 @@ def sites_add(
         console.print(msg)
         kwargs["api_key"] = api_key
     if extra_headers is not None:
-        parsed_extra_headers = cast(dict, json.loads(extra_headers))
+        parsed_extra_headers = json.loads(extra_headers)
         kwargs["extra_headers"] = parsed_extra_headers
     if proxy_servers is not None:
-        parsed_proxy_servers = cast(dict, json.loads(proxy_servers))
+        parsed_proxy_servers = json.loads(proxy_servers)
         kwargs["proxy_servers"] = parsed_proxy_servers
     if client_cert is not None:
         kwargs["client_cert"] = client_cert
@@ -497,7 +496,13 @@ def sites_add(
     if auth_domain_override is not None:
         kwargs["auth_domain_override"] = auth_domain_override
     if keyring is not None:
-        kwargs["keyring"] = keyring
+        msg = (
+            "[bold yellow]WARNING:[/bold yellow] "
+            f"Your Keyring contents will be stored in {anaconda_config_path()} and may not be secure"
+        )
+        console.print(msg)
+        parsed_keyring = json.loads(keyring)
+        kwargs["keyring"] = parsed_keyring
     if client_id is not None:
         kwargs["client_id"] = client_id
     if redirect_uri is not None:
@@ -560,7 +565,7 @@ def sites_add(
     sites.write_config(dry_run=dry_run)
 
 
-sites_add.__doc__ = (
+sites_set.__doc__ = (
     f"Add new site or modify existing configuration in {anaconda_config_path()}"
 )
 
@@ -573,6 +578,7 @@ def sites_remove(
         help=f"Show proposed changes to {anaconda_config_path()} and exit",
     ),
 ) -> None:
+    """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
     sites.sites.remove(site)
 
