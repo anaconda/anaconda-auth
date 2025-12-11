@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 import pytest
+from conda.base.context import context
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.gateways.connection.session import CondaSession
 from requests import HTTPError
@@ -64,4 +65,6 @@ def test_conda_context(condarc_path):
         f"--file={condarc_path}",
         use_exception_handler=True,
     )
+    # TODO(mattkram): We should be able to use reset_context()
+    context.__init__()
     assert not get_ssl_verify()

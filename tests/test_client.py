@@ -7,6 +7,7 @@ from textwrap import dedent
 from uuid import uuid4
 
 import pytest
+from conda.base.context import context
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from requests import Request
@@ -472,6 +473,8 @@ def test_client_condarc_base_defaults(condarc_path: Path) -> None:
             """
         )
     )
+    # TODO(mattkram): We should be able to use reset_context()
+    context.__init__()
 
     client = BaseClient()
     assert client.config.ssl_verify
@@ -616,6 +619,8 @@ def test_client_ssl_context(config_toml: Path, condarc_path: Path) -> None:
             """
         )
     )
+    # TODO(mattkram): We should be able to use reset_context()
+    context.__init__()
 
     import ssl
 
@@ -659,6 +664,8 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
             """
         )
     )
+    # TODO(mattkram): We should be able to use reset_context()
+    context.__init__()
     client = BaseClient()
     assert client.cert == ("client_cert.pem", "client_cert_key")
 
