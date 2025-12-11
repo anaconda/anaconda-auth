@@ -470,6 +470,11 @@ def sites_add(
     if domain is not None:
         kwargs["domain"] = domain
     if api_key is not None:
+        msg = (
+            "[bold yellow]WARNING:[/bold yellow] "
+            f"Your API Key will be stored in {anaconda_config_path()} and may not be secure"
+        )
+        console.print(msg)
         kwargs["api_key"] = api_key
     if extra_headers is not None:
         parsed_extra_headers = cast(dict, json.loads(extra_headers))
