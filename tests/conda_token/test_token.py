@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 import pytest
+from conda.base import context  # noqa: E402
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.gateways.connection.session import CondaSession
 from requests import HTTPError
@@ -64,4 +65,5 @@ def test_conda_context(condarc_path):
         f"--file={condarc_path}",
         use_exception_handler=True,
     )
+    context.reset_context()
     assert not get_ssl_verify()
