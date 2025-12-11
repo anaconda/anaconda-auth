@@ -10,7 +10,6 @@ from requests import HTTPError
 from anaconda_auth._conda.conda_api import Commands
 from anaconda_auth._conda.conda_api import run_command
 from anaconda_auth._conda.repo_config import CondaTokenError
-from anaconda_auth._conda.repo_config import get_ssl_verify
 from anaconda_auth._conda.repo_config import token_list
 from anaconda_auth._conda.repo_config import validate_token
 
@@ -66,4 +65,4 @@ def test_conda_context(condarc_path):
         use_exception_handler=True,
     )
     context.reset_context()
-    assert not get_ssl_verify()
+    assert not context.context.ssl_verify
