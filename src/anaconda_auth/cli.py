@@ -362,9 +362,9 @@ def sites_list() -> None:
 
     table = Table("Site name", "Domain name", "Default site", header_style="bold green")
 
-    for site_name, site in sites_config.sites.root.items():
-        is_default = CHECK_MARK if site_name == sites_config.default_site else ""
-        table.add_row(site_name, site.domain, is_default)
+    for name, site in sites_config.sites.items():
+        is_default = CHECK_MARK if name == sites_config.default_site else ""
+        table.add_row(name, site.domain, is_default)
 
     console.print(table)
 

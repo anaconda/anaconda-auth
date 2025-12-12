@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Any
 from typing import ClassVar
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Literal
 from typing import MutableMapping
@@ -248,16 +249,14 @@ class AnacondaCloudConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="c
 
 class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def _find_key(self, key: Optional[str]) -> str:
-        if key in self.root:
+        if key in self:
             return key
         raise UnknownSiteName(
             f"The site name {key} has not been configured in {anaconda_config_path()}"
         )
 
     def _find_domain(self, domain: Optional[str]) -> str:
-        matches = [
-            (key, site) for key, site in self.root.items() if site.domain == domain
-        ]
+        matches = [(key, site) for key, site in self.items() if site.domain == domain]
         if len(matches) == 1:
             return matches[0][0]
         if matches:
@@ -289,6 +288,23 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
 
     def __setitem__(self, name: str, site: AnacondaAuthSite) -> None:
         self.root[name] = site
+
+    def __iter__(self) -> Generator[str, None, None]:
+        return iter(self.root.keys())
+
+    def len(self) -> int:
+        return len(self.root)
+
+    def keys(self) -> Generator[str, None, None]:
+        return self.root.keys()
+
+    def items(self) -> Generator[Tuple[str, AnacondaAuthSite], None, None]:
+        for k in self.keys():
+            yield (k, self[k])
+
+    def values(self) -> Generator[AnacondaAuthSite, None, None]:
+        for k in self.keys():
+            yield self[k]
 
     def add(self, site: AnacondaAuthSite) -> None:
         self[cast(str, site.site)] = site
