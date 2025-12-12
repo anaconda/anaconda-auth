@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import warnings
@@ -10,17 +11,25 @@ from requests.exceptions import HTTPError
 from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
+from rich.table import Table
 
 from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
+from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_auth.config import AnacondaAuthSite
+from anaconda_auth.config import AnacondaAuthSitesConfig
+from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.exceptions import TokenExpiredError
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+
+CHECK_MARK = "[bold green]✔︎[/bold green]"
 
 
 def _continue_with_login() -> int:
@@ -332,3 +341,247 @@ def auth_logout(at: Optional[str] = None) -> None:
     """Logout"""
     _override_default_site(at)
     logout()
+
+
+sites_app = typer.Typer(
+    name="sites",
+    add_completion=False,
+    help="Manage your Anaconda site configuration",
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+        "help_option_names": ["--help", "-h"],
+    },
+)
+
+
+@sites_app.command(name="list")
+def sites_list() -> None:
+    """List configured sites by name and domain."""
+    sites_config = AnacondaAuthSitesConfig()
+
+    table = Table("Site name", "Domain name", "Default site", header_style="bold green")
+
+    for name, site in sites_config.sites.items():
+        is_default = CHECK_MARK if name == sites_config.default_site else ""
+        table.add_row(name, site.domain, is_default)
+
+    console.print(table)
+
+
+@sites_app.command(name="show")
+def sites_show(
+    site: Optional[str] = typer.Argument(
+        default=None,
+        help="Choose configured site name or domain name. If unspecified will show the configured default site.",
+    ),
+    all: Optional[bool] = typer.Option(
+        False, "--all", help="Show all site configurations"
+    ),
+    show_hidden: bool = typer.Option(False, help="Show hidden fields"),
+) -> None:
+    """Show the site configuration for the default site or look up by the provided name or domain."""
+
+    hidden = {
+        "api_key",
+        "auth_domain_override",
+        "client_id",
+        "hash_hostname",
+        "keyring",
+        "preferred_token_storage",
+        "login_success_path",
+        "login_error_path",
+        "openid_config_path",
+        "oidc_request_headers",
+        "redirect_uri",
+    }
+
+    exclude = None if show_hidden else hidden
+
+    if all:
+        sites = AnacondaAuthSitesConfig()
+        all_sites = {
+            config.site: config.model_dump(exclude=exclude)
+            for config in sites.sites.root.values()
+        }
+        console.print_json(data=all_sites)
+    else:
+        config = AnacondaAuthSitesConfig.load_site(site=site)
+        data = config.model_dump(exclude=exclude)
+        data = {"site": config.site, **data}
+        console.print_json(data=data)
+
+
+@sites_app.command(name="set", no_args_is_help=True)
+def sites_set(
+    site: Optional[str] = typer.Argument(
+        default=None, help="Name for site, defaults to domain if not supplied"
+    ),
+    domain: Optional[str] = typer.Option(
+        default=None, help="Domain name for site, defaults to 'anaconda.com'"
+    ),
+    default: bool = typer.Option(default=False, help="Set this site as default"),
+    api_key: Optional[str] = typer.Option(
+        default=None,
+        help=f"API key for site. CAUTION: this will get written to {anaconda_config_path()}",
+    ),
+    preferred_token_storage: Optional[str] = typer.Option(default=None, hidden=True),
+    auth_domain_override: Optional[str] = typer.Option(default=None, hidden=True),
+    keyring: Optional[str] = typer.Option(default=None, hidden=True),
+    ssl_verify: bool = True,
+    use_truststore: bool = False,
+    extra_headers: Optional[str] = typer.Option(
+        default=None, help="Extra headers in JSON format to use for all requests"
+    ),
+    client_id: Optional[str] = typer.Option(default=None, hidden=True),
+    redirect_uri: str = typer.Option(default=None, hidden=True),
+    openid_config_path: Optional[str] = typer.Option(default=None, hidden=True),
+    oidc_request_headers: Optional[str] = typer.Option(default=None, hidden=True),
+    login_success_path: Optional[str] = typer.Option(default=None, hidden=True),
+    login_error_path: Optional[str] = typer.Option(default=None, hidden=True),
+    use_unified_repo_api_key: bool = False,
+    hash_hostname: Optional[bool] = typer.Option(default=None, hidden=True),
+    proxy_servers: Optional[str] = typer.Option(
+        default=None, help="JSON string of proxy server mapping"
+    ),
+    client_cert: Optional[str] = None,
+    client_cert_key: Optional[str] = None,
+    use_device_flow: Optional[bool] = None,
+    disable_conda_auto_config: bool = False,
+    globally: bool = typer.Option(
+        False,
+        "--global",
+        "-g",
+        help="Apply configuration for all sites by editing [plugin.auth], ignores site name if provided",
+    ),
+    dry_run: bool = typer.Option(
+        default=False,
+        help=f"Show proposed changes to {anaconda_config_path()} and exit",
+    ),
+) -> None:
+    if use_truststore and not ssl_verify:
+        raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
+
+    kwargs = dict[str, bool | str](
+        ssl_verify="truststore" if use_truststore else ssl_verify,
+    )
+
+    if site is not None:
+        kwargs["site"] = site
+    if domain is not None:
+        kwargs["domain"] = domain
+    if api_key is not None:
+        msg = (
+            "[bold yellow]WARNING:[/bold yellow] "
+            f"Your API Key will be stored in {anaconda_config_path()} and may not be secure"
+        )
+        console.print(msg)
+        kwargs["api_key"] = api_key
+    if extra_headers is not None:
+        parsed_extra_headers = json.loads(extra_headers)
+        kwargs["extra_headers"] = parsed_extra_headers
+    if proxy_servers is not None:
+        parsed_proxy_servers = json.loads(proxy_servers)
+        kwargs["proxy_servers"] = parsed_proxy_servers
+    if client_cert is not None:
+        kwargs["client_cert"] = client_cert
+    if client_cert_key is not None:
+        kwargs["client_cert_key"] = client_cert_key
+    if use_device_flow is not None:
+        kwargs["use_device_flow"] = use_device_flow
+    if use_unified_repo_api_key is not None:
+        kwargs["use_unified_repo_api_key"] = use_unified_repo_api_key
+    if disable_conda_auto_config is not None:
+        kwargs["disable_conda_auto_config"] = disable_conda_auto_config
+    if preferred_token_storage is not None:
+        kwargs["preferred_token_storage"] = preferred_token_storage
+    if auth_domain_override is not None:
+        kwargs["auth_domain_override"] = auth_domain_override
+    if keyring is not None:
+        msg = (
+            "[bold yellow]WARNING:[/bold yellow] "
+            f"Your Keyring contents will be stored in {anaconda_config_path()} and may not be secure"
+        )
+        console.print(msg)
+        parsed_keyring = json.loads(keyring)
+        kwargs["keyring"] = parsed_keyring
+    if client_id is not None:
+        kwargs["client_id"] = client_id
+    if redirect_uri is not None:
+        kwargs["redirect_uri"] = redirect_uri
+    if openid_config_path is not None:
+        kwargs["openid_config_path"] = openid_config_path
+    if oidc_request_headers is not None:
+        kwargs["oidc_request_headers"] = oidc_request_headers
+    if login_success_path is not None:
+        kwargs["login_success_path"] = login_success_path
+    if login_error_path is not None:
+        kwargs["login_error_path"] = login_error_path
+    if hash_hostname is not None:
+        kwargs["hash_hostname"] = hash_hostname
+
+    # Do not allow these to leak into the config.toml
+    # * condarc config
+    # * env vars (including .env file)
+    # * secrets
+    AnacondaAuthConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_AUTH_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+    AnacondaCloudConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_CLOUD_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+    AnacondaAuthSitesConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_SITES_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+    if globally:
+        _ = kwargs.pop("site", None)
+        config = AnacondaAuthConfig().model_copy(update=kwargs, deep=True)
+        config.write_config(dry_run=dry_run)
+        return
+
+    sites = AnacondaAuthSitesConfig()
+
+    try:
+        config = AnacondaAuthSitesConfig.load_site(site or domain)
+        config = config.model_copy(update=kwargs, deep=True)
+    except UnknownSiteName:
+        config = AnacondaAuthSite(**kwargs)
+
+    sites.sites[config.site] = config
+
+    if default:
+        sites.default_site = config.site
+
+    sites.write_config(dry_run=dry_run)
+
+
+sites_set.__doc__ = (
+    f"Add new site or modify existing configuration in {anaconda_config_path()}"
+)
+
+
+@sites_app.command(name="remove", no_args_is_help=True)
+def sites_remove(
+    site: str = typer.Argument(help="Site name or domain name to remove."),
+    dry_run: bool = typer.Option(
+        default=False,
+        help=f"Show proposed changes to {anaconda_config_path()} and exit",
+    ),
+) -> None:
+    """Remove site configuration by name or domain."""
+    sites = AnacondaAuthSitesConfig()
+    sites.sites.remove(site)
+
+    sites.write_config(dry_run=dry_run)
