@@ -69,8 +69,14 @@ class AnacondaAuthSite(BaseModel):
 
     @field_validator("ssl_verify", mode="before")
     def validate_ssl_verify(cls, value: Any) -> Any:
-        # TODO(mattkram): This effectively removes validation but is safer
-        return value
+        # TODO(mattkram): pydantic is converting bool to "0"/"1" before this validator
+        #                 We can revisit a cleaner approach later.
+        if value == "0":
+            return False
+        elif value == "1":
+            return True
+        else:
+            return value
 
     @property
     def auth_domain(self) -> str:
