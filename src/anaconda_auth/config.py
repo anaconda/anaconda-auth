@@ -14,6 +14,7 @@ from urllib.parse import urljoin
 
 from pydantic import BaseModel
 from pydantic import RootModel
+from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings import PydanticBaseSettingsSource
@@ -65,6 +66,11 @@ class AnacondaAuthSite(BaseModel):
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
     _merged: bool = False
+
+    @field_validator("ssl_verify", mode="before")
+    def validate_ssl_verify(cls, value: Any) -> Any:
+        # TODO(mattkram): This effectively removes validation but is safer
+        return value
 
     @property
     def auth_domain(self) -> str:

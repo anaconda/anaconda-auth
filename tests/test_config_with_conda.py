@@ -30,6 +30,24 @@ def test_conda_context_apply_to_default_site(
 
 
 @pytest.mark.usefixtures("disable_dot_env")
+def test_conda_context_ssl_verify_cert_path(
+    condarc_path: Path,
+    config_toml: Path,
+) -> None:
+    condarc_path.write_text(
+        dedent(
+            """\
+            ssl_verify: /path/to/cert.pem
+            """
+        )
+    )
+    conda.base.context.reset_context()
+
+    config = AnacondaAuthConfig()
+    assert config.ssl_verify == "/path/to/cert.pem"
+
+
+@pytest.mark.usefixtures("disable_dot_env")
 def test_conda_context_priority_config_toml(
     condarc_path: Path,
     config_toml: Path,
