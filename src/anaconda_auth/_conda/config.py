@@ -39,8 +39,6 @@ class TokenDomainSetting(NamedTuple):
 
 
 TOKEN_DOMAIN_MAP = {
-    "repo.continuum.io": TokenDomainSetting("anaconda.com"),
-    "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False),
 }
 
