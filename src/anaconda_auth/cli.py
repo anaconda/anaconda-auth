@@ -22,7 +22,6 @@ from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.exceptions import TokenExpiredError
-from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
@@ -412,13 +411,13 @@ def sites_show(
         console.print_json(data=data)
 
 
-@sites_app.command(name="set", no_args_is_help=True)
-def sites_set(
-    site: Optional[str] = typer.Argument(
-        default=None, help="Name for site, defaults to domain if not supplied"
+@sites_app.command(name="add", no_args_is_help=True)
+def sites_add(
+    domain: str = typer.Argument(
+        help="Domain name for site, defaults to 'anaconda.com'"
     ),
-    domain: Optional[str] = typer.Option(
-        default=None, help="Domain name for site, defaults to 'anaconda.com'"
+    name: Optional[str] = typer.Option(
+        default=None, help="Name for site, defaults to domain if not supplied"
     ),
     default: bool = typer.Option(default=False, help="Set this site as default"),
     api_key: Optional[str] = typer.Option(
@@ -448,15 +447,11 @@ def sites_set(
     client_cert_key: Optional[str] = None,
     use_device_flow: Optional[bool] = None,
     disable_conda_auto_config: bool = False,
-    globally: bool = typer.Option(
-        False,
-        "--global",
-        "-g",
-        help="Apply configuration for all sites by editing [plugin.auth], ignores site name if provided",
-    ),
-    dry_run: bool = typer.Option(
-        default=False,
-        help=f"Show proposed changes to {anaconda_config_path()} and exit",
+    yes: Optional[bool] = typer.Option(
+        None,
+        "--yes/--dry-run",
+        "-y",
+        help="Confirm changes and write, use --dry-run to print diff but do no write",
     ),
 ) -> None:
     if use_truststore and not ssl_verify:
@@ -466,8 +461,8 @@ def sites_set(
         ssl_verify="truststore" if use_truststore else ssl_verify,
     )
 
-    if site is not None:
-        kwargs["site"] = site
+    if name is not None:
+        kwargs["site"] = name
     if domain is not None:
         kwargs["domain"] = domain
     if api_key is not None:
@@ -545,31 +540,34 @@ def sites_set(
         disable_conda_context=True,
     )
 
-    if globally:
-        _ = kwargs.pop("site", None)
-        config = AnacondaAuthConfig().model_copy(update=kwargs, deep=True)
-        config.write_config(dry_run=dry_run)
-        return
-
     sites = AnacondaAuthSitesConfig()
 
-    try:
-        config = AnacondaAuthSitesConfig.load_site(site or domain)
-        config = config.model_copy(update=kwargs, deep=True)
-    except UnknownSiteName:
-        config = AnacondaAuthSite(**kwargs)
+    if name is None:
+        name = domain
 
+    if name in sites.sites:
+        raise ValueError(f"A site with name {name} already exists")
+
+    if list(sites.sites.keys()) == ["anaconda.com"]:
+        sites.sites.remove("anaconda.com")
+
+    config = AnacondaAuthSite(**kwargs)
     sites.sites[config.site] = config
 
     if default:
         sites.default_site = config.site
 
-    sites.write_config(dry_run=dry_run)
+    if yes is True:
+        sites.write_config()
+    elif yes is False:
+        sites.write_config(dry_run=True)
+    else:
+        sites.write_config(dry_run=True)
+        if Confirm.ask("Confirm:"):
+            sites.write_config()
 
 
-sites_set.__doc__ = (
-    f"Add new site or modify existing configuration in {anaconda_config_path()}"
-)
+sites_add.__doc__ = f"Add new site configuration to {anaconda_config_path()}"
 
 
 @sites_app.command(name="remove", no_args_is_help=True)
