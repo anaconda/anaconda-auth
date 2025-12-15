@@ -23,7 +23,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f   # v3.2.0
         with:
           auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ startsWith(matrix.python-version, '3.13-') && '3.13' || matrix.python-version }}
           miniconda-version: latest
       - name: Install testing dependencies
         shell: bash -el {0}
