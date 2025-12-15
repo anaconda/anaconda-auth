@@ -239,10 +239,7 @@ def test_inject_no_header_during_request_if_no_token(
 
 
 REFERENCE = {
-    "https://repo.continuum.io/*": "anaconda-auth",
-    "https://repo.anaconda.com/*": "anaconda-auth",
     "https://repo.anaconda.cloud/*": "anaconda-auth",
-    "https://anaconda.com/*": "anaconda-auth",
 }
 
 

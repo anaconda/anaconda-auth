@@ -14,6 +14,7 @@ from urllib.parse import urljoin
 
 from pydantic import BaseModel
 from pydantic import RootModel
+from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings import PydanticBaseSettingsSource
@@ -50,7 +51,7 @@ class AnacondaAuthSite(BaseModel):
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
     keyring: Optional[Dict[str, Dict[str, str]]] = None
-    ssl_verify: Union[bool, Literal["truststore"]] = True
+    ssl_verify: Union[bool, str] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
     redirect_uri: str = "http://127.0.0.1:8000/auth/oidc"
@@ -65,6 +66,19 @@ class AnacondaAuthSite(BaseModel):
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
     _merged: bool = False
+
+    @field_validator("ssl_verify", mode="before")
+    @classmethod
+    def validate_ssl_verify(cls, value: Any) -> Any:
+        if not isinstance(value, (bool, str)):
+            raise ValueError("Must be bool or str")
+        # Convert environment variable booleans
+        if value == "0":
+            return False
+        elif value == "1":
+            return True
+        else:
+            return value
 
     @property
     def auth_domain(self) -> str:
