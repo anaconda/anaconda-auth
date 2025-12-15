@@ -48,7 +48,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, is_unified, _ = TOKEN_DOMAIN_MAP[channel_domain]
         else:
-            token_domain, is_unified, _ = channel_domain, False
+            token_domain, is_unified = channel_domain, False
 
         try:
             token_info = TokenInfo.load(token_domain)
