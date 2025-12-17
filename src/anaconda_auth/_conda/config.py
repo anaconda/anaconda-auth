@@ -36,12 +36,13 @@ PREFIX_CONDARC_PATH = Path(sys.prefix) / "condarc.d" / "anaconda-auth.yml"
 class TokenDomainSetting(NamedTuple):
     token_domain: str
     default_use_unified_api_key: bool = True
+    autoconfigure_conda_channel_settings: bool = False
 
 
 TOKEN_DOMAIN_MAP = {
     "repo.continuum.io": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
-    "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False),
+    "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False, True),
 }
 
 
@@ -63,7 +64,7 @@ def _assert_settings(
     found = _dictify(context.channel_settings)
     if filtered:
         found = {k: v for k, v in expected.items() if k in expected}
-    assert found == expected
+    assert found == expected, f"{found=}, {expected=}"
 
 
 def _build_channel_settings(
@@ -71,8 +72,11 @@ def _build_channel_settings(
 ) -> List[Dict[str, str]]:
     hosts: Set[str] = set()
     if include_defaults:
-        hosts.update(TOKEN_DOMAIN_MAP)
-        hosts.update(t.token_domain for t in TOKEN_DOMAIN_MAP.values())
+        hosts.update(
+            repo_domain
+            for repo_domain, settings in TOKEN_DOMAIN_MAP.items()
+            if settings.autoconfigure_conda_channel_settings
+        )
     if include_sites:
         # We are delaying this import so this file can be run standalone
         from anaconda_auth.config import AnacondaAuthSitesConfig

@@ -30,12 +30,7 @@ outputs:
       run:
         - python {{ project['requires-python'] }}
         {% for dep in project['dependencies'] %}
-        {% if not dep.startswith('anaconda-cli-base') %}
         - {{ dep.lower() }}
-        {% else %}
-        # TODO(mattkram): This is here because of coordinated rollout. Remove after releases.
-        - anaconda-cli-base >=0.7.0rc0
-        {% endif %}
         {% endfor %}
       run_constrained:
         - {{ pin_subpackage("anaconda-cloud-auth", exact=True) }}

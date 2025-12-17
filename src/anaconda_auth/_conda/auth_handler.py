@@ -46,7 +46,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         parsed_url = urlparse(url)
         channel_domain = parsed_url.netloc.lower()
         if channel_domain in TOKEN_DOMAIN_MAP:
-            token_domain, is_unified = TOKEN_DOMAIN_MAP[channel_domain]
+            token_domain, is_unified, _ = TOKEN_DOMAIN_MAP[channel_domain]
         else:
             token_domain, is_unified = channel_domain, False
 
@@ -145,7 +145,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
-        token = self._load_token(request.url)
+        try:
+            token = self._load_token(request.url)
+        except Exception:
+            # TODO(mattkram): We need to be very resilient about exceptions here for now
+            token = None
+
         if not token:
             request.register_hook("response", self.handle_missing_token)
             return request
