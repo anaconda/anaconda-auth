@@ -325,3 +325,53 @@ def test_override_site_with_auth_env_vars(
     assert config.sites["local"].auth_domain_override == "auth-local"
     assert local.client_id == "override-in-env"
     assert not local.ssl_verify
+
+
+def test_site_default_name_and_domain() -> None:
+    site = AnacondaAuthSite()
+    assert site.domain == site.site == "anaconda.com"
+
+    assert "site" not in site.model_dump()
+
+
+def test_site_name_follows_domain() -> None:
+    site = AnacondaAuthSite(domain="foo.bar")
+    assert site.domain == site.site == "foo.bar"
+
+    assert "site" not in site.model_dump()
+
+
+def test_default_site_dump_exclusion_default(config_toml: Path) -> None:
+    sites = AnacondaAuthSitesConfig()
+    assert sites.default_site == "anaconda.com"
+    assert "default_site" not in sites.model_dump()
+
+
+def test_default_site_dump_exclusion_single_site(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    assert sites.default_site == "foobar"
+    assert "default_site" not in sites.model_dump()
+
+
+def test_default_site_dump_included(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        default_site = "foobar"
+
+        [sites."anaconda.com"]
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    assert sites.default_site == "foobar"
+    assert "default_site" in sites.model_dump()
