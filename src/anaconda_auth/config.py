@@ -249,14 +249,16 @@ class AnacondaCloudConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="c
 
 class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def _find_key(self, key: Optional[str]) -> str:
-        if key in self:
+        if key in self.root:
             return key
         raise UnknownSiteName(
             f"The site name {key} has not been configured in {anaconda_config_path()}"
         )
 
     def _find_domain(self, domain: Optional[str]) -> str:
-        matches = [(key, site) for key, site in self.items() if site.domain == domain]
+        matches = [
+            (key, site) for key, site in self.root.items() if site.domain == domain
+        ]
         if len(matches) == 1:
             return matches[0][0]
         if matches:
@@ -290,7 +292,7 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
         self.root[name] = site
 
     def __iter__(self) -> Generator[str, None, None]:
-        return iter(self.root.keys())
+        yield from self.root.__iter__()
 
     def len(self) -> int:
         return len(self.root)
