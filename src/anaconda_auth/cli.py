@@ -342,6 +342,33 @@ def auth_logout(at: Optional[str] = None) -> None:
     logout()
 
 
+def _protect_secrets():
+    # Do not allow these to leak into the config.toml
+    # * condarc config
+    # * env vars (including .env file)
+    # * secrets
+    AnacondaAuthConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_AUTH_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+    AnacondaCloudConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_CLOUD_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+    AnacondaAuthSitesConfig.model_config.update(
+        env_file=None,
+        env_prefix="__ANACONDA_HIDDEN_SITES_",
+        secrets_dir=None,
+        disable_conda_context=True,
+    )
+
+
 sites_app = typer.Typer(
     name="sites",
     add_completion=False,
@@ -411,10 +438,21 @@ def sites_show(
         console.print_json(data=data)
 
 
-@sites_app.command(name="add", no_args_is_help=True)
-def sites_add(
-    domain: str = typer.Argument(
-        help="Domain name for site, defaults to 'anaconda.com'"
+def _confirm_write(sites: AnacondaAuthSitesConfig, yes: Optional[bool]) -> None:
+    if yes is True:
+        sites.write_config()
+    elif yes is False:
+        sites.write_config(dry_run=True)
+    else:
+        sites.write_config(dry_run=True)
+        if Confirm.ask("Confirm:"):
+            sites.write_config()
+
+
+def sites_add_or_modify(
+    ctx: typer.Context,
+    domain: Optional[str] = typer.Option(
+        default=None, help="Domain name for site, defaults to 'anaconda.com'"
     ),
     name: Optional[str] = typer.Option(
         default=None, help="Name for site, defaults to domain if not supplied"
@@ -438,15 +476,23 @@ def sites_add(
     oidc_request_headers: Optional[str] = typer.Option(default=None, hidden=True),
     login_success_path: Optional[str] = typer.Option(default=None, hidden=True),
     login_error_path: Optional[str] = typer.Option(default=None, hidden=True),
-    use_unified_repo_api_key: bool = False,
-    hash_hostname: Optional[bool] = typer.Option(default=None, hidden=True),
+    use_unified_repo_api_key: Optional[bool] = typer.Option(
+        None, "--use-unified-repo-api-key/--no-use-unified-repo-api-key"
+    ),
+    hash_hostname: Optional[bool] = typer.Option(
+        None, "--hash-host-name/--no-hash-host-name", hidden=True
+    ),
     proxy_servers: Optional[str] = typer.Option(
         default=None, help="JSON string of proxy server mapping"
     ),
     client_cert: Optional[str] = None,
     client_cert_key: Optional[str] = None,
-    use_device_flow: Optional[bool] = None,
-    disable_conda_auto_config: bool = False,
+    use_device_flow: Optional[bool] = typer.Option(
+        None, "--use-device-flow/--no-use-device-flow"
+    ),
+    disable_conda_auto_config: Optional[bool] = typer.Option(
+        None, "--disable-conda-auto-config/--no-disable-conda-auto-config"
+    ),
     yes: Optional[bool] = typer.Option(
         None,
         "--yes/--dry-run",
@@ -515,71 +561,63 @@ def sites_add(
     if hash_hostname is not None:
         kwargs["hash_hostname"] = hash_hostname
 
-    # Do not allow these to leak into the config.toml
-    # * condarc config
-    # * env vars (including .env file)
-    # * secrets
-    AnacondaAuthConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_AUTH_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
-
-    AnacondaCloudConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_CLOUD_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
-
-    AnacondaAuthSitesConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_SITES_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
+    _protect_secrets()
 
     sites = AnacondaAuthSitesConfig()
 
-    if name is None:
-        name = domain
+    if ctx.command.name == "add":
+        if domain is None:
+            raise ValueError("You must supply at least --domain to a add a new site")
 
-    if name in sites.sites:
-        raise ValueError(f"A site with name {name} already exists")
+        if name is None:
+            name = domain
 
-    if list(sites.sites.keys()) == ["anaconda.com"]:
-        sites.sites.remove("anaconda.com")
+        if name in sites.sites:
+            raise ValueError(
+                f"A site with name {name} already exists, use the modify subcommand to alter it"
+            )
 
-    config = AnacondaAuthSite(**kwargs)
-    sites.sites[config.site] = config
+        config = AnacondaAuthSite(**kwargs)
+        sites.sites[config.site] = config
 
-    if default:
-        sites.default_site = config.site
+        if default:
+            sites.default_site = config.site
 
-    if yes is True:
-        sites.write_config()
-    elif yes is False:
-        sites.write_config(dry_run=True)
-    else:
-        sites.write_config(dry_run=True)
-        if Confirm.ask("Confirm:"):
-            sites.write_config()
+    elif ctx.command.name == "modify":
+        if domain is None and name is None:
+            raise ValueError(
+                "You must supply at least one of --domain or --name to modify a site"
+            )
+
+        config = AnacondaAuthSitesConfig.load_site(name or domain)
+        config = config.model_copy(update=kwargs)
+
+        sites.sites[config.site] = config
+
+    _confirm_write(sites, yes)
 
 
+sites_add = sites_app.command(name="add", no_args_is_help=True)(sites_add_or_modify)
 sites_add.__doc__ = f"Add new site configuration to {anaconda_config_path()}"
+
+sites_modify = sites_app.command(name="modify", no_args_is_help=True)(
+    sites_add_or_modify
+)
+sites_modify.__doc__ = f"Modify site configuration in {anaconda_config_path()}"
 
 
 @sites_app.command(name="remove", no_args_is_help=True)
 def sites_remove(
     site: str = typer.Argument(help="Site name or domain name to remove."),
-    dry_run: bool = typer.Option(
-        default=False,
-        help=f"Show proposed changes to {anaconda_config_path()} and exit",
+    yes: Optional[bool] = typer.Option(
+        None,
+        "--yes/--dry-run",
+        "-y",
+        help="Confirm changes and write, use --dry-run to print diff but do no write",
     ),
 ) -> None:
     """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
     sites.sites.remove(site)
 
-    sites.write_config(dry_run=dry_run)
+    _confirm_write(sites, yes)
