@@ -13,6 +13,7 @@ from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 
 
 @pytest.fixture(
@@ -375,3 +376,163 @@ def test_default_site_dump_included(config_toml: Path) -> None:
     sites = AnacondaAuthSitesConfig()
     assert sites.default_site == "foobar"
     assert "default_site" in sites.model_dump()
+
+
+def test_sites_config_dict_methods(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    expected_config = AnacondaAuthConfig()
+    assert expected_config.site == "foobar"
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+    assert list(sites.sites.keys()) == ["foobar"]
+    assert "foobar" in sites.sites
+    assert list(sites.sites.items()) == [("foobar", expected_config)]
+    assert list(sites.sites.values()) == [expected_config]
+
+
+def test_sites_add(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    config = AnacondaAuthSite(domain="foo.bar", site="foo-bar")
+    sites.sites.add(config)
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+    expected_config = config.model_copy(update={"use_device_flow": True})
+
+    assert sites.sites["foo-bar"].model_dump() == expected_config.model_dump()
+    assert sites.sites["foo.bar"].model_dump() == expected_config.model_dump()
+
+    assert len(sites.sites) == 2
+    assert list(sites.sites.keys()) == ["anaconda.com", "foo-bar"]
+    assert "foo-bar" in sites.sites
+
+    items = list(sites.sites.items())
+    assert items[1][0] == "foo-bar"
+    assert items[1][1].site == expected_config.site
+    assert items[1][1].model_dump() == expected_config.model_dump()
+
+    values = list(sites.sites.values())
+    assert values[1].site == expected_config.site
+    assert values[1].model_dump() == expected_config.model_dump()
+
+
+def test_sites_setitem(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    config = AnacondaAuthSite(domain="foo.bar", site="foo-bar")
+    sites.sites["foobar"] = (
+        config  # __setitem__ allows the site name to be changed on insert
+    )
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+    expected_config = config.model_copy(
+        update={"use_device_flow": True, "site": "foobar"}
+    )
+
+    assert sites.sites["foobar"].model_dump() == expected_config.model_dump()
+    assert sites.sites["foo.bar"].model_dump() == expected_config.model_dump()
+
+    assert len(sites.sites) == 2
+    assert list(sites.sites.keys()) == ["anaconda.com", "foobar"]
+    assert "foobar" in sites.sites
+
+    items = list(sites.sites.items())
+    assert items[1][0] == "foobar"
+    assert items[1][1].site == expected_config.site
+    assert items[1][1].model_dump() == expected_config.model_dump()
+
+    values = list(sites.sites.values())
+    assert values[1].site == expected_config.site
+    assert values[1].model_dump() == expected_config.model_dump()
+
+
+def test_sites_remove_by_name(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    sites.sites.remove("foobar")
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+
+
+def test_sites_remove_by_domain(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    sites.sites.remove("foo.bar")
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+
+
+def test_sites_del(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    del sites.sites["foobar"]
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
