@@ -201,7 +201,10 @@ class AnacondaSiteSettingsSource(AnacondaSettingsSource):
             # We now fall back to default_site, which for historical
             # reasons can be a site key or a domain.
             site = all_sites._find_at(site_config.default_site)
-        return all_sites.root[site].model_dump(exclude_unset=True)
+        config = all_sites.root[site]
+        values = config.model_dump(exclude_unset=True)
+        values["site"] = config.site
+        return values
 
 
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):
@@ -294,7 +297,7 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
     def __iter__(self) -> Generator[str, None, None]:
         yield from self.root.__iter__()
 
-    def len(self) -> int:
+    def __len__(self) -> int:
         return len(self.root)
 
     def keys(self) -> Generator[str, None, None]:
@@ -318,6 +321,9 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
             key = self._find_domain(name)
 
         del self.root[key]
+
+    def __delitem__(self, name: str) -> None:
+        self.remove(name)
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
