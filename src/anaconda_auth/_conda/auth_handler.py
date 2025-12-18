@@ -150,15 +150,19 @@ class AnacondaAuthHandler(ChannelAuthBase):
         credential is a legacy repo token or an API key.
 
         """
-        token = self._load_token(url)
-        if token is None:
+        try:
+            token = self._load_token(url)
+            if token is None:
+                return None
+
+            config = AnacondaAuthConfig()
+            if config.use_unified_repo_api_key:
+                return f"Bearer {token}"
+
+            return f"token {token}"
+        except Exception:
+            # TODO(mattkram): We need to be very resilient about exceptions here for now
             return None
-
-        config = AnacondaAuthConfig()
-        if config.use_unified_repo_api_key:
-            return f"Bearer {token}"
-
-        return f"token {token}"
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
@@ -167,11 +171,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if request.url is None:
             return request
 
-        try:
-            header = self._build_header(request.url)
-        except Exception:
-            # TODO(mattkram): We need to be very resilient about exceptions here for now
-            header = None
+        header = self._build_header(request.url)
 
         if not header:
             request.register_hook("response", self.handle_missing_token)
