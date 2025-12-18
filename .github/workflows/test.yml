@@ -28,7 +28,6 @@ jobs:
       - name: Install testing dependencies
         shell: bash -el {0}
         run: |
-          which pip
           pip install tox tox-conda tox-gh-actions
       - name: Test with tox
         env:
@@ -36,8 +35,6 @@ jobs:
           PYTEST_ARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '--error-on-pending-deprecations' || '' }}
         shell: bash -el {0}
         run: |
-          which tox
-          which pip
           tox -- $PYTEST_ARGS
 
   build-conda-package:
