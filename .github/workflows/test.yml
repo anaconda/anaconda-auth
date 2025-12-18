@@ -27,7 +27,8 @@ jobs:
           miniconda-version: latest
       - name: Install testing dependencies
         run: |
-          pip install tox tox-conda tox-gh-actions
+          conda install conda-forge::tox
+          pip install tox-conda tox-gh-actions
       - name: Test with tox
         env:
           CE_TOKEN: ${{ secrets.TEST_REPO_TOKEN }}
