@@ -26,14 +26,12 @@ jobs:
           python-version: ${{ startsWith(matrix.python-version, '3.13-') && '3.13' || matrix.python-version }}
           miniconda-version: latest
       - name: Install testing dependencies
-        shell: bash -el {0}
         run: |
           pip install tox tox-conda tox-gh-actions
       - name: Test with tox
         env:
           CE_TOKEN: ${{ secrets.TEST_REPO_TOKEN }}
           PYTEST_ARGS: ${{ contains(matrix.python-version, 'pendingdeprecations') && '--error-on-pending-deprecations' || '' }}
-        shell: bash -el {0}
         run: |
           tox -- $PYTEST_ARGS
 
