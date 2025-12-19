@@ -217,8 +217,11 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if request.url is None:
             return request
 
+        # Build the authorization header if there is a credential stored, and
+        # determine the credential type expected for the channel
         header, credential_type = self._build_header(request.url)
 
+        # Register a hook to handle error responses
         request.register_hook(
             "response",
             self._build_response_handler(
@@ -226,8 +229,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             ),
         )
 
-        if not header:
-            return request
+        if header:
+            request.headers["Authorization"] = header
 
-        request.headers["Authorization"] = header
         return request
