@@ -197,15 +197,16 @@ class AnacondaAuthHandler(ChannelAuthBase):
             """Raise a nice error message if the authentication token is missing."""
             if response.status_code in {401, 403}:
                 if request_included_auth:
-                    raise AnacondaAuthError(
-                        f"Received authentication error ({response.status_code}) when "
-                        f"accessing {self.channel_name}. "
+                    message = (
+                        f"Received authentication error ({response.status_code}) when accessing {self.channel_name}. "
                         f"If your token is invalid or expired, please re-install with `{instruction}`."
                     )
                 else:
-                    raise AnacondaAuthError(
-                        f"Token not found for {self.channel_name}. Please install token with `{instruction}`."
+                    message = (
+                        f"Token not found for {self.channel_name}. "
+                        "Please install token with `{instruction}`."
                     )
+                raise AnacondaAuthError(message)
             return response
 
         return handler
