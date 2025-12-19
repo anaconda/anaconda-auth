@@ -163,7 +163,7 @@ def test_get_token_missing(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token is None
+    assert token == AccessCredential(None, CredentialType.REPO_TOKEN)
 
 
 @pytest.fixture()
