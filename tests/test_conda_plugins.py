@@ -210,8 +210,12 @@ def test_response_callback_error_handler(
     monkeypatch.setattr(session, "send", _mocked_request)
 
     # A 403 response is captured by the hook and a custom exception is raised
-    with pytest.raises(AnacondaAuthError):
+    with pytest.raises(AnacondaAuthError) as exc_info:
         session.get(url)
+
+    # Check the exception message
+    message = str(exc_info.value)
+    assert "anaconda token install" in message
 
 
 @pytest.mark.parametrize("mocked_status_code", [401, 403])
