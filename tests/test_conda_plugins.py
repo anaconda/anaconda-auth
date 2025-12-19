@@ -224,7 +224,9 @@ def test_response_callback_error_handler(
 
     # Check the exception message
     message = str(exc_info.value)
-    assert channel_name in message
+
+    access_message = f"Received authentication error ({mocked_status_code}) when accessing {channel_name}"
+    assert access_message in message
     assert expected_message in message
 
 
