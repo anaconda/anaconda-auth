@@ -156,7 +156,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return AccessCredential(token, credential_type)
         return AccessCredential(None, credential_type)
 
-    def _build_header(self, url: str) -> Optional[str]:
+    def _build_header(self, url: str) -> tuple[Optional[str], CredentialType]:
         """Build the Authorization header based on the request URL.
 
         The result can vary in terms of "token" vs. "Bearer" as well as whether the
@@ -166,15 +166,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
         try:
             token = self._load_token(url)
             if token.value is None:
-                return None
+                return None, token.type
 
             if token.type == CredentialType.REPO_TOKEN:
-                return f"token {token.value}"
+                return f"token {token.value}", token.type
 
-            return f"Bearer {token.value}"
+            return f"Bearer {token.value}", token.type
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
-            return None
+            return None, token.type
 
     def handle_missing_token(self, response: Response, **_: Any) -> Response:
         """Raise a nice error message if the authentication token is missing."""
@@ -203,7 +203,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if request.url is None:
             return request
 
-        header = self._build_header(request.url)
+        header, credential_type = self._build_header(request.url)
 
         if not header:
             request.register_hook("response", self.handle_missing_token)
