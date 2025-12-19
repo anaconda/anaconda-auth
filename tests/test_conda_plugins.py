@@ -74,10 +74,27 @@ def mocked_token_info_with_api_key(mocker):
 
 
 @pytest.fixture()
-def handler():
-    return AnacondaAuthHandler(
-        channel_name="https://repo.anaconda.cloud/repo/my-org/my-channel"
-    )
+def channel_name():
+    return "https://repo.anaconda.cloud/repo/my-org/my-channel"
+
+
+@pytest.fixture()
+def handler(channel_name: str):
+    return AnacondaAuthHandler(channel_name=channel_name)
+
+
+@pytest.fixture()
+def url() -> str:
+    return "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+
+
+@pytest.fixture()
+def session(handler, url) -> CondaSession:
+    # Create a session and assign the handler to it
+    get_session.cache_clear()
+    session_obj = get_session(url)
+    session_obj.auth = handler
+    return session_obj
 
 
 @pytest.mark.usefixtures("mocked_conda_token")
@@ -164,20 +181,6 @@ def test_get_token_missing(handler):
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
     assert token == AccessCredential(None, CredentialType.REPO_TOKEN)
-
-
-@pytest.fixture()
-def url() -> str:
-    return "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
-
-
-@pytest.fixture()
-def session(handler, url) -> CondaSession:
-    # Create a session and assign the handler to it
-    get_session.cache_clear()
-    session_obj = get_session(url)
-    session_obj.auth = handler
-    return session_obj
 
 
 @pytest.mark.usefixtures("mocked_token_info")
