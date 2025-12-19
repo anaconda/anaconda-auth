@@ -89,12 +89,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
             # Fallback to conda-token if the token is not found in the keyring
             return None
 
-        # Check configuration to use unified api key,
-        # otherwise continue and attempt to utilize repo token
+        # Load the API key directly from the keyring
         if credential_type == CredentialType.API_KEY:
             return token_info.api_key
 
-        # We attempt to parse the URL and extract the org slug (for repo.anaconda.cloud)
+        # If we are looking for a repo token, we first attempt to parse the URL
+        # and extract the org slug (for repo.anaconda.cloud)
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
             path = path[len(URI_PREFIX) :]
