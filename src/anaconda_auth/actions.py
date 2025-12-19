@@ -277,7 +277,7 @@ def login(
     if config is None:
         config = AnacondaAuthConfig()
         if ssl_verify is not None:
-            config = config.model_copy(update={"ssl_verify": ssl_verify})
+            config = config.model_copy(update={"ssl_verify": ssl_verify}, deep=True)
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)

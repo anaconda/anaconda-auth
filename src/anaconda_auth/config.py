@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Any
 from typing import ClassVar
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Literal
 from typing import MutableMapping
@@ -10,14 +11,18 @@ from typing import Optional
 from typing import Tuple
 from typing import Type
 from typing import Union
+from typing import cast
 from urllib.parse import urljoin
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import RootModel
 from pydantic import field_validator
+from pydantic import model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
 from pydantic_settings import PydanticBaseSettingsSource
+from typing_extensions import Self
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.exceptions import UnknownSiteName
@@ -45,7 +50,7 @@ def _raise_deprecated_field_set_warning(set_fields: Dict[str, Any]) -> None:
 
 
 class AnacondaAuthSite(BaseModel):
-    site: Optional[str] = "anaconda.com"
+    site: Optional[str] = Field(default=None, exclude=True)
     preferred_token_storage: Literal["system", "anaconda-keyring"] = "anaconda-keyring"
     domain: str = "anaconda.com"
     auth_domain_override: Optional[str] = None
@@ -66,6 +71,13 @@ class AnacondaAuthSite(BaseModel):
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
     _merged: bool = False
+
+    @model_validator(mode="after")
+    def set_site_name_if_none(self) -> Self:
+        if self.site is None:
+            self.site = self.domain
+
+        return self
 
     @field_validator("ssl_verify", mode="before")
     @classmethod
@@ -145,8 +157,14 @@ class AnacondaSettingsSource(PydanticBaseSettingsSource):
 
 
 class CondaContextSettingsSource(AnacondaSettingsSource):
+    def __init__(self, settings_cls: type[BaseSettings]):
+        super().__init__(settings_cls)
+        self.enabled = not settings_cls.model_config.get("disable_conda_context", False)
+
     def __call__(self) -> Dict[str, Any]:
-        values = {}
+        values: Dict[str, Any] = {}
+        if not self.enabled:
+            return values
 
         try:
             from conda.base.context import context
@@ -197,7 +215,10 @@ class AnacondaSiteSettingsSource(AnacondaSettingsSource):
             # We now fall back to default_site, which for historical
             # reasons can be a site key or a domain.
             site = all_sites._find_at(site_config.default_site)
-        return all_sites.root[site].model_dump(exclude_unset=True)
+        config = all_sites.root[site]
+        values = config.model_dump(exclude_unset=True)
+        values["site"] = config.site
+        return values
 
 
 class AnacondaAuthConfig(AnacondaAuthSite, AnacondaBaseSettings, plugin_name="auth"):
@@ -281,16 +302,54 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
             return self._find_domain(key)
 
     def __getitem__(self, key: str) -> AnacondaAuthConfig:
-        return AnacondaAuthConfig(site=self._find_at(key))
+        lookup = self._find_at(key)
+        return AnacondaAuthConfig(site=lookup)
+
+    def __setitem__(self, name: str, site: AnacondaAuthSite) -> None:
+        self.root[name] = site
+
+    def __iter__(self) -> Generator[str, None, None]:
+        yield from self.root.__iter__()
+
+    def __len__(self) -> int:
+        return len(self.root)
+
+    def keys(self) -> Generator[str, None, None]:
+        return self.root.keys()
+
+    def items(self) -> Generator[Tuple[str, AnacondaAuthSite], None, None]:
+        for k in self.keys():
+            yield (k, self[k])
+
+    def values(self) -> Generator[AnacondaAuthSite, None, None]:
+        for k in self.keys():
+            yield self[k]
+
+    def add(self, site: AnacondaAuthSite) -> None:
+        self[cast(str, site.site)] = site
+
+    def remove(self, name: str) -> None:
+        try:
+            key = self._find_key(name)
+        except UnknownSiteName:
+            key = self._find_domain(name)
+
+        del self.root[key]
+
+    def __delitem__(self, name: str) -> None:
+        self.remove(name)
 
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
 
-    default_site: Optional[str] = None
+    default_site: Optional[str] = Field(
+        default=None,
+        exclude_if=lambda v: AnacondaAuthSitesConfig._exclude_default_site(v),
+    )
     sites: Sites = Sites({})
 
-    def __new__(cls) -> "AnacondaAuthSitesConfig":
+    def __new__(cls, **kwargs: Any) -> "AnacondaAuthSitesConfig":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -305,6 +364,15 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
                 self.sites.root["anaconda.com"] = AnacondaAuthSite()
         for key, value in self.sites.root.items():
             value.site = key
+
+    @classmethod
+    def _exclude_default_site(cls, value: str) -> bool:
+        this = cls()
+        if this.sites.root:
+            implicit_site = next(iter(this.sites.root))
+            return value == implicit_site
+        else:
+            return value == "anaconda.com"
 
     @classmethod
     def all_sites(cls) -> List[str]:
