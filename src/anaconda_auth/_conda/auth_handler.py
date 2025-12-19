@@ -66,7 +66,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         return token_domain, credential_type
 
-    def _load_token_from_keyring(self, url: str) -> Optional[AccessCredential]:
+    def _load_token_from_keyring(
+        self,
+        token_domain: str,
+        credential_type: CredentialType,
+        parsed_url: ParseResult,
+    ) -> Optional[AccessCredential]:
         """Attempt to load an appropriate token from the keyring.
 
         We parse the requested URL, extract what may be an organization ID, and first
@@ -78,9 +83,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
         the token will attempt to be read from via conda-token instead.
 
         """
-        parsed_url = urlparse(url)
-        token_domain, credential_type = self._load_token_domain(parsed_url)
-
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
@@ -144,9 +146,13 @@ class AnacondaAuthHandler(ChannelAuthBase):
              The token, if it can be loaded. None, otherwise.
 
         """
+        parsed_url = urlparse(url)
+        token_domain, credential_type = self._load_token_domain(parsed_url)
 
         # First, we try to load the token from the keyring. If it is not found, we fall through
-        if token := self._load_token_from_keyring(url):
+        if token := self._load_token_from_keyring(
+            token_domain, credential_type, parsed_url
+        ):
             return token
         elif token := self._load_token_via_conda_token(url):
             return token
