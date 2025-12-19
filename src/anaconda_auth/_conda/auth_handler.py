@@ -119,8 +119,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return None
 
     @staticmethod
-    def _load_token_via_conda_token(url: str) -> Optional[AccessCredential]:
-        domain = urlparse(url).netloc.lower()
+    def _load_token_via_conda_token(
+        parsed_url: ParseResult,
+    ) -> Optional[AccessCredential]:
+        domain = parsed_url.netloc.lower()
         # Try to load the token via conda-token if that is installed
         if repo_config is not None:
             tokens = repo_config.token_list()
@@ -154,7 +156,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             token_domain, credential_type, parsed_url
         ):
             return token
-        elif token := self._load_token_via_conda_token(url):
+        elif token := self._load_token_via_conda_token(parsed_url):
             return token
         return None
 
