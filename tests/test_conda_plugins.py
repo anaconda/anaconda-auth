@@ -200,15 +200,15 @@ def test_inject_header_during_request(session, url, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "mocked_status_code, url, expected_message",
+    "mocked_status_code, channel_name, url, expected_message",
     [
-        (401, "https://repo.anaconda.cloud", "anaconda token install"),
-        (403, "https://repo.anaconda.cloud", "anaconda token install"),
+        (401, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
+        (403, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
     ],
 )
 @pytest.mark.usefixtures("mocked_token_info")
 def test_response_callback_error_handler(
-    mocked_status_code, url, expected_message, *, session, monkeypatch
+    mocked_status_code, channel_name, url, expected_message, *, session, monkeypatch
 ):
     def _mocked_request(req, *args, **kwargs):
         response = Response()
@@ -224,6 +224,7 @@ def test_response_callback_error_handler(
 
     # Check the exception message
     message = str(exc_info.value)
+    assert channel_name in message
     assert expected_message in message
 
 
