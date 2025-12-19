@@ -204,12 +204,30 @@ def test_inject_header_during_request(session, url, monkeypatch):
     [
         (401, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
         (403, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
+        (401, "channel_name", "https://repo.some-domain.com", "anaconda login"),
+        (403, "channel_name", "https://repo.some-domain.com", "anaconda login"),
     ],
 )
 @pytest.mark.usefixtures("mocked_token_info")
 def test_response_callback_error_handler(
-    mocked_status_code, channel_name, url, expected_message, *, session, monkeypatch
+    mocked_status_code,
+    channel_name,
+    url,
+    expected_message,
+    *,
+    session,
+    monkeypatch,
+    mocker,
 ):
+    if "some-domain" in url:
+        mocker.patch(
+            "anaconda_auth.token.TokenInfo.load",
+            return_value=TokenInfo(
+                domain=url.replace("https://", ""),
+                api_key="my-test-api-key",
+            ),
+        )
+
     def _mocked_request(req, *args, **kwargs):
         response = Response()
         response.status_code = mocked_status_code
