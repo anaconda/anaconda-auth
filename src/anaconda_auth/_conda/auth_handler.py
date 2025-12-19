@@ -182,8 +182,10 @@ class AnacondaAuthHandler(ChannelAuthBase):
             # TODO(mattkram): We need to be very resilient about exceptions here for now
             return None, token.type
 
-    def _build_missing_token_handler(
-        self, credential_type: CredentialType
+    def _build_response_handler(
+        self,
+        credential_type: CredentialType,
+        request_included_auth: bool,
     ) -> ResponseHook:
         instruction = (
             "anaconda token install"
@@ -194,30 +196,16 @@ class AnacondaAuthHandler(ChannelAuthBase):
         def handler(response: Response, **_: Any) -> Response:
             """Raise a nice error message if the authentication token is missing."""
             if response.status_code in {401, 403}:
-                raise AnacondaAuthError(
-                    f"Token not found for {self.channel_name}. Please install token with `{instruction}`."
-                )
-            return response
-
-        return handler
-
-    def _build_invalid_token_handler(
-        self, credential_type: CredentialType
-    ) -> ResponseHook:
-        instruction = (
-            "anaconda token install"
-            if credential_type == CredentialType.REPO_TOKEN
-            else "anaconda login"
-        )
-
-        def handler(response: Response, **_: Any) -> Response:
-            """Raise a nice error message if the authentication token is invalid (not missing)."""
-            if response.status_code in {401, 403}:
-                raise AnacondaAuthError(
-                    f"Received authentication error ({response.status_code}) when "
-                    f"accessing {self.channel_name}. "
-                    f"If your token is invalid or expired, please re-install with `{instruction}`."
-                )
+                if request_included_auth:
+                    raise AnacondaAuthError(
+                        f"Received authentication error ({response.status_code}) when "
+                        f"accessing {self.channel_name}. "
+                        f"If your token is invalid or expired, please re-install with `{instruction}`."
+                    )
+                else:
+                    raise AnacondaAuthError(
+                        f"Token not found for {self.channel_name}. Please install token with `{instruction}`."
+                    )
             return response
 
         return handler
@@ -231,14 +219,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         header, credential_type = self._build_header(request.url)
 
+        request.register_hook(
+            "response",
+            self._build_response_handler(
+                credential_type, request_included_auth=header is not None
+            ),
+        )
+
         if not header:
-            request.register_hook(
-                "response", self._build_missing_token_handler(credential_type)
-            )
             return request
 
-        request.register_hook(
-            "response", self._build_invalid_token_handler(credential_type)
-        )
         request.headers["Authorization"] = header
         return request
