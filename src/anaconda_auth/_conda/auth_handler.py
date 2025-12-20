@@ -135,7 +135,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return None
 
     @lru_cache
-    def _load_token(self, url: str) -> Optional[AccessCredential]:
+    def _load_token(self, url: str) -> AccessCredential:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
