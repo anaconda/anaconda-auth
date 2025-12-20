@@ -203,7 +203,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
                 else:
                     message = (
                         f"Token not found for {self.channel_name}. "
-                        "Please install token with `{instruction}`."
+                        f"Please install token with `{instruction}`."
                     )
                 raise AnacondaAuthError(message)
             return response
