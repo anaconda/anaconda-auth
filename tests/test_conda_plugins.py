@@ -249,9 +249,17 @@ def test_response_callback_error_handler(
     assert expected_message in message
 
 
-@pytest.mark.parametrize("mocked_status_code", [401, 403])
+@pytest.mark.parametrize(
+    "mocked_status_code, url, expected_message",
+    [
+        (401, "https://repo.anaconda.cloud", "anaconda token install"),
+        (403, "https://repo.anaconda.cloud", "anaconda token install"),
+        (401, "https://repo.some-domain.com", "anaconda login"),
+        (403, "https://repo.some-domain.com", "anaconda login"),
+    ],
+)
 def test_inject_no_header_during_request_if_no_token(
-    mocked_status_code, *, session, url, monkeypatch
+    mocked_status_code, url, expected_message, *, session, monkeypatch
 ):
     """
     If there is not token, we first make a request without an Authorization header.
@@ -275,11 +283,17 @@ def test_inject_no_header_during_request_if_no_token(
     monkeypatch.setattr(session, "send", _mocked_request)
 
     # An error response is captured by the hook and a custom exception is raised
-    with pytest.raises(AnacondaAuthError):
+    with pytest.raises(AnacondaAuthError) as exc_info:
         session.get(url)
 
     # Make sure the token did not get injected
     assert request.headers.get("Authorization") is None
+
+    # Check the exception message
+    message = str(exc_info.value)
+
+    assert "Token not found for" in message
+    assert expected_message in message
 
 
 REFERENCE = {
