@@ -230,6 +230,7 @@ def test_response_callback_error_handler(
 
     def _mocked_request(req, *args, **kwargs):
         response = Response()
+        response.request = req
         response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response
@@ -266,6 +267,7 @@ def test_inject_no_header_during_request_if_no_token(
 
         # Simulate a 403 response from the server
         response = Response()
+        response.request = req
         response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response

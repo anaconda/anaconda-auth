@@ -185,7 +185,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
     def _build_response_handler(
         self,
         credential_type: CredentialType,
-        request_included_auth: bool,
     ) -> ResponseHook:
         instruction = (
             "anaconda token install"
@@ -196,7 +195,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         def handler(response: Response, **_: Any) -> Response:
             """Raise a nice error message if the authentication token is missing."""
             if response.status_code in {401, 403}:
-                if request_included_auth:
+                if response.request.headers.get("Authorization") is not None:
                     message = (
                         f"Received authentication error ({response.status_code}) when accessing {self.channel_name}. "
                         f"If your token is invalid or expired, please re-install with `{instruction}`."
@@ -225,9 +224,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # Register a hook to handle error responses
         request.register_hook(
             "response",
-            self._build_response_handler(
-                credential_type, request_included_auth=header is not None
-            ),
+            self._build_response_handler(credential_type),
         )
 
         if header:
