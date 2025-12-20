@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Any
 from typing import NamedTuple
 from typing import Optional
+from typing import Protocol
 from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
@@ -26,11 +27,16 @@ from anaconda_auth.token import TokenInfo
 URI_PREFIX = "/repo/"
 
 
+class ResponseHook(Protocol):
+    # Type alias/protocol for requests response hook
+    def __call__(self, response: Response, **_: Any) -> Response: ...
+
+
 class AccessCredential(NamedTuple):
     """Represents a typed string containing an access credential (of CredentialType)."""
 
     # This is essentially a tagged union, which felt lightweight and appropriate for our needs
-    value: str
+    value: Optional[str]
     type: CredentialType
 
 
@@ -66,7 +72,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         return token_domain, credential_type
 
-    def _load_token_from_keyring(self, url: str) -> Optional[AccessCredential]:
+    def _load_token_from_keyring(
+        self,
+        token_domain: str,
+        credential_type: CredentialType,
+        parsed_url: ParseResult,
+    ) -> Optional[str]:
         """Attempt to load an appropriate token from the keyring.
 
         We parse the requested URL, extract what may be an organization ID, and first
@@ -78,21 +89,18 @@ class AnacondaAuthHandler(ChannelAuthBase):
         the token will attempt to be read from via conda-token instead.
 
         """
-        parsed_url = urlparse(url)
-        token_domain, credential_type = self._load_token_domain(parsed_url)
-
         try:
             token_info = TokenInfo.load(token_domain)
         except TokenNotFoundError:
             # Fallback to conda-token if the token is not found in the keyring
             return None
 
-        # Check configuration to use unified api key,
-        # otherwise continue and attempt to utilize repo token
-        if token_info.api_key and credential_type == CredentialType.API_KEY:
-            return AccessCredential(token_info.api_key, CredentialType.API_KEY)
+        # Load the API key directly from the keyring
+        if credential_type == CredentialType.API_KEY:
+            return token_info.api_key
 
-        # We attempt to parse the URL and extract the org slug (for repo.anaconda.cloud)
+        # If we are looking for a repo token, we first attempt to parse the URL
+        # and extract the org slug (for repo.anaconda.cloud)
         path = parsed_url.path
         if path.startswith(URI_PREFIX):
             path = path[len(URI_PREFIX) :]
@@ -100,36 +108,34 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # First we attempt to return an organization-specific token
         try:
-            return AccessCredential(
-                token_info.get_repo_token(maybe_org), CredentialType.REPO_TOKEN
-            )
+            return token_info.get_repo_token(maybe_org)
         except TokenNotFoundError:
             pass
 
         # Return the first one, assuming this is not an org-specific channel
         try:
-            return AccessCredential(
-                token_info.repo_tokens[0].token, CredentialType.REPO_TOKEN
-            )
+            return token_info.repo_tokens[0].token
         except IndexError:
             pass
 
         return None
 
     @staticmethod
-    def _load_token_via_conda_token(url: str) -> Optional[AccessCredential]:
-        domain = urlparse(url).netloc.lower()
+    def _load_token_via_conda_token(
+        parsed_url: ParseResult,
+    ) -> Optional[str]:
+        domain = parsed_url.netloc.lower()
         # Try to load the token via conda-token if that is installed
         if repo_config is not None:
             tokens = repo_config.token_list()
             for token_url, token in tokens.items():
                 token_netloc = urlparse(token_url).netloc
                 if token_netloc.lower() == domain and token is not None:
-                    return AccessCredential(token, CredentialType.REPO_TOKEN)
+                    return token
         return None
 
     @lru_cache
-    def _load_token(self, url: str) -> Optional[AccessCredential]:
+    def _load_token(self, url: str) -> AccessCredential:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
@@ -144,15 +150,19 @@ class AnacondaAuthHandler(ChannelAuthBase):
              The token, if it can be loaded. None, otherwise.
 
         """
+        parsed_url = urlparse(url)
+        token_domain, credential_type = self._load_token_domain(parsed_url)
 
         # First, we try to load the token from the keyring. If it is not found, we fall through
-        if token := self._load_token_from_keyring(url):
-            return token
-        elif token := self._load_token_via_conda_token(url):
-            return token
-        return None
+        if token := self._load_token_from_keyring(
+            token_domain, credential_type, parsed_url
+        ):
+            return AccessCredential(token, credential_type)
+        elif token := self._load_token_via_conda_token(parsed_url):
+            return AccessCredential(token, credential_type)
+        return AccessCredential(None, credential_type)
 
-    def _build_header(self, url: str) -> Optional[str]:
+    def _build_header(self, url: str) -> tuple[Optional[str], CredentialType]:
         """Build the Authorization header based on the request URL.
 
         The result can vary in terms of "token" vs. "Bearer" as well as whether the
@@ -161,36 +171,44 @@ class AnacondaAuthHandler(ChannelAuthBase):
         """
         try:
             token = self._load_token(url)
-            if token is None:
-                return None
+            if token.value is None:
+                return None, token.type
 
             if token.type == CredentialType.REPO_TOKEN:
-                return f"token {token.value}"
+                return f"token {token.value}", token.type
 
-            return f"Bearer {token.value}"
+            return f"Bearer {token.value}", token.type
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
-            return None
+            return None, token.type
 
-    def handle_missing_token(self, response: Response, **_: Any) -> Response:
-        """Raise a nice error message if the authentication token is missing."""
-        if response.status_code in {401, 403}:
-            raise AnacondaAuthError(
-                f"Token not found for {self.channel_name}. Please install token with "
-                "`anaconda token install`."
-            )
-        return response
+    def _build_response_handler(
+        self,
+        credential_type: CredentialType,
+    ) -> ResponseHook:
+        instruction = (
+            "anaconda token install"
+            if credential_type == CredentialType.REPO_TOKEN
+            else "anaconda login"
+        )
 
-    def handle_invalid_token(self, response: Response, **_: Any) -> Response:
-        """Raise a nice error message if the authentication token is invalid (not missing)."""
-        if response.status_code in {401, 403}:
-            raise AnacondaAuthError(
-                f"Received authentication error ({response.status_code}) when "
-                f"accessing {self.channel_name}. "
-                "If your token is invalid or expired, please re-install with "
-                "`anaconda token install`."
-            )
-        return response
+        def handler(response: Response, **_: Any) -> Response:
+            """Raise a nice error message if the authentication token is missing."""
+            if response.status_code in {401, 403}:
+                if response.request.headers.get("Authorization") is not None:
+                    message = (
+                        f"Received authentication error ({response.status_code}) when accessing {self.channel_name}. "
+                        f"If your token is invalid or expired, please re-install with `{instruction}`."
+                    )
+                else:
+                    message = (
+                        f"Token not found for {self.channel_name}. "
+                        f"Please install token with `{instruction}`."
+                    )
+                raise AnacondaAuthError(message)
+            return response
+
+        return handler
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Inject the token as an Authorization header on each request."""
@@ -199,12 +217,17 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if request.url is None:
             return request
 
-        header = self._build_header(request.url)
+        # Build the authorization header if there is a credential stored, and
+        # determine the credential type expected for the channel
+        header, credential_type = self._build_header(request.url)
 
-        if not header:
-            request.register_hook("response", self.handle_missing_token)
-            return request
+        # Register a hook to handle error responses
+        request.register_hook(
+            "response",
+            self._build_response_handler(credential_type),
+        )
 
-        request.register_hook("response", self.handle_invalid_token)
-        request.headers["Authorization"] = header
+        if header:
+            request.headers["Authorization"] = header
+
         return request

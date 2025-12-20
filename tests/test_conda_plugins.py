@@ -74,10 +74,27 @@ def mocked_token_info_with_api_key(mocker):
 
 
 @pytest.fixture()
-def handler():
-    return AnacondaAuthHandler(
-        channel_name="https://repo.anaconda.cloud/repo/my-org/my-channel"
-    )
+def channel_name():
+    return "https://repo.anaconda.cloud/repo/my-org/my-channel"
+
+
+@pytest.fixture()
+def handler(channel_name: str):
+    return AnacondaAuthHandler(channel_name=channel_name)
+
+
+@pytest.fixture()
+def url() -> str:
+    return "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+
+
+@pytest.fixture()
+def session(handler, url) -> CondaSession:
+    # Create a session and assign the handler to it
+    get_session.cache_clear()
+    session_obj = get_session(url)
+    session_obj.auth = handler
+    return session_obj
 
 
 @pytest.mark.usefixtures("mocked_conda_token")
@@ -163,21 +180,7 @@ def test_get_token_missing(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token is None
-
-
-@pytest.fixture()
-def url() -> str:
-    return "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
-
-
-@pytest.fixture()
-def session(handler, url) -> CondaSession:
-    # Create a session and assign the handler to it
-    get_session.cache_clear()
-    session_obj = get_session(url)
-    session_obj.auth = handler
-    return session_obj
+    assert token == AccessCredential(None, CredentialType.REPO_TOKEN)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -196,13 +199,38 @@ def test_inject_header_during_request(session, url, monkeypatch):
     assert request.headers.get("Authorization") == "token my-test-token-in-token-info"
 
 
-@pytest.mark.parametrize("mocked_status_code", [401, 403])
+@pytest.mark.parametrize(
+    "mocked_status_code, channel_name, url, expected_message",
+    [
+        (401, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
+        (403, "channel_name", "https://repo.anaconda.cloud", "anaconda token install"),
+        (401, "channel_name", "https://repo.some-domain.com", "anaconda login"),
+        (403, "channel_name", "https://repo.some-domain.com", "anaconda login"),
+    ],
+)
 @pytest.mark.usefixtures("mocked_token_info")
 def test_response_callback_error_handler(
-    mocked_status_code, *, session, url, monkeypatch
+    mocked_status_code,
+    channel_name,
+    url,
+    expected_message,
+    *,
+    session,
+    monkeypatch,
+    mocker,
 ):
+    if "some-domain" in url:
+        mocker.patch(
+            "anaconda_auth.token.TokenInfo.load",
+            return_value=TokenInfo(
+                domain=url.replace("https://", ""),
+                api_key="my-test-api-key",
+            ),
+        )
+
     def _mocked_request(req, *args, **kwargs):
         response = Response()
+        response.request = req
         response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response
@@ -210,13 +238,28 @@ def test_response_callback_error_handler(
     monkeypatch.setattr(session, "send", _mocked_request)
 
     # A 403 response is captured by the hook and a custom exception is raised
-    with pytest.raises(AnacondaAuthError):
+    with pytest.raises(AnacondaAuthError) as exc_info:
         session.get(url)
 
+    # Check the exception message
+    message = str(exc_info.value)
 
-@pytest.mark.parametrize("mocked_status_code", [401, 403])
+    access_message = f"Received authentication error ({mocked_status_code}) when accessing {channel_name}"
+    assert access_message in message
+    assert expected_message in message
+
+
+@pytest.mark.parametrize(
+    "mocked_status_code, url, expected_message",
+    [
+        (401, "https://repo.anaconda.cloud", "anaconda token install"),
+        (403, "https://repo.anaconda.cloud", "anaconda token install"),
+        (401, "https://repo.some-domain.com", "anaconda login"),
+        (403, "https://repo.some-domain.com", "anaconda login"),
+    ],
+)
 def test_inject_no_header_during_request_if_no_token(
-    mocked_status_code, *, session, url, monkeypatch
+    mocked_status_code, url, expected_message, *, session, monkeypatch
 ):
     """
     If there is not token, we first make a request without an Authorization header.
@@ -232,6 +275,7 @@ def test_inject_no_header_during_request_if_no_token(
 
         # Simulate a 403 response from the server
         response = Response()
+        response.request = req
         response.status_code = mocked_status_code
         response = dispatch_hook("response", req.hooks, response, **kwargs)
         return response
@@ -239,11 +283,17 @@ def test_inject_no_header_during_request_if_no_token(
     monkeypatch.setattr(session, "send", _mocked_request)
 
     # An error response is captured by the hook and a custom exception is raised
-    with pytest.raises(AnacondaAuthError):
+    with pytest.raises(AnacondaAuthError) as exc_info:
         session.get(url)
 
     # Make sure the token did not get injected
     assert request.headers.get("Authorization") is None
+
+    # Check the exception message
+    message = str(exc_info.value)
+
+    assert "Token not found for" in message
+    assert expected_message in message
 
 
 REFERENCE = {
