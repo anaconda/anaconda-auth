@@ -181,16 +181,18 @@ class BaseClient(requests.Session):
             self.verify = True
         else:
             self.verify = self.config.ssl_verify
-
-        http_adapter = HTTPAdapter(ssl_context=ssl_context)
-
-        self.mount("http://", http_adapter)
-        self.mount("https://", http_adapter)
+        self.mounting(ssl_context)
 
         if self.config.client_cert_key and self.config.client_cert:
             self.cert = (self.config.client_cert, self.config.client_cert_key)
         elif self.config.client_cert:
             self.cert = self.config.client_cert
+
+    def mounting(self, ssl_context) -> None:
+        http_adapter = HTTPAdapter(ssl_context=ssl_context)
+
+        self.mount("http://", http_adapter)
+        self.mount("https://", http_adapter)
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
