@@ -497,6 +497,7 @@ def sites_add_or_modify(
     disable_conda_auto_config: Optional[bool] = typer.Option(
         None, "--disable-conda-auto-config/--no-disable-conda-auto-config"
     ),
+    replace_anaconda_com: Optional[bool] = True,
     yes: Optional[bool] = typer.Option(
         None,
         "--yes/--dry-run",
@@ -583,6 +584,9 @@ def sites_add_or_modify(
 
         config = AnacondaAuthSite(**kwargs)
         sites.add(config, name=config.site)
+
+        if replace_anaconda_com:
+            sites.remove("anaconda.com")
 
         if default:
             sites.default_site = config.site
