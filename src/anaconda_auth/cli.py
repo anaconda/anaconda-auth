@@ -501,7 +501,7 @@ def sites_add_or_modify(
         None,
         "--yes/--dry-run",
         "-y",
-        help="Confirm changes and write, use --dry-run to print diff but do no write",
+        help="Confirm changes and write, use --dry-run to print diff but do not write",
     ),
 ) -> None:
     if use_truststore and not ssl_verify:
@@ -601,13 +601,17 @@ def sites_add_or_modify(
     _confirm_write(sites, yes)
 
 
-sites_add = sites_app.command(name="add", no_args_is_help=True)(sites_add_or_modify)
-sites_add.__doc__ = f"Add new site configuration to {anaconda_config_path()}"
+sites_add = sites_app.command(
+    name="add",
+    no_args_is_help=True,
+    help=f"Add new site configuration to {anaconda_config_path()}",
+)(sites_add_or_modify)
 
-sites_modify = sites_app.command(name="modify", no_args_is_help=True)(
-    sites_add_or_modify
-)
-sites_modify.__doc__ = f"Modify site configuration in {anaconda_config_path()}"
+sites_modify = sites_app.command(
+    name="modify",
+    no_args_is_help=True,
+    help=f"Modify site configuration in {anaconda_config_path()}",
+)(sites_add_or_modify)
 
 
 @sites_app.command(name="remove", no_args_is_help=True)
