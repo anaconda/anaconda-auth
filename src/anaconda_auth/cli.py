@@ -438,15 +438,19 @@ def sites_show(
         console.print_json(data=data)
 
 
-def _confirm_write(sites: AnacondaAuthSitesConfig, yes: Optional[bool]) -> None:
+def _confirm_write(
+    sites: AnacondaAuthSitesConfig,
+    yes: Optional[bool],
+    preserve_existing_keys: bool = True,
+) -> None:
     if yes is True:
-        sites.write_config()
+        sites.write_config(preserve_existing_keys=preserve_existing_keys)
     elif yes is False:
-        sites.write_config(dry_run=True)
+        sites.write_config(dry_run=True, preserve_existing_keys=preserve_existing_keys)
     else:
-        sites.write_config(dry_run=True)
+        sites.write_config(dry_run=True, preserve_existing_keys=preserve_existing_keys)
         if Confirm.ask("Confirm:"):
-            sites.write_config()
+            sites.write_config(preserve_existing_keys=preserve_existing_keys)
 
 
 def sites_add_or_modify(
@@ -618,6 +622,10 @@ def sites_remove(
 ) -> None:
     """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
-    sites.sites.remove(site)
+    config = sites.sites[site]
 
-    _confirm_write(sites, yes)
+    sites.sites.remove(site)
+    if sites.default_site == config.site:
+        sites.default_site = next(iter(sites.sites))
+
+    _confirm_write(sites, yes, preserve_existing_keys=True)
