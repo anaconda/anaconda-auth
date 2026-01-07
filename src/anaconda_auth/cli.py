@@ -582,7 +582,7 @@ def sites_add_or_modify(
             )
 
         config = AnacondaAuthSite(**kwargs)
-        sites.sites[config.site] = config
+        sites.add(config, name=config.site)
 
         if default:
             sites.default_site = config.site
@@ -593,10 +593,11 @@ def sites_add_or_modify(
                 "You must supply at least one of --domain or --name to modify a site"
             )
 
-        config = AnacondaAuthSitesConfig.load_site(name or domain)
+        key = sites.sites._find_at(name or domain)
+        config = sites.sites.root[key]
         config = config.model_copy(update=kwargs)
 
-        sites.sites[config.site] = config
+        sites.add(config, name=config.site)
 
     _confirm_write(sites, yes)
 
@@ -628,8 +629,8 @@ def sites_remove(
     sites = AnacondaAuthSitesConfig()
     config = sites.sites[site]
 
-    sites.sites.remove(site)
+    sites.remove(site)
     if sites.default_site == config.site:
         sites.default_site = next(iter(sites.sites))
 
-    _confirm_write(sites, yes, preserve_existing_keys=True)
+    _confirm_write(sites, yes, preserve_existing_keys=False)

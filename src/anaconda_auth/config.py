@@ -305,9 +305,6 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
         lookup = self._find_at(key)
         return AnacondaAuthConfig(site=lookup)
 
-    def __setitem__(self, name: str, site: AnacondaAuthSite) -> None:
-        self.root[name] = site
-
     def __iter__(self) -> Generator[str, None, None]:
         yield from self.root.__iter__()
 
@@ -325,28 +322,11 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
         for k in self.keys():
             yield self[k]
 
-    def add(self, site: AnacondaAuthSite) -> None:
-        self[cast(str, site.site)] = site
-
-    def remove(self, name: str) -> None:
-        try:
-            key = self._find_key(name)
-        except UnknownSiteName:
-            key = self._find_domain(name)
-
-        del self.root[key]
-
-    def __delitem__(self, name: str) -> None:
-        self.remove(name)
-
 
 class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
     _instance: ClassVar[Optional["AnacondaAuthSitesConfig"]] = None
 
-    default_site: Optional[str] = Field(
-        default=None,
-        exclude_if=lambda v: AnacondaAuthSitesConfig._exclude_default_site(v),
-    )
+    default_site: Optional[str] = None
     sites: Sites = Sites({})
 
     def __new__(cls, **kwargs: Any) -> "AnacondaAuthSitesConfig":
@@ -366,15 +346,6 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
             value.site = key
 
     @classmethod
-    def _exclude_default_site(cls, value: str) -> bool:
-        this = cls()
-        if this.sites.root:
-            implicit_site = next(iter(this.sites.root))
-            return value == implicit_site
-        else:
-            return value == "anaconda.com"
-
-    @classmethod
     def all_sites(cls) -> List[str]:
         return list(cls().sites.root)
 
@@ -384,3 +355,22 @@ class AnacondaAuthSitesConfig(AnacondaBaseSettings, plugin_name=None):
         config = cls()
         sstr: str = site or config.default_site or "anaconda.com"
         return config.sites[sstr]
+
+    def add(self, site: AnacondaAuthSite, name: Optional[str] = None) -> None:
+        if name:
+            key = name
+        else:
+            key = cast(str, site.site)
+
+        self.sites.root[key] = site
+
+    def remove(self, name: str) -> None:
+        key = self.sites._find_at(name)
+
+        del self.sites.root[key]
+
+        if not self.sites.root:
+            self.sites.root["anaconda.com"] = AnacondaAuthSite()
+
+        if self.default_site == key:
+            self.default_site = next(iter(self.sites.root))
