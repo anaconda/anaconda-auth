@@ -7,10 +7,10 @@ from anaconda_auth.client import BaseClient
 
 
 # add BaseClient superclass to pick up properties
-class AsyncBaseClient(httpx.AsyncClient, BaseClient):
+class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
     """Version of client.BaseClient for use in async contexts."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         # require sync client to set up initial config, since this client could
         # be instantiated in sync code.
         sync_client = BaseClient(**kwargs)
@@ -33,7 +33,7 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):
     async def request(
         self,
         method: str,
-        url: str,
+        url: httpx.URL | str,
         *args: Any,
         **kwargs: Any,
     ) -> httpx.Response:
