@@ -393,6 +393,9 @@ def sites_list() -> None:
         table.add_row(name, site.domain, is_default)
 
     console.print(table)
+    console.print(
+        "[dim italic]To view full site details use[/] [dim bold]anaconda sites show \\[name or domain][/]"
+    )
 
 
 @sites_app.command(name="show")
