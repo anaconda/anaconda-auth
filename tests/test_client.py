@@ -22,11 +22,6 @@ from anaconda_auth.token import TokenInfo
 from .conftest import MockedRequest
 from .conftest import is_conda_installed
 
-try:
-    from conda.base import context
-except ImportError:
-    context = None
-
 HERE = os.path.dirname(__file__)
 
 
