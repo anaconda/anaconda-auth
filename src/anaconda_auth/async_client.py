@@ -10,17 +10,17 @@ from anaconda_auth.client import BaseClient
 class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
     """Version of client.BaseClient for use in async contexts."""
 
-    def __init__(self, **kwargs) -> None:
-        # require sync client to set up initial config, since this client could
+    def __init__(self, **kwargs: dict[str, Any]) -> None:
+        # require a sync client to set up initial config, since this client could
         # be instantiated in sync code.
-        sync_client = BaseClient(**kwargs)
+        sync_client = BaseClient(**kwargs)  # type: ignore
         self._account = sync_client.account
         self.config = sync_client.config
         self.api_version = sync_client.api_version
 
         super().__init__(
             headers=sync_client.headers,
-            verify=sync_client._ssl,
+            verify=sync_client._ssl,  # type: ignore
             cert=sync_client.config.client_cert,
             base_url=sync_client._base_uri,
             auth=sync_client.auth,
@@ -30,10 +30,10 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
     def account(self) -> dict:
         return self._account
 
-    async def request(
+    async def request(  # type: ignore
         self,
-        method: str,
-        url: httpx.URL | str,
+        method: str,  # type: ignore
+        url: str,  # type: ignore
         *args: Any,
         **kwargs: Any,
     ) -> httpx.Response:
