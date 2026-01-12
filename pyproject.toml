@@ -243,14 +243,14 @@ deps =
     old-keyring: keyring <=23.4.0
     pydantic1: pydantic <2.0
     pydantic2: pydantic >=2.0
-    # Keep testing semver<3 until version 3+ released to defaults
-    semver2: semver<3
-    semver3: semver>=3,<4
 conda_deps =
     anaconda-anon-usage
     anaconda-client
     # Optionally install conda to test plugins
     conda: conda
+    # Keep testing semver<3 until version 3+ released to defaults
+    semver2: semver<3
+    semver3: semver>=3,<4
 conda_channels =
     anaconda-cloud
     defaults

@@ -167,7 +167,9 @@ class CondaContextSettingsSource(AnacondaSettingsSource):
             return values
 
         try:
-            from conda.base.context import context
+            from conda.base.context import Context
+
+            context = Context()
 
             if context.proxy_servers:
                 values["proxy_servers"] = dict(context.proxy_servers)
