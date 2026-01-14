@@ -1,5 +1,7 @@
 from functools import cached_property
 from typing import Any
+from typing import Optional
+from typing import cast
 
 import httpx
 
@@ -10,20 +12,26 @@ from anaconda_auth.client import BaseClient
 class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
     """Version of client.BaseClient for use in async contexts."""
 
-    def __init__(self, **kwargs: dict[str, Any]) -> None:
-        # require a sync client to set up initial config, since this client could
-        # be instantiated in sync code.
+    def __init__(
+        self, httpx_kwargs: dict[str, Any] | None = None, **kwargs: dict[str, Any]
+    ) -> None:
+        """
+        httpx_kwargs: passed to HTTPX. Cannot include the keys derived
+           from the sync client: headers, verify, cert, base_url and auth.
+        kwargs: passed to BaseClient and its requests.Session superclass
+        """
         sync_client = BaseClient(**kwargs)  # type: ignore
         self._account = sync_client.account
         self.config = sync_client.config
         self.api_version = sync_client.api_version
 
         super().__init__(
-            headers=sync_client.headers,
+            headers=cast(sync_client.headers, dict[str, str]),
             verify=sync_client._ssl,  # type: ignore
             cert=sync_client.config.client_cert,
             base_url=sync_client._base_uri,
-            auth=sync_client.auth,
+            auth=cast(sync_client.auth, Optional(tuple[str, str])),
+            **(httpx_kwargs or {}),
         )
 
     @cached_property
