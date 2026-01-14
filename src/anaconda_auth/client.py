@@ -80,8 +80,6 @@ class BearerAuth(AuthBase):
 class BaseClient(requests.Session):
     _user_agent: str = f"anaconda-auth/{version}"
     _api_version: Optional[str] = None
-    headers: dict[str, str]
-    auth: Optional[tuple[str, str]]
 
     def __init__(
         self,

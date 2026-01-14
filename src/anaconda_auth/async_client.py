@@ -1,7 +1,5 @@
 from functools import cached_property
 from typing import Any
-from typing import Optional
-from typing import cast
 
 import httpx
 
@@ -26,11 +24,11 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
         self.api_version = sync_client.api_version
 
         super().__init__(
-            headers=cast(sync_client.headers, dict[str, str]),
+            headers=sync_client.headers,  # type: ignore
             verify=sync_client._ssl,  # type: ignore
             cert=sync_client.config.client_cert,
             base_url=sync_client._base_uri,
-            auth=cast(sync_client.auth, Optional[tuple[str, str]]),
+            auth=sync_client.auth,  # type: ignore
             **(httpx_kwargs or {}),
         )
 
