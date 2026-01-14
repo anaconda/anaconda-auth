@@ -4,6 +4,7 @@ from typing import Optional
 from typing import cast
 
 import httpx
+import requests
 
 from anaconda_auth.client import BaseClient
 
@@ -20,7 +21,7 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
            from the sync client: headers, verify, cert, base_url and auth.
         kwargs: passed to BaseClient and its requests.Session superclass
         """
-        sync_client = BaseClient(**kwargs)  # type: ignore
+        sync_client: requests.Session = BaseClient(**kwargs)  # type: ignore
         self._account = sync_client.account
         self.config = sync_client.config
         self.api_version = sync_client.api_version
@@ -30,7 +31,7 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
             verify=sync_client._ssl,  # type: ignore
             cert=sync_client.config.client_cert,
             base_url=sync_client._base_uri,
-            auth=cast(sync_client.auth, Optional(tuple[str, str])),
+            auth=cast(sync_client.auth, Optional[tuple[str, str]]),
             **(httpx_kwargs or {}),
         )
 
