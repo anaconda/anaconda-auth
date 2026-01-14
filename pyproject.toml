@@ -96,7 +96,7 @@ disallow_untyped_defs = true
 files = [
   "src/**/*.py"
 ]
-python_version = "3.9"
+python_version = "3.10"
 
 [[tool.mypy.overrides]]
 ignore_errors = true
