@@ -19,7 +19,7 @@ dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
 name = "anaconda-auth"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.entry-points."anaconda_cli.subcommand"]
 auth = "anaconda_auth.cli:app"
@@ -96,7 +96,7 @@ disallow_untyped_defs = true
 files = [
   "src/**/*.py"
 ]
-python_version = "3.9"
+python_version = "3.10"
 
 [[tool.mypy.overrides]]
 ignore_errors = true
@@ -215,7 +215,6 @@ requires =
 
 [gh-actions]
 python =
-    3.9: py39, mypy
     3.10: py310, mypy
     3.11: py311, mypy
     3.12: py312, mypy
