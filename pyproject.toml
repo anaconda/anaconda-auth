@@ -12,7 +12,8 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.7.0"
+  "anaconda-cli-base >=0.7.0",
+  "httpx"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
@@ -233,6 +234,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
+    pytest-asyncio
     requests-mock
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
@@ -261,6 +263,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
+    pytest-asyncio
     types-requests
     anaconda-cli-base
     typer
