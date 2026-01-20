@@ -472,8 +472,10 @@ def sites_add_or_modify(
     preferred_token_storage: Optional[str] = typer.Option(default=None, hidden=True),
     auth_domain_override: Optional[str] = typer.Option(default=None, hidden=True),
     keyring: Optional[str] = typer.Option(default=None, hidden=True),
-    ssl_verify: bool = True,
-    use_truststore: bool = False,
+    ssl_verify: Optional[bool] = typer.Option(None, "--ssl-verify/--no-ssl-verify"),
+    use_truststore: Optional[bool] = typer.Option(
+        None, "--use-truststore/--no-use-truststore"
+    ),
     extra_headers: Optional[str] = typer.Option(
         default=None, help="Extra headers in JSON format to use for all requests"
     ),
@@ -510,12 +512,16 @@ def sites_add_or_modify(
         help="Confirm changes and write, use --dry-run to print diff but do not write",
     ),
 ) -> None:
-    if use_truststore and not ssl_verify:
-        raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
+    kwargs: dict[str, bool | str] = {}
 
-    kwargs = dict[str, bool | str](
-        ssl_verify="truststore" if use_truststore else ssl_verify,
-    )
+    if ssl_verify is None and use_truststore is None:
+        pass
+    elif ssl_verify and use_truststore:
+        kwargs["ssl_verify"] = "truststore"
+    elif ssl_verify is False and use_truststore:
+        raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
+    elif not ssl_verify:
+        kwargs["ssl_verify"] = False
 
     if name is not None:
         kwargs["site"] = name
@@ -607,6 +613,9 @@ def sites_add_or_modify(
         config = config.model_copy(update=kwargs)
 
         sites.add(config, name=config.site)
+
+        if default is not None:
+            sites.default_site = config.site
 
     _confirm_write(sites, yes)
 
