@@ -3,6 +3,7 @@ import os
 import sys
 import warnings
 from textwrap import dedent
+from typing import Annotated
 from typing import List
 from typing import Optional
 
@@ -128,91 +129,119 @@ app = typer.Typer(
 )
 def main(
     ctx: typer.Context,
-    version: bool = typer.Option(False, "-V", "--version"),
-    name: Optional[str] = typer.Option(
-        None,
-        "-n",
-        "--name",
-        hidden=True,
-    ),
-    organization: Optional[str] = typer.Option(
-        None,
-        "-o",
-        "--org",
-        "--organization",
-        hidden=True,
-    ),
-    strength: Optional[str] = typer.Option(
-        None,
-        "--strength",
-        hidden=True,
-    ),
-    strong: Optional[bool] = typer.Option(
-        None,
-        "--strong",
-        hidden=True,
-    ),
-    weak: Optional[bool] = typer.Option(
-        None,
-        "-w",
-        "--weak",
-        hidden=True,
-    ),
-    url: Optional[str] = typer.Option(
-        None,
-        "--url",
-        hidden=True,
-    ),
-    max_age: Optional[str] = typer.Option(
-        None,
-        "--max-age",
-        hidden=True,
-    ),
-    scopes: Optional[str] = typer.Option(
-        None,
-        "-s",
-        "--scopes",
-        hidden=True,
-    ),
-    out: Optional[str] = typer.Option(
-        None,
-        "--out",
-        hidden=True,
-    ),
-    list_scopes: Optional[bool] = typer.Option(
-        None,
-        "-x",
-        "--list-scopes",
-        hidden=True,
-    ),
-    list_tokens: Optional[bool] = typer.Option(
-        None,
-        "-l",
-        "--list",
-        hidden=True,
-    ),
-    remove: Optional[str] = typer.Option(
-        None,
-        "-r",
-        "--remove",
-        hidden=True,
-    ),
-    create: Optional[bool] = typer.Option(
-        None,
-        "-c",
-        "--create",
-        hidden=True,
-    ),
-    info: Optional[bool] = typer.Option(
-        None,
-        "-i",
-        "--info",
-        "--current-info",
-        hidden=True,
-    ),
-    extra_args: Optional[List[str]] = typer.Argument(
-        default=None, hidden=True, metavar=""
-    ),
+    version: Annotated[bool, typer.Option("-V", "--version")] = False,
+    name: Annotated[
+        Optional[str],
+        typer.Option(
+            "-n",
+            "--name",
+            hidden=True,
+        ),
+    ] = None,
+    organization: Annotated[
+        Optional[str],
+        typer.Option(
+            "-o",
+            "--org",
+            "--organization",
+            hidden=True,
+        ),
+    ] = None,
+    strength: Annotated[
+        Optional[str],
+        typer.Option(
+            "--strength",
+            hidden=True,
+        ),
+    ] = None,
+    strong: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--strong",
+            hidden=True,
+        ),
+    ] = None,
+    weak: Annotated[
+        Optional[bool],
+        typer.Option(
+            "-w",
+            "--weak",
+            hidden=True,
+        ),
+    ] = None,
+    url: Annotated[
+        Optional[str],
+        typer.Option(
+            "--url",
+            hidden=True,
+        ),
+    ] = None,
+    max_age: Annotated[
+        Optional[str],
+        typer.Option(
+            "--max-age",
+            hidden=True,
+        ),
+    ] = None,
+    scopes: Annotated[
+        Optional[str],
+        typer.Option(
+            "-s",
+            "--scopes",
+            hidden=True,
+        ),
+    ] = None,
+    out: Annotated[
+        Optional[str],
+        typer.Option(
+            "--out",
+            hidden=True,
+        ),
+    ] = None,
+    list_scopes: Annotated[
+        Optional[bool],
+        typer.Option(
+            "-x",
+            "--list-scopes",
+            hidden=True,
+        ),
+    ] = None,
+    list_tokens: Annotated[
+        Optional[bool],
+        typer.Option(
+            "-l",
+            "--list",
+            hidden=True,
+        ),
+    ] = None,
+    remove: Annotated[
+        Optional[str],
+        typer.Option(
+            "-r",
+            "--remove",
+            hidden=True,
+        ),
+    ] = None,
+    create: Annotated[
+        Optional[bool],
+        typer.Option(
+            "-c",
+            "--create",
+            hidden=True,
+        ),
+    ] = None,
+    info: Annotated[
+        Optional[bool],
+        typer.Option(
+            "-i",
+            "--info",
+            "--current-info",
+            hidden=True,
+        ),
+    ] = None,
+    extra_args: Annotated[
+        Optional[List[str]], typer.Argument(hidden=True, metavar="")
+    ] = None,
 ) -> None:
     if version:
         console.print(
@@ -286,9 +315,11 @@ def main(
 
 @app.command("login")
 def auth_login(
-    force: bool = False,
-    ssl_verify: Optional[bool] = typer.Option(None, "--ssl-verify/--no-ssl-verify"),
-    at: Optional[str] = None,
+    force: Annotated[bool, typer.Option()] = False,
+    ssl_verify: Annotated[
+        Optional[bool], typer.Option("--ssl-verify/--no-ssl-verify")
+    ] = None,
+    at: Annotated[Optional[str], typer.Option()] = None,
 ) -> None:
     """Login"""
     _override_default_site(at)
@@ -313,7 +344,7 @@ def auth_login(
 
 
 @app.command(name="whoami")
-def auth_info(at: Optional[str] = None) -> None:
+def auth_info(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     """Display information about the currently signed-in user"""
     _override_default_site(at)
     client = BaseClient()
@@ -324,7 +355,7 @@ def auth_info(at: Optional[str] = None) -> None:
 
 
 @app.command(name="api-key")
-def auth_key(at: Optional[str] = None) -> None:
+def auth_key(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     """Display API Key for signed-in user"""
     _override_default_site(at)
     token_info = TokenInfo.load()
@@ -336,7 +367,7 @@ def auth_key(at: Optional[str] = None) -> None:
 
 
 @app.command(name="logout")
-def auth_logout(at: Optional[str] = None) -> None:
+def auth_logout(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     """Logout"""
     _override_default_site(at)
     logout()
@@ -400,14 +431,16 @@ def sites_list() -> None:
 
 @sites_app.command(name="show")
 def sites_show(
-    site: Optional[str] = typer.Argument(
-        default=None,
-        help="Choose configured site name or domain name. If unspecified will show the configured default site.",
-    ),
-    all: Optional[bool] = typer.Option(
-        False, "--all", help="Show all site configurations"
-    ),
-    show_hidden: bool = typer.Option(False, help="Show hidden fields"),
+    site: Annotated[
+        Optional[str],
+        typer.Argument(
+            help="Choose configured site name or domain name. If unspecified will show the configured default site.",
+        ),
+    ] = None,
+    all: Annotated[
+        Optional[bool], typer.Option("--all", help="Show all site configurations")
+    ] = False,
+    show_hidden: Annotated[bool, typer.Option(help="Show hidden fields")] = False,
 ) -> None:
     """Show the site configuration for the default site or look up by the provided name or domain."""
 
@@ -458,59 +491,72 @@ def _confirm_write(
 
 def sites_add_or_modify(
     ctx: typer.Context,
-    domain: Optional[str] = typer.Option(
-        default=None, help="Domain name for site, defaults to 'anaconda.com'"
-    ),
-    name: Optional[str] = typer.Option(
-        default=None, help="Name for site, defaults to domain if not supplied"
-    ),
-    default: bool = typer.Option(default=False, help="Set this site as default"),
-    api_key: Optional[str] = typer.Option(
-        default=None,
-        help=f"API key for site. CAUTION: this will get written to {anaconda_config_path()}",
-    ),
-    preferred_token_storage: Optional[str] = typer.Option(default=None, hidden=True),
-    auth_domain_override: Optional[str] = typer.Option(default=None, hidden=True),
-    keyring: Optional[str] = typer.Option(default=None, hidden=True),
-    ssl_verify: Optional[bool] = typer.Option(None, "--ssl-verify/--no-ssl-verify"),
-    use_truststore: Optional[bool] = typer.Option(
-        None, "--use-truststore/--no-use-truststore"
-    ),
-    extra_headers: Optional[str] = typer.Option(
-        default=None, help="Extra headers in JSON format to use for all requests"
-    ),
-    client_id: Optional[str] = typer.Option(default=None, hidden=True),
-    redirect_uri: str = typer.Option(default=None, hidden=True),
-    openid_config_path: Optional[str] = typer.Option(default=None, hidden=True),
-    oidc_request_headers: Optional[str] = typer.Option(default=None, hidden=True),
-    login_success_path: Optional[str] = typer.Option(default=None, hidden=True),
-    login_error_path: Optional[str] = typer.Option(default=None, hidden=True),
-    use_unified_repo_api_key: Optional[bool] = typer.Option(
-        None, "--use-unified-repo-api-key/--no-use-unified-repo-api-key"
-    ),
-    hash_hostname: Optional[bool] = typer.Option(
-        None, "--hash-host-name/--no-hash-host-name", hidden=True
-    ),
-    proxy_servers: Optional[str] = typer.Option(
-        default=None, help="JSON string of proxy server mapping"
-    ),
-    client_cert: Optional[str] = None,
-    client_cert_key: Optional[str] = None,
-    use_device_flow: Optional[bool] = typer.Option(
-        None, "--use-device-flow/--no-use-device-flow"
-    ),
-    disable_conda_auto_config: Optional[bool] = typer.Option(
-        None, "--disable-conda-auto-config/--no-disable-conda-auto-config"
-    ),
-    remove_anaconda_com: Optional[bool] = typer.Option(
-        True, help="Remove the site named 'anaconda.com' if present"
-    ),
-    yes: Optional[bool] = typer.Option(
-        None,
-        "--yes/--dry-run",
-        "-y",
-        help="Confirm changes and write, use --dry-run to print diff but do not write",
-    ),
+    domain: Annotated[
+        Optional[str],
+        typer.Option(help="Domain name for site, defaults to 'anaconda.com'"),
+    ] = None,
+    name: Annotated[
+        Optional[str],
+        typer.Option(help="Name for site, defaults to domain if not supplied"),
+    ] = None,
+    default: Annotated[bool, typer.Option(help="Set this site as default")] = False,
+    api_key: Annotated[
+        Optional[str],
+        typer.Option(
+            help=f"API key for site. CAUTION: this will get written to {anaconda_config_path()}"
+        ),
+    ] = None,
+    preferred_token_storage: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    auth_domain_override: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    keyring: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    ssl_verify: Annotated[
+        Optional[bool], typer.Option("--ssl-verify/--no-ssl-verify")
+    ] = None,
+    use_truststore: Annotated[
+        Optional[bool], typer.Option("--use-truststore/--no-use-truststore")
+    ] = None,
+    extra_headers: Annotated[
+        Optional[str],
+        typer.Option(help="Extra headers in JSON format to use for all requests"),
+    ] = None,
+    client_id: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    redirect_uri: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    openid_config_path: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    oidc_request_headers: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    login_success_path: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    login_error_path: Annotated[Optional[str], typer.Option(hidden=True)] = None,
+    use_unified_repo_api_key: Annotated[
+        Optional[bool],
+        typer.Option("--use-unified-repo-api-key/--no-use-unified-repo-api-key"),
+    ] = None,
+    hash_hostname: Annotated[
+        Optional[bool],
+        typer.Option("--hash-host-name/--no-hash-host-name", hidden=True),
+    ] = None,
+    proxy_servers: Annotated[
+        Optional[str], typer.Option(help="JSON string of proxy server mapping")
+    ] = None,
+    client_cert: Annotated[Optional[str], typer.Option()] = None,
+    client_cert_key: Annotated[Optional[str], typer.Option()] = None,
+    use_device_flow: Annotated[
+        Optional[bool], typer.Option("--use-device-flow/--no-use-device-flow")
+    ] = None,
+    disable_conda_auto_config: Annotated[
+        Optional[bool],
+        typer.Option("--disable-conda-auto-config/--no-disable-conda-auto-config"),
+    ] = None,
+    remove_anaconda_com: Annotated[
+        Optional[bool],
+        typer.Option(help="Remove the site named 'anaconda.com' if present"),
+    ] = True,
+    yes: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--yes/--dry-run",
+            "-y",
+            help="Confirm changes and write, use --dry-run to print diff but do not write",
+        ),
+    ] = None,
 ) -> None:
     kwargs: dict[str, bool | str] = {}
 
@@ -635,13 +681,15 @@ sites_modify = sites_app.command(
 
 @sites_app.command(name="remove", no_args_is_help=True)
 def sites_remove(
-    site: str = typer.Argument(help="Site name or domain name to remove."),
-    yes: Optional[bool] = typer.Option(
-        None,
-        "--yes/--dry-run",
-        "-y",
-        help="Confirm changes and write, use --dry-run to print diff but do no write",
-    ),
+    site: Annotated[str, typer.Argument(help="Site name or domain name to remove.")],
+    yes: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--yes/--dry-run",
+            "-y",
+            help="Confirm changes and write, use --dry-run to print diff but do no write",
+        ),
+    ] = None,
 ) -> None:
     """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
