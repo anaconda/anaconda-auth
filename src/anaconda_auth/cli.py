@@ -562,12 +562,14 @@ def _sites_add_or_modify(
 
     if ssl_verify is None and use_truststore is None:
         pass
-    elif ssl_verify and use_truststore:
+    elif (ssl_verify or ssl_verify is None) and use_truststore:
         kwargs["ssl_verify"] = "truststore"
     elif ssl_verify is False and use_truststore:
         raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
-    elif not ssl_verify:
+    elif ssl_verify is False:
         kwargs["ssl_verify"] = False
+    else:
+        kwargs["ssl_verify"] = True
 
     if name is not None:
         kwargs["site"] = name
