@@ -4,6 +4,8 @@ from typing import Any
 from typing import ClassVar
 from typing import Dict
 from typing import Generator
+from typing import Iterator
+from typing import KeysView
 from typing import List
 from typing import Literal
 from typing import MutableMapping
@@ -307,13 +309,13 @@ class Sites(RootModel[Dict[str, AnacondaAuthSite]]):
         lookup = self._find_at(key)
         return AnacondaAuthConfig(site=lookup)
 
-    def __iter__(self) -> Generator[str, None, None]:
+    def __iter__(self) -> Iterator[str]:  # type: ignore[override]
         yield from self.root.__iter__()
 
     def __len__(self) -> int:
         return len(self.root)
 
-    def keys(self) -> Generator[str, None, None]:
+    def keys(self) -> KeysView[str]:
         return self.root.keys()
 
     def items(self) -> Generator[Tuple[str, AnacondaAuthSite], None, None]:

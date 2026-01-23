@@ -4,6 +4,7 @@ import sys
 import warnings
 from textwrap import dedent
 from typing import Annotated
+from typing import Any
 from typing import List
 from typing import Optional
 
@@ -373,7 +374,7 @@ def auth_logout(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     logout()
 
 
-def _protect_secrets():
+def _protect_secrets() -> None:
     # Do not allow these to leak into the config.toml
     # * condarc config
     # * env vars (including .env file)
@@ -558,7 +559,7 @@ def _sites_add_or_modify(
         ),
     ] = None,
 ) -> None:
-    kwargs: dict[str, bool | str] = {}
+    kwargs: dict[str, Any] = {}
 
     if ssl_verify is None and use_truststore is None:
         pass
