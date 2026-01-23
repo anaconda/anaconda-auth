@@ -489,7 +489,7 @@ def _confirm_write(
             sites.write_config(preserve_existing_keys=preserve_existing_keys)
 
 
-def sites_add_or_modify(
+def _sites_add_or_modify(
     ctx: typer.Context,
     domain: Annotated[
         Optional[str],
@@ -581,11 +581,21 @@ def sites_add_or_modify(
         console.print(msg)
         kwargs["api_key"] = api_key
     if extra_headers is not None:
-        parsed_extra_headers = json.loads(extra_headers)
-        kwargs["extra_headers"] = parsed_extra_headers
+        try:
+            parsed_extra_headers = json.loads(extra_headers)
+            kwargs["extra_headers"] = parsed_extra_headers
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"extra-headers={extra_headers} could not be parsed as JSON"
+            )
     if proxy_servers is not None:
-        parsed_proxy_servers = json.loads(proxy_servers)
-        kwargs["proxy_servers"] = parsed_proxy_servers
+        try:
+            parsed_proxy_servers = json.loads(proxy_servers)
+            kwargs["proxy_servers"] = parsed_proxy_servers
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"proxy-servers={proxy_servers} could not be parsed as JSON"
+            )
     if client_cert is not None:
         kwargs["client_cert"] = client_cert
     if client_cert_key is not None:
@@ -606,8 +616,11 @@ def sites_add_or_modify(
             f"Your Keyring contents will be stored in {anaconda_config_path()} and may not be secure"
         )
         console.print(msg)
-        parsed_keyring = json.loads(keyring)
-        kwargs["keyring"] = parsed_keyring
+        try:
+            parsed_keyring = json.loads(keyring)
+            kwargs["keyring"] = parsed_keyring
+        except json.JSONDecodeError:
+            raise ValueError("The keyring argument could not be parsed as JSON")
     if client_id is not None:
         kwargs["client_id"] = client_id
     if redirect_uri is not None:
@@ -670,13 +683,13 @@ sites_add = sites_app.command(
     name="add",
     no_args_is_help=True,
     help=f"Add new site configuration to {anaconda_config_path()}",
-)(sites_add_or_modify)
+)(_sites_add_or_modify)
 
 sites_modify = sites_app.command(
     name="modify",
     no_args_is_help=True,
     help=f"Modify site configuration in {anaconda_config_path()}",
-)(sites_add_or_modify)
+)(_sites_add_or_modify)
 
 
 @sites_app.command(name="remove", no_args_is_help=True)
