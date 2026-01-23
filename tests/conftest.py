@@ -244,6 +244,12 @@ class MockResponse:
     def json(self) -> dict[str, Any]:
         return self.json_data or {}
 
+    def raise_for_status(self) -> None:
+        from requests.exceptions import HTTPError
+
+        if self.status_code >= 400:
+            raise HTTPError(f"Mocked HTTP error: {self.status_code}")
+
 
 class MockedRequest:
     def __init__(

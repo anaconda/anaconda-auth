@@ -183,6 +183,7 @@ class BaseClient(requests.Session):
             self.verify = self.config.ssl_verify
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
+        self._ssl = ssl_context
 
         self.mount("http://", http_adapter)
         self.mount("https://", http_adapter)
