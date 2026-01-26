@@ -19,10 +19,8 @@ from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
-from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
-from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -375,33 +373,6 @@ def auth_logout(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     logout()
 
 
-def _protect_secrets() -> None:
-    # Do not allow these to leak into the config.toml
-    # * condarc config
-    # * env vars (including .env file)
-    # * secrets
-    AnacondaAuthConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_AUTH_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
-
-    AnacondaCloudConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_CLOUD_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
-
-    AnacondaAuthSitesConfig.model_config.update(
-        env_file=None,
-        env_prefix="__ANACONDA_HIDDEN_SITES_",
-        secrets_dir=None,
-        disable_conda_context=True,
-    )
-
-
 sites_app = typer.Typer(
     name="sites",
     add_completion=False,
@@ -639,8 +610,6 @@ def _sites_add_or_modify(
         kwargs["login_error_path"] = login_error_path
     if hash_hostname is not None:
         kwargs["hash_hostname"] = hash_hostname
-
-    _protect_secrets()
 
     sites = AnacondaAuthSitesConfig()
 

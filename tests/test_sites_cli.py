@@ -4,6 +4,7 @@ from textwrap import dedent
 from typing import Callable
 
 import pytest
+from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from rich.console import Console
 
@@ -115,6 +116,34 @@ def test_add_new_site_without_name(config_toml: Path, invoke_cli: CLIInvoker) ->
         domain = "foo.local"
         """
     )
+
+
+def test_add_site_protect_secrets(
+    config_toml: Path, invoke_cli: CLIInvoker, monkeypatch: MonkeyPatch
+) -> None:
+    assert not config_toml.exists()
+
+    cert_path = config_toml.parent / "cert.pem"
+    cert_path.touch()
+
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "in-env-var")
+    monkeypatch.setenv("CONDA_SSL_VERIFY", f"{cert_path}")
+
+    result = invoke_cli(["sites", "add", "--domain", "foo.local", "--yes"])
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "foo.local"
+
+        [sites."foo.local"]
+        domain = "foo.local"
+        """
+    )
+
+    result = invoke_cli(["sites", "show", "--show-hidden", "foo.local"])
+    assert f'"ssl_verify": "{cert_path}"' in result.stdout
+    assert '"api_key": "in-env-var"' in result.stdout
 
 
 def test_add_new_site_dry_run(config_toml: Path, invoke_cli: CLIInvoker) -> None:
@@ -346,6 +375,62 @@ def test_add_new_site_keep_anaconda_com(
         domain = "foo.local"
         """
     )
+
+
+def test_modify_requires_name_or_domain(
+    config_toml: Path, invoke_cli: CLIInvoker
+) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "modify", "--no-ssl-verify"])
+    assert result.exit_code == 2
+    assert (
+        "You must supply at least one of --domain or --name to modify a site"
+        in result.stdout
+    )
+
+
+def test_modify_protect_secrets(
+    config_toml: Path, invoke_cli: CLIInvoker, monkeypatch: MonkeyPatch
+) -> None:
+    cert_path = config_toml.parent / "cert.pem"
+    cert_path.touch()
+
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "in-env-var")
+    monkeypatch.setenv("CONDA_SSL_VERIFY", f"{cert_path}")
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "short-name"
+
+            [sites.short-name]
+            domain = "foo.local"
+            """
+        )
+    )
+
+    result = invoke_cli(["sites", "show", "--show-hidden", "short-name"])
+    assert '"api_key": "in-env-var"' in result.stdout
+    assert f'"ssl_verify": "{cert_path}"' in result.stdout
+
+    result = invoke_cli(
+        ["sites", "modify", "--name", "short-name", "--use-device-flow", "--yes"]
+    )
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "short-name"
+
+        [sites.short-name]
+        domain = "foo.local"
+        use_device_flow = true
+        """
+    )
+
+    result = invoke_cli(["sites", "show", "--show-hidden", "short-name"])
+    assert '"api_key": "in-env-var"' in result.stdout
+    assert f'"ssl_verify": "{cert_path}"' in result.stdout
 
 
 def test_modify_keeps_ssl_verify_false(
