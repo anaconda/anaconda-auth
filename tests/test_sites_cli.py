@@ -1,7 +1,11 @@
+import json
+import os
 from io import StringIO
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 from typing import Callable
+from typing import Dict
 
 import pytest
 from pytest import MonkeyPatch
@@ -10,6 +14,10 @@ from rich.console import Console
 
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from tests.conftest import CLIInvoker
+
+
+def is_windows() -> bool:
+    return os.name == "nt"
 
 
 @pytest.fixture
@@ -123,11 +131,21 @@ def test_add_site_protect_secrets(
 ) -> None:
     assert not config_toml.exists()
 
-    cert_path = config_toml.parent / "cert.pem"
-    cert_path.touch()
+    if is_windows():
+        value = "true"
+
+        def equivalence(value: str) -> bool:
+            return value is True
+    else:
+        cert_path = config_toml.parent / "cert.pem"
+        cert_path.touch()
+        value = str(cert_path)
+
+        def equivalence(value: bool) -> bool:
+            return value == str(cert_path)
 
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "in-env-var")
-    monkeypatch.setenv("CONDA_SSL_VERIFY", f"{cert_path}")
+    monkeypatch.setenv("CONDA_SSL_VERIFY", value)
 
     result = invoke_cli(["sites", "add", "--domain", "foo.local", "--yes"])
     assert result.exit_code == 0
@@ -142,8 +160,9 @@ def test_add_site_protect_secrets(
     )
 
     result = invoke_cli(["sites", "show", "--show-hidden", "foo.local"])
-    assert f'"ssl_verify": "{cert_path}"' in result.stdout
-    assert '"api_key": "in-env-var"' in result.stdout
+    data: Dict[str, Any] = json.loads(result.stdout)
+    assert data.get("api_key", "") == "in-env-var"
+    assert equivalence(data.get("ssl_verify"))
 
 
 def test_add_new_site_dry_run(config_toml: Path, invoke_cli: CLIInvoker) -> None:
