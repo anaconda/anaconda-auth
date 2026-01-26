@@ -24,6 +24,7 @@ from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.exceptions import TokenExpiredError
+from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
@@ -709,7 +710,16 @@ def sites_remove(
 ) -> None:
     """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
-    config = sites.sites[site]
+
+    if len(sites.sites) == 1 and [site] == list(sites.sites):
+        console.print(f"{site} is the only configured site and cannot be removed")
+        raise typer.Exit(code=1)
+
+    try:
+        config = sites.sites[site]
+    except UnknownSiteName as e:
+        console.print(e.args[0])
+        raise typer.Exit(code=1)
 
     sites.remove(site)
     if sites.default_site == config.site:

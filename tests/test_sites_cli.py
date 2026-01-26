@@ -38,11 +38,109 @@ def test_add_new_site_removes_anaconda_com(
     )
 
 
+def test_add_new_site_no_removes_anaconda_com(
+    config_toml: Path, invoke_cli: CLIInvoker
+) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(
+        [
+            "sites",
+            "add",
+            "--name",
+            "short-name",
+            "--domain",
+            "foo.local",
+            "--no-remove-anaconda-com",
+            "--yes",
+        ]
+    )
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "anaconda.com"
+
+        [sites."anaconda.com"]
+
+        [sites.short-name]
+        domain = "foo.local"
+        """
+    )
+
+
+def test_add_new_default_site_no_removes_anaconda_com(
+    config_toml: Path, invoke_cli: CLIInvoker
+) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(
+        [
+            "sites",
+            "add",
+            "--name",
+            "short-name",
+            "--domain",
+            "foo.local",
+            "--default",
+            "--no-remove-anaconda-com",
+            "--yes",
+        ]
+    )
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "short-name"
+
+        [sites."anaconda.com"]
+
+        [sites.short-name]
+        domain = "foo.local"
+        """
+    )
+
+
 def test_add_new_site_without_name(config_toml: Path, invoke_cli: CLIInvoker) -> None:
     assert not config_toml.exists()
 
     result = invoke_cli(["sites", "add", "--domain", "foo.local", "--yes"])
     assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "foo.local"
+
+        [sites."foo.local"]
+        domain = "foo.local"
+        """
+    )
+
+
+def test_add_new_site_dry_run(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "add", "--domain", "foo.local", "--dry-run"])
+    assert result.exit_code == 0
+    assert '+[sites."foo.local"]'
+    assert not config_toml.exists()
+
+
+def test_add_new_site_no_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "add", "--domain", "foo.local"], input="n")
+    assert result.exit_code == 0
+    assert '+[sites."foo.local"]'
+    assert not config_toml.exists()
+
+
+def test_add_new_site_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "add", "--domain", "foo.local"], input="y")
+    assert result.exit_code == 0
+    assert '+[sites."foo.local"]'
 
     assert config_toml.read_text() == dedent(
         """\
@@ -404,3 +502,166 @@ def test_modify_lookup_missing(
     assert result.exit_code == 1
 
     assert "The site or domain foo.bar has not been configured" in result.stdout
+
+
+def test_remove_fails(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "remove", "nope"])
+
+    assert result.exit_code == 1
+    assert "The site or domain nope has not been configured" in result.stdout
+
+
+def test_cannot_remove_anaconda_com(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    assert not config_toml.exists()
+
+    result = invoke_cli(["sites", "remove", "anaconda.com"])
+
+    assert result.exit_code == 1
+    assert (
+        "anaconda.com is the only configured site and cannot be removed"
+        in result.stdout
+    )
+
+
+def test_cannot_remove_only_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.foo]
+
+        """)
+    )
+
+    result = invoke_cli(["sites", "remove", "foo"])
+
+    assert result.exit_code == 1
+    assert "foo is the only configured site and cannot be removed" in result.stdout
+
+
+def test_remove_default_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+
+            [sites.foo]
+
+            [sites.baz]
+
+        """)
+    )
+
+    result = invoke_cli(["sites", "remove", "foo", "--yes"])
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+            default_site = "bar"
+
+            [sites.bar]
+
+            [sites.baz]
+        """
+    )
+
+
+def test_remove_non_default_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+
+            [sites.foo]
+
+            [sites.baz]
+
+        """)
+    )
+
+    result = invoke_cli(["sites", "remove", "bar", "--yes"])
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+            default_site = "foo"
+
+            [sites.foo]
+
+            [sites.baz]
+        """
+    )
+
+
+def test_remove_dry_run(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    contents = dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+
+            [sites.foo]
+
+            [sites.baz]
+
+    """)
+    config_toml.write_text(contents)
+
+    result = invoke_cli(["sites", "remove", "bar", "--dry-run"])
+    assert result.exit_code == 0
+    assert "-[sites.bar]" in result.stdout
+
+    assert config_toml.read_text() == contents
+
+
+def test_remove_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    contents = dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+
+            [sites.foo]
+
+            [sites.baz]
+
+    """)
+    config_toml.write_text(contents)
+
+    result = invoke_cli(["sites", "remove", "bar"], input="y")
+    assert result.exit_code == 0
+
+    assert "-[sites.bar]" in result.stdout
+
+    assert config_toml.read_text() == dedent(
+        """\
+            default_site = "foo"
+
+            [sites.foo]
+
+            [sites.baz]
+        """
+    )
+
+
+def test_remove_no_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    contents = dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+
+            [sites.foo]
+
+            [sites.baz]
+
+    """)
+    config_toml.write_text(contents)
+
+    result = invoke_cli(["sites", "remove", "bar"], input="n")
+    assert result.exit_code == 0
+
+    assert "-[sites.bar]" in result.stdout
+
+    assert config_toml.read_text() == contents
