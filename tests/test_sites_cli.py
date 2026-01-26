@@ -156,7 +156,7 @@ def test_add_new_site_without_domain(config_toml: Path, invoke_cli: CLIInvoker) 
     assert not config_toml.exists()
 
     result = invoke_cli(["sites", "add", "--name", "foo", "--yes"])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "You must supply at least --domain" in result.stdout
 
 
@@ -282,7 +282,7 @@ def test_ssl_verify_truststore_valid(
         pytest.param(
             "--no-ssl-verify",
             "--use-truststore",
-            1,
+            2,
             "Cannot set both",
             id="no-verify-use-truststore",
         ),

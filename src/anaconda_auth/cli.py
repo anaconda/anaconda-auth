@@ -567,7 +567,8 @@ def _sites_add_or_modify(
     elif (ssl_verify or ssl_verify is None) and use_truststore:
         kwargs["ssl_verify"] = "truststore"
     elif ssl_verify is False and use_truststore:
-        raise ValueError("Cannot set both --use-truststore and --no-ssl-verify")
+        console.print("Cannot set both --use-truststore and --no-ssl-verify")
+        raise typer.Exit(code=2)
     elif ssl_verify is False:
         kwargs["ssl_verify"] = False
     else:
@@ -589,17 +590,15 @@ def _sites_add_or_modify(
             parsed_extra_headers = json.loads(extra_headers)
             kwargs["extra_headers"] = parsed_extra_headers
         except json.JSONDecodeError:
-            raise ValueError(
-                f"extra-headers={extra_headers} could not be parsed as JSON"
-            )
+            console.print(f"extra-headers={extra_headers} could not be parsed as JSON")
+            raise typer.Exit(code=1)
     if proxy_servers is not None:
         try:
             parsed_proxy_servers = json.loads(proxy_servers)
             kwargs["proxy_servers"] = parsed_proxy_servers
         except json.JSONDecodeError:
-            raise ValueError(
-                f"proxy-servers={proxy_servers} could not be parsed as JSON"
-            )
+            console.print(f"proxy-servers={proxy_servers} could not be parsed as JSON")
+            raise typer.Exit(code=1)
     if client_cert is not None:
         kwargs["client_cert"] = client_cert
     if client_cert_key is not None:
@@ -624,7 +623,8 @@ def _sites_add_or_modify(
             parsed_keyring = json.loads(keyring)
             kwargs["keyring"] = parsed_keyring
         except json.JSONDecodeError:
-            raise ValueError("The keyring argument could not be parsed as JSON")
+            console.print("The keyring argument could not be parsed as JSON")
+            raise typer.Exit(code=1)
     if client_id is not None:
         kwargs["client_id"] = client_id
     if redirect_uri is not None:
@@ -646,15 +646,17 @@ def _sites_add_or_modify(
 
     if ctx.command.name == "add":
         if domain is None:
-            raise ValueError("You must supply at least --domain to a add a new site")
+            console.print("You must supply at least --domain to a add a new site")
+            raise typer.Exit(code=2)
 
         if name is None:
             name = domain
 
         if name in sites.sites:
-            raise ValueError(
+            console.print(
                 f"A site with name {name} already exists, use the modify subcommand to alter it"
             )
+            raise typer.Exit(code=1)
 
         if remove_anaconda_com and "anaconda.com" in sites.sites.root:
             del sites.sites.root["anaconda.com"]
@@ -667,9 +669,10 @@ def _sites_add_or_modify(
 
     elif ctx.command.name == "modify":
         if domain is None and name is None:
-            raise ValueError(
+            console.print(
                 "You must supply at least one of --domain or --name to modify a site"
             )
+            raise typer.Exit(code=2)
 
         key = sites.sites._find_at(name or domain)
         config = sites.sites.root[key]
