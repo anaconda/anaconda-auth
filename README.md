@@ -41,11 +41,22 @@ to Anaconda API Services.
 ╰────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
+### Change site
+
+To change the default site for all `anaconda` CLI plugins you can run
+
+```text
+anaconda sites add --name <site-name> --domain <domain> --default [extra-flags]
+```
+
+For the list of extra flags see the next section. This will edit your `~/.anaconda/config.toml`.
+
 ## Configuration
 
 You can configure `anaconda-auth` by either:
 
 1. Setting parameters in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
+1. Setting one or more sites in the `[sites.<name>]` section of the `~/.anaconda/config.toml` file.
 1. Setting one or more `ANACONDA_AUTH_` environment variables or using a `.env` file in your working directory.
 
 `ANACONDA_AUTH_` env vars or a `.env` file take precedence over the `~/.anaconda/config.toml` file.
@@ -74,6 +85,72 @@ off for login and API requests and where the preferred token storage is `anacond
 [plugin.auth]
 ssl_verify = false
 preferred_token_storage = "system"
+```
+
+### Multi-site configuration
+
+This plugin supports configuration of multiple sites for use with
+`anaconda login` and `BaseClient`. Each of the above parameters can be
+set within a `[sites.<name>]` table within `~/.anaconda/config.toml`.
+For example
+
+```toml
+[sites.on-prem]
+domain = "my.site.foo.com"
+ssl_verify = false
+```
+
+When utilizing a site with `BaseClient(site="<name>")` the global
+`[plugin.auth]` table acts as a fallback, the site config will utilize any value in `[plugin.auth]` that is *not* explicitly overridden in the `[sites]` table. Finally, all value of any configured site can be overridden with the `ANACONDA_AUTH_*` env vars above.
+
+You can have any number of this tables within the config file. To set
+a site as default use `default_site = "<name>"` where the `<name>` is the
+name of one of the `sites` tables. For example, you can have an extra
+site in addition to the default `anaconda.com` site make it the default
+for `BaseClient()` and CLI operations.
+
+```toml
+default_site = "on-prem"
+
+[sites."anaconda.com"]
+# Empty table means use default values
+
+[sites.on-prem]
+domain = "my.site.foo.com"
+ssl_verify = false
+```
+
+#### CLI commands
+
+A top-level `--at <site-name>` flag is added to all `anaconda` CLI commands to switch the site.
+
+```text
+anaconda --at <site-name> <cmd> [flags]
+```
+
+This works across *all* Anaconda CLI plugins and subcommands.
+
+Multi-site configuration can be controlled using the `anaconda sites`
+subcommand to list, add, modify, and remove sites.
+
+```text
+❯ anaconda sites
+
+ Usage: anaconda sites [OPTIONS] COMMAND [ARGS]...
+
+ Manage your Anaconda site configuration
+
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────╮
+│ --help  -h        Show this message and exit.                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ────────────────────────────────────────────────────────────────────────────────────╮
+│ list     List configured sites by name and domain.                                            │
+│ show     Show the site configuration for the default site or look up by the provided name or  │
+│          domain.                                                                              │
+│ add      Add new site configuration to ~/.anaconda/config.toml                                │
+│ modify   Modify site configuration in ~/.anaconda/config.toml                                 │
+│ remove   Remove site configuration by name or domain.                                         │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ## API Keys and tokens
@@ -110,9 +187,13 @@ from anaconda_auth import login
 login()
 ```
 
-The `login()` function initiates a browser-based login flow. It will automatically
+The `login()` function initiates a browser-based login flow for your
+default site. It will automatically
 open your browser and, once you have completed the login flow, it will store an
 API key on your system.
+
+`login()` takes an optional keyword argument `site="<name or domain>"`
+to login to another configured site in your `~/.anaconda/config.toml`.
 
 Typically, these API keys will have a one year expiration, so you will only need
 to log in once and requests using the client class will read the token from the
@@ -128,6 +209,11 @@ from anaconda_auth import logout
 
 logout()
 ```
+
+`logout()` takes an optional keyword argument `site="<name or domain>"`
+to logout from another configured site in your `~/.anaconda/config.toml`.
+Without the `site=` argument the default site from your configuration is
+used.
 
 ### API requests
 
@@ -150,12 +236,16 @@ print(response.json())
 
 BaseClient accepts the following optional arguments.
 
-- `domain`: Domain to use for requests, defaults to `anaconda.com`
+- `site`: Site name from `~/.anaconda/config.toml`
+- `domain`: Domain to use for requests, defaults to your default site
 - `ssl_verify`: Enable SSL verification, defaults to `True`
 - `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
 - `user_agent`: Defaults to `anaconda-auth/<package-version>`
 - `api_version`: Requested API version, defaults to latest available from the domain
 - `extra_headers`: Dictionary or JSON string of extra headers to send in requests
+
+When using the `site="<name>"` argument all other keyword args will
+override the configuration loaded from `~/.anaconda/config.toml`.
 
 To create a Client class specific to your package, subclass BaseClient and set
 an appropriate user-agent and API version for your needs.
