@@ -267,26 +267,40 @@ def _api_key_is_valid(config: AnacondaAuthSite) -> bool:
     return valid
 
 
+def _get_config(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+) -> AnacondaAuthSite:
+    # Prepare the requested or default site config
+    if isinstance(site, AnacondaAuthSite):
+        config = site
+    elif site:
+        config = AnacondaAuthConfig(site=site)
+    else:
+        config = AnacondaAuthConfig()
+
+    return config
+
+
 def login(
-    config: Optional[AnacondaAuthSite] = None,
-    ssl_verify: Optional[bool] = None,
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+    ssl_verify: Optional[Union[bool, str]] = None,
     basic: bool = False,
     force: bool = False,
 ) -> None:
     """Log into anaconda.com and store the token information in the keyring."""
-    if config is None:
-        config = AnacondaAuthConfig()
-        if ssl_verify is not None:
-            config = config.model_copy(update={"ssl_verify": ssl_verify}, deep=True)
+    config = _get_config(site)
+    if ssl_verify is not None:
+        config = config.model_copy(update={"ssl_verify": ssl_verify}, deep=True)
 
     if force or not _api_key_is_valid(config=config):
         _do_login(config=config, basic=basic)
 
 
-def logout(config: Optional[AnacondaAuthSite] = None) -> None:
+def logout(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+) -> None:
     """Log out of anaconda.com."""
-    if config is None:
-        config = AnacondaAuthConfig()
+    config = _get_config(site)
 
     try:
         token_info = TokenInfo.load(domain=config.domain)
