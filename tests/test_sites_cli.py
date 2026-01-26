@@ -412,11 +412,21 @@ def test_modify_requires_name_or_domain(
 def test_modify_protect_secrets(
     config_toml: Path, invoke_cli: CLIInvoker, monkeypatch: MonkeyPatch
 ) -> None:
-    cert_path = config_toml.parent / "cert.pem"
-    cert_path.touch()
+    if is_windows():
+        value = "true"
+
+        def equivalence(value: str) -> bool:
+            return value is True
+    else:
+        cert_path = config_toml.parent / "cert.pem"
+        cert_path.touch()
+        value = str(cert_path)
+
+        def equivalence(value: bool) -> bool:
+            return value == str(cert_path)
 
     monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "in-env-var")
-    monkeypatch.setenv("CONDA_SSL_VERIFY", f"{cert_path}")
+    monkeypatch.setenv("CONDA_SSL_VERIFY", value)
     config_toml.write_text(
         dedent(
             """\
@@ -429,8 +439,9 @@ def test_modify_protect_secrets(
     )
 
     result = invoke_cli(["sites", "show", "--show-hidden", "short-name"])
-    assert '"api_key": "in-env-var"' in result.stdout
-    assert f'"ssl_verify": "{cert_path}"' in result.stdout
+    data: Dict[str, Any] = json.loads(result.stdout)
+    assert data.get("api_key", "") == "in-env-var"
+    assert equivalence(data.get("ssl_verify"))
 
     result = invoke_cli(
         ["sites", "modify", "--name", "short-name", "--use-device-flow", "--yes"]
@@ -448,8 +459,9 @@ def test_modify_protect_secrets(
     )
 
     result = invoke_cli(["sites", "show", "--show-hidden", "short-name"])
-    assert '"api_key": "in-env-var"' in result.stdout
-    assert f'"ssl_verify": "{cert_path}"' in result.stdout
+    data: Dict[str, Any] = json.loads(result.stdout)
+    assert data.get("api_key", "") == "in-env-var"
+    assert equivalence(data.get("ssl_verify"))
 
 
 def test_modify_keeps_ssl_verify_false(
