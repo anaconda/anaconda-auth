@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 import pytest
 from requests import PreparedRequest
 from requests import Response
@@ -13,9 +15,11 @@ from conda.gateways.connection.session import CondaSession  # noqa: E402
 from conda.gateways.connection.session import get_session  # noqa: E402
 
 from anaconda_auth._conda import config as plugin_config  # noqa: E402
+from anaconda_auth._conda.auth_handler import AccessCredential  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthError  # noqa: E402
 from anaconda_auth._conda.auth_handler import AnacondaAuthHandler  # noqa: E402
 from anaconda_auth._conda.condarc import CondaRC  # noqa: E402
+from anaconda_auth._conda.config import CredentialType  # noqa: E402
 
 
 @pytest.fixture()
@@ -81,7 +85,7 @@ def test_get_token_via_conda_token(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-token"
+    assert token == AccessCredential("my-test-token", CredentialType.REPO_TOKEN)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -89,7 +93,9 @@ def test_get_repo_token_via_keyring(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-token-in-token-info"
+    assert token == AccessCredential(
+        "my-test-token-in-token-info", CredentialType.REPO_TOKEN
+    )
 
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
@@ -98,7 +104,7 @@ def test_get_unified_api_token_for_dotcom(handler, monkeypatch):
     monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "False")
     for host in ("repo.anaconda.com", "repo.continuum.io"):
         token = handler._load_token(f"https://{host}/pkgs/main/noarch/repodata.json")
-        assert token == "my-test-api-key"
+        assert token == AccessCredential("my-test-api-key", CredentialType.API_KEY)
 
 
 @pytest.mark.usefixtures("mocked_token_info_with_api_key")
@@ -107,7 +113,7 @@ def test_get_unified_api_token_via_keyring(handler, monkeypatch):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == "my-test-api-key"
+    assert token == AccessCredential("my-test-api-key", CredentialType.API_KEY)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -147,7 +153,9 @@ def test_get_token_for_main_finds_first_token(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/main/noarch/repodata.json"
     )
-    assert token == "my-first-test-token-in-token-info"
+    assert token == AccessCredential(
+        "my-first-test-token-in-token-info", CredentialType.REPO_TOKEN
+    )
 
 
 @pytest.mark.usefixtures("mocked_empty_conda_token")
@@ -303,3 +311,53 @@ def test_channel_settings_merged(conda_search_path):
     expected["my-test-channel"] = "anaconda-auth"
     expected["my-site-channel"] = "anaconda-auth"
     plugin_config._assert_settings(conda_context, expected)
+
+
+def test_load_token_domain_anaconda_dot_com_default(conda_search_path):
+    channel_url = "https://repo.anaconda.com/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert credential_type == CredentialType.API_KEY
+
+
+def test_load_token_domain_anaconda_cloud_default(conda_search_path):
+    channel_url = "https://repo.anaconda.cloud/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert credential_type == CredentialType.REPO_TOKEN
+
+
+def test_load_token_domain_anaconda_cloud_api_key(conda_search_path, monkeypatch):
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "True")
+
+    channel_url = "https://repo.anaconda.cloud/repo/some-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert credential_type == CredentialType.API_KEY
+
+
+def test_load_token_domain_user_provided_default(conda_search_path):
+    channel_url = "https://some-domain.com/repo/some-channel"
+    condarc = CondaRC()
+    condarc.update_channel_settings(
+        channel=channel_url + "/*",
+        auth_type="anaconda-auth",
+    )
+    condarc.save()
+    context.reset_context()
+
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "some-domain.com"
+    assert credential_type == CredentialType.API_KEY
