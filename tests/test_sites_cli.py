@@ -293,6 +293,12 @@ def test_add_site_insecure_flag(
             lambda ssl_verify: ssl_verify is True,
             id="no-use-truststore",
         ),
+        pytest.param(
+            "--ssl-verify",
+            "--no-use-truststore",
+            lambda ssl_verify: ssl_verify is True,
+            id="verify-no-use-truststore",
+        ),
     ],
 )
 def test_ssl_verify_truststore_valid(
@@ -325,23 +331,7 @@ def test_ssl_verify_truststore_valid(
     assert equivalence(config.ssl_verify)
 
 
-@pytest.mark.parametrize(
-    "ssl_verify,truststore,exit_code,msg",
-    [
-        pytest.param(
-            "--no-ssl-verify",
-            "--use-truststore",
-            2,
-            "Cannot set both",
-            id="no-verify-use-truststore",
-        ),
-    ],
-)
 def test_ssl_verify_truststore_invalid(
-    ssl_verify: str,
-    truststore: str,
-    exit_code: int,
-    msg: str,
     config_toml: Path,
     invoke_cli: CLIInvoker,
 ) -> None:
@@ -352,18 +342,15 @@ def test_ssl_verify_truststore_invalid(
         "add",
         "--domain",
         "foo.bar",
+        "--no-ssl-verify",
+        "--use-truststore",
         "--yes",
     ]
 
-    if ssl_verify:
-        cmd.append(ssl_verify)
-    if truststore:
-        cmd.append(truststore)
-
     result = invoke_cli(cmd)
 
-    assert result.exit_code == exit_code
-    assert msg in result.stdout
+    assert result.exit_code == 2
+    assert "Cannot set both" in result.stdout
 
 
 def test_add_new_site_keep_anaconda_com(
