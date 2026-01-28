@@ -519,14 +519,6 @@ def test_sites_dump(config_toml: Path) -> None:
     assert sites.model_dump()["sites"]["local"]["ssl_verify"]
 
 
-valid_ssl_verify_with_equality = [
-    (True, lambda v: v is True),
-    (False, lambda v: v is False),
-    ("truststore", lambda v: v == "truststore"),
-    ("/path/to/cert", lambda v: v == "/path/to/cert"),
-]
-
-
 @pytest.mark.parametrize(
     "value,equality",
     [
