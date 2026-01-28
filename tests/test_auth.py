@@ -103,7 +103,7 @@ def test_login_no_existing_token(mocked_do_login: MagicMock) -> None:
     mocked_do_login.assert_called_once()
 
 
-def test_login_has_valid_token(
+def test_login_has_valid_token_site_kwarg(
     mocked_do_login: MagicMock, mocker: MockerFixture
 ) -> None:
     config = AnacondaAuthConfig()
@@ -112,6 +112,20 @@ def test_login_has_valid_token(
     TokenInfo(domain=config.domain, api_key="pre-existing").save()
 
     login(site=config)
+    mocked_do_login.assert_not_called()
+
+    assert TokenInfo.load(config.domain).api_key == "pre-existing"
+
+
+def test_login_has_valid_token_site_arg(
+    mocked_do_login: MagicMock, mocker: MockerFixture
+) -> None:
+    config = AnacondaAuthConfig()
+
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
+    TokenInfo(domain=config.domain, api_key="pre-existing").save()
+
+    login(config)
     mocked_do_login.assert_not_called()
 
     assert TokenInfo.load(config.domain).api_key == "pre-existing"
@@ -142,7 +156,7 @@ def test_login_default_site(
     assert TokenInfo.load(config.domain).api_key == f"pre-existing for {config.domain}"
 
 
-def test_login_other_site(
+def test_login_other_site_kwarg(
     mocked_do_login: MagicMock, mocker: MockerFixture, config_toml: Path
 ) -> None:
     config_toml.write_text(
@@ -165,6 +179,81 @@ def test_login_other_site(
     mocked_do_login.assert_not_called()
 
     assert TokenInfo.load(config.domain).api_key == f"pre-existing for {config.domain}"
+
+
+def test_login_other_site_arg(
+    mocked_do_login: MagicMock, mocker: MockerFixture, config_toml: Path
+) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+            domain = "bar.local"
+
+            [sites.foo]
+            domain = "foo.local"
+        """)
+    )
+    config = AnacondaAuthConfig(site="bar")
+
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
+    TokenInfo(domain=config.domain, api_key=f"pre-existing for {config.domain}").save()
+
+    login("bar")
+    mocked_do_login.assert_not_called()
+
+    assert TokenInfo.load(config.domain).api_key == f"pre-existing for {config.domain}"
+
+
+def test_login_config_deprecated(
+    mocked_do_login: MagicMock, mocker: MockerFixture, config_toml: Path
+) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+            domain = "bar.local"
+
+            [sites.foo]
+            domain = "foo.local"
+        """)
+    )
+    config = AnacondaAuthConfig(site="bar")
+
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
+    TokenInfo(domain=config.domain, api_key=f"pre-existing for {config.domain}").save()
+
+    with pytest.raises(DeprecationWarning) as excinfo:
+        login(config=config)
+    assert "config= keyword argument is deprecated" in excinfo.value.args[0]
+    mocked_do_login.assert_not_called()
+
+
+def test_login_error_site_and_config(
+    mocked_do_login: MagicMock, mocker: MockerFixture, config_toml: Path
+) -> None:
+    config_toml.write_text(
+        dedent("""\
+            default_site = "foo"
+
+            [sites.bar]
+            domain = "bar.local"
+
+            [sites.foo]
+            domain = "foo.local"
+        """)
+    )
+    config = AnacondaAuthConfig(site="bar")
+
+    mocker.patch("anaconda_auth.token.TokenInfo.expired", False)
+    TokenInfo(domain=config.domain, api_key=f"pre-existing for {config.domain}").save()
+
+    with pytest.raises(ValueError) as excinfo:
+        login(config=config, site="bar")
+    assert "You cannot set both site= and config= arguments" in excinfo.value.args[0]
+    mocked_do_login.assert_not_called()
 
 
 def test_force_login_with_valid_token(
