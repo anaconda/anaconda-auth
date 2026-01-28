@@ -166,6 +166,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return token
         return AccessCredential(None, credential_type)
 
+    @lru_cache
     def _build_header(self, url: str) -> tuple[Optional[str], CredentialType]:
         """Build the Authorization header based on the request URL.
 
