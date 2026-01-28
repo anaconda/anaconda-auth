@@ -12,6 +12,7 @@ so that it can be run during the conda build process
 """
 
 import sys
+from enum import Enum
 from pathlib import Path
 from typing import Any
 from typing import Dict
@@ -21,6 +22,11 @@ from typing import Set
 from typing import Union
 
 __all__ = []
+
+
+class CredentialType(Enum):
+    API_KEY = "api-key"
+    REPO_TOKEN = "repo-token"
 
 
 PREFIX_CONDARC_PATH = Path(sys.prefix) / "condarc.d" / "anaconda-auth.yml"
@@ -35,14 +41,16 @@ PREFIX_CONDARC_PATH = Path(sys.prefix) / "condarc.d" / "anaconda-auth.yml"
 # configuration for conda.
 class TokenDomainSetting(NamedTuple):
     token_domain: str
-    default_use_unified_api_key: bool = True
+    default_credential_type: CredentialType = CredentialType.API_KEY
     autoconfigure_conda_channel_settings: bool = False
 
 
 TOKEN_DOMAIN_MAP = {
     "repo.continuum.io": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
-    "repo.anaconda.cloud": TokenDomainSetting("anaconda.com", False, True),
+    "repo.anaconda.cloud": TokenDomainSetting(
+        "anaconda.com", CredentialType.REPO_TOKEN, True
+    ),
 }
 
 

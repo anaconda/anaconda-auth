@@ -203,7 +203,7 @@ legacy_tox_ini = """
 [tox]
 envlist =
     py39
-    py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
+    py310-{old-keyring,new-keyring,pydantic1,pydantic2,conda}
     py311-{conda}
     py312-{conda}
     py313-{no-conda,conda}
@@ -250,8 +250,10 @@ conda_deps =
     # Optionally install conda to test plugins
     conda: conda
     # Keep testing semver<3 until version 3+ released to defaults
-    semver2: semver<3
-    semver3: semver>=3,<4
+    # mattkram: Drop semver2 testing because of issues installing on Windows
+    #           See: https://github.com/anaconda/anaconda-auth/issues/221
+    # semver2: semver<3
+    # semver3: semver>=3,<4
 conda_channels =
     anaconda-cloud
     defaults
