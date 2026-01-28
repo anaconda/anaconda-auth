@@ -252,6 +252,16 @@ class TokenInfo(BaseModel):
     repo_tokens: List[RepoToken] = []
     version: Optional[int] = TOKEN_INFO_VERSION
 
+    @property
+    def decoded_api_key(self) -> dict:
+        return jwt.decode(
+            self.api_key, algorithms=["RS256"], options={"verify_signature": False}
+        )
+
+    @property
+    def api_key_kid(self) -> str:
+        return self.decoded_api_key.get("kid")
+
     @classmethod
     def _decode(cls, keyring_data: str) -> dict:
         decoded_bytes = base64.b64decode(keyring_data)

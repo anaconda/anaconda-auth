@@ -305,6 +305,7 @@ def logout(config: Optional[AnacondaAuthSite] = None) -> None:
     # domains.
     try:
         token_info = TokenInfo.load(domain="anaconda.cloud")
+
         token_info.delete()
     except TokenNotFoundError:
         pass
