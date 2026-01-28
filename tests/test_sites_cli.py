@@ -179,7 +179,7 @@ def test_add_new_site_no_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> N
 
     result = invoke_cli(["sites", "add", "--domain", "foo.local"], input="n")
     assert result.exit_code == 0
-    assert '+[sites."foo.local"]'
+    assert '+[sites."foo.local"]' in result.stdout
     assert not config_toml.exists()
 
 
