@@ -12,6 +12,7 @@ from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from rich.console import Console
 
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from tests.conftest import CLIInvoker
 
@@ -781,3 +782,144 @@ def test_remove_no_confirm(config_toml: Path, invoke_cli: CLIInvoker) -> None:
     assert "-[sites.bar]" in result.stdout
 
     assert config_toml.read_text() == contents
+
+
+def test_sites_show_default(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "foo"
+
+            [sites.foo]
+            domain = "foo.local"
+            ssl_verify = false
+
+            [sites.bar]
+            domain = "bar.local"
+            """
+        )
+    )
+
+    result = invoke_cli(["sites", "show"])
+    assert result.exit_code == 0
+
+    data = json.loads(result.stdout)
+    expected = {
+        "site": "foo",
+        "domain": "foo.local",
+        "ssl_verify": False,
+        "extra_headers": None,
+        "use_unified_repo_api_key": False,
+        "proxy_servers": None,
+        "client_cert": None,
+        "client_cert_key": None,
+        "use_device_flow": False,
+    }
+
+    assert data == expected
+
+
+def test_sites_show_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "foo"
+
+            [sites.foo]
+            domain = "foo.local"
+            ssl_verify = false
+
+            [sites.bar]
+            domain = "bar.local"
+            """
+        )
+    )
+
+    result = invoke_cli(["sites", "show", "bar.local"])
+    assert result.exit_code == 0
+
+    data = json.loads(result.stdout)
+    expected = {
+        "site": "bar",
+        "domain": "bar.local",
+        "ssl_verify": True,
+        "extra_headers": None,
+        "use_unified_repo_api_key": False,
+        "proxy_servers": None,
+        "client_cert": None,
+        "client_cert_key": None,
+        "use_device_flow": False,
+    }
+
+    assert data == expected
+
+
+def test_sites_show_all(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "foo"
+
+            [sites.foo]
+            domain = "foo.local"
+            ssl_verify = false
+
+            [sites.bar]
+            domain = "bar.local"
+            """
+        )
+    )
+
+    result = invoke_cli(["sites", "show", "--all"])
+    assert result.exit_code == 0
+
+    data = json.loads(result.stdout)
+    expected = {
+        "foo": {
+            "domain": "foo.local",
+            "ssl_verify": False,
+            "extra_headers": None,
+            "use_unified_repo_api_key": False,
+            "proxy_servers": None,
+            "client_cert": None,
+            "client_cert_key": None,
+            "use_device_flow": False,
+        },
+        "bar": {
+            "domain": "bar.local",
+            "ssl_verify": True,
+            "extra_headers": None,
+            "use_unified_repo_api_key": False,
+            "proxy_servers": None,
+            "client_cert": None,
+            "client_cert_key": None,
+            "use_device_flow": False,
+        },
+    }
+
+    assert data == expected
+
+
+def test_sites_show_hidden(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "foo"
+
+            [sites.foo]
+            domain = "foo.local"
+            ssl_verify = false
+
+            [sites.bar]
+            domain = "bar.local"
+            """
+        )
+    )
+
+    result = invoke_cli(["sites", "show", "--show-hidden"])
+    assert result.exit_code == 0
+
+    data = json.loads(result.stdout)
+    site = AnacondaAuthConfig()
+    expected = {"site": site.site, **site.model_dump()}
+    assert data == expected
