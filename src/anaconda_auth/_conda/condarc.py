@@ -6,6 +6,7 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
 
+from anaconda_auth._conda.config import CredentialType
 from anaconda_cli_base import console
 
 DEFAULT_CONDARC_PATH = Path("~/.condarc").expanduser()
@@ -46,19 +47,29 @@ class CondaRC:
             raise CondaRCError(f"Could not parse condarc: {exc}")
 
     def update_channel_settings(
-        self, channel: str, auth_type: str, username: str | None = None
+        self,
+        channel: str,
+        auth_type: str,
+        username: str | None = None,
+        *,
+        auth_domain: str | None = None,
+        credential_type: CredentialType | None = None,
     ) -> None:
         """
         Update the condarc file's "channel_settings" section
         """
-        if username is None:
-            updated_settings = {"channel": channel, "auth": auth_type}
-        else:
-            updated_settings = {
-                "channel": channel,
-                "auth": auth_type,
-                "username": username,
-            }
+        updated_settings = {
+            "channel": channel,
+            "auth": auth_type,
+            "username": username,
+            "auth_domain": auth_domain,
+            "credential_type": credential_type.value if credential_type else None,
+        }
+
+        # Filter out any None values
+        updated_settings = {
+            key: value for key, value in updated_settings.items() if value is not None
+        }
 
         channel_settings = self._loaded_yaml.get("channel_settings", []) or []
 

@@ -4,6 +4,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+from fnmatch import fnmatch
 from functools import lru_cache
 from typing import Any
 from typing import NamedTuple
@@ -13,7 +14,11 @@ from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
 from conda import CondaError
+from conda.base.context import Context
 from conda.plugins.types import ChannelAuthBase
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import ValidationError
 from requests import PreparedRequest
 from requests import Response
 
@@ -46,7 +51,74 @@ class AnacondaAuthError(CondaError):
     """
 
 
+def _load_channel_settings(channel_name: str) -> dict[str, Any]:
+    """Find the correct channel settings from conda's configuration."""
+    # TODO(mattkram): Open conda issue to see if we can pass this into the AuthHandler
+    #                 as part of the plugin protocol.
+
+    # Since the conda logic uses a url, we derive a url from the channel name
+    # this will not work for multi_channels like "defaults", but we restrict the
+    # extra fields we need to URL-based channel_settings, which should be sufficient.
+    url = channel_name
+    if not url.endswith("/"):
+        url += "/"
+
+    parsed_url = urlparse(url)
+    if not parsed_url.scheme or not parsed_url.netloc:
+        return {}
+
+    # The following implementation has mostly been copied from conda, with one noted exception.
+    # Ideally, we can receive the settings in the plugin instantiation.
+    # See: https://github.com/conda/conda/blob/2af8e0f7255e1d06ea0bfcb6076c7427d101feee/conda/gateways/connection/session.py#L91-L112
+
+    # We ensure here if there are duplicates defined, we choose the last one
+    channel_settings = {}
+    context = Context()
+    for settings in context.channel_settings:
+        channel = settings.get("channel", "")
+        if channel == channel_name:
+            # First we check for exact match
+            channel_settings = settings
+            continue
+
+        parsed_setting = urlparse(channel)
+
+        # We require that the schemes must be identical to prevent downgrade attacks.
+        # This includes the case of a scheme-less pattern like "*", which is not allowed.
+        if parsed_setting.scheme != parsed_url.scheme:
+            continue
+
+        url_without_schema = parsed_url.netloc + parsed_url.path
+        pattern = parsed_setting.netloc + parsed_setting.path
+        if fnmatch(url_without_schema, pattern):
+            channel_settings = settings
+
+    return channel_settings
+
+
+class AnacondaAuthHandlerExtraSettings(BaseModel):
+    override_auth_domain: Optional[str] = Field(default=None, alias="auth_domain")
+    override_credential_type: Optional[CredentialType] = Field(
+        default=None, alias="credential_type"
+    )
+
+    @classmethod
+    def from_channel_name(cls, channel_name: str) -> "AnacondaAuthHandlerExtraSettings":
+        """Load extra settings for a channel, with validation."""
+        settings = _load_channel_settings(channel_name)
+        try:
+            return cls(**settings)
+        except ValidationError as e:
+            raise AnacondaAuthError(
+                f"""Error when loading anaconda-auth extra configuration from your condarc.\n\n{e}"""
+            )
+
+
 class AnacondaAuthHandler(ChannelAuthBase):
+    def __init__(self, channel_name: str, *args: Any, **kwargs: Any):
+        super().__init__(channel_name, *args, **kwargs)
+        self._extras = AnacondaAuthHandlerExtraSettings.from_channel_name(channel_name)
+
     def _load_token_domain(self, parsed_url: ParseResult) -> tuple[str, CredentialType]:
         """Select the appropriate domain for token lookup based on a parsed URL.
 
@@ -69,6 +141,12 @@ class AnacondaAuthHandler(ChannelAuthBase):
         config = AnacondaAuthConfig(domain=token_domain)
         if config.use_unified_repo_api_key:
             credential_type = CredentialType.API_KEY
+
+        if self._extras.override_auth_domain:
+            token_domain = self._extras.override_auth_domain
+
+        if self._extras.override_credential_type:
+            credential_type = self._extras.override_credential_type
 
         return token_domain, credential_type
 
