@@ -132,7 +132,7 @@ class BaseClient(requests.Session):
         if client_cert is not None:
             kwargs["client_cert"] = client_cert
 
-        self.config = config.model_copy(update=kwargs)
+        self.config = config.model_copy(update=kwargs, deep=True)
 
         self.proxies = self.config.proxy_servers or {}
         self.configure_ssl()

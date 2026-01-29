@@ -1,5 +1,6 @@
 from pathlib import Path
 from textwrap import dedent
+from typing import Callable
 
 import pytest
 from pytest import MonkeyPatch
@@ -13,6 +14,7 @@ from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.config import AnacondaCloudConfig
 from anaconda_auth.config import Sites
 from anaconda_auth.exceptions import UnknownSiteName
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 
 
 @pytest.fixture(
@@ -325,3 +327,230 @@ def test_override_site_with_auth_env_vars(
     assert config.sites["local"].auth_domain_override == "auth-local"
     assert local.client_id == "override-in-env"
     assert not local.ssl_verify
+
+
+def test_site_default_name_and_domain() -> None:
+    site = AnacondaAuthSite()
+    assert site.domain == site.site == "anaconda.com"
+
+    assert "site" not in site.model_dump()
+
+
+def test_site_name_follows_domain() -> None:
+    site = AnacondaAuthSite(domain="foo.bar")
+    assert site.domain == site.site == "foo.bar"
+
+    assert "site" not in site.model_dump()
+
+
+def test_sites_config_dict_methods(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    expected_config = AnacondaAuthConfig()
+    assert expected_config.site == "foobar"
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+    assert list(sites.sites.keys()) == ["foobar"]
+    assert "foobar" in sites.sites
+    assert list(sites.sites.items()) == [("foobar", expected_config)]
+    assert list(sites.sites.values()) == [expected_config]
+
+
+def test_sites_add(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    config = AnacondaAuthSite(domain="foo.bar", site="foo-bar")
+    sites.add(config)
+    sites.write_config()
+    AnacondaConfigTomlSettingsSource._cache.clear()
+
+    sites = AnacondaAuthSitesConfig()
+    expected_config = config.model_copy(update={"use_device_flow": True})
+
+    assert sites.sites["foo-bar"].model_dump() == expected_config.model_dump()
+    assert sites.sites["foo.bar"].model_dump() == expected_config.model_dump()
+
+    assert len(sites.sites) == 2
+    assert list(sites.sites.keys()) == ["anaconda.com", "foo-bar"]
+    assert "foo-bar" in sites.sites
+
+    items = list(sites.sites.items())
+    assert items[1][0] == "foo-bar"
+    assert items[1][1].site == expected_config.site
+    assert items[1][1].model_dump() == expected_config.model_dump()
+
+    values = list(sites.sites.values())
+    assert values[1].site == expected_config.site
+    assert values[1].model_dump() == expected_config.model_dump()
+
+
+def test_sites_add_name(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    config = AnacondaAuthSite(domain="foo.bar", site="foo-bar")
+    sites.add(config, name="foobar")
+    sites.write_config()
+
+    sites = AnacondaAuthSitesConfig()
+    expected_config = config.model_copy(
+        update={"use_device_flow": True, "site": "foobar"}
+    )
+
+    assert sites.sites["foobar"].model_dump() == expected_config.model_dump()
+    assert sites.sites["foo.bar"].model_dump() == expected_config.model_dump()
+
+    assert len(sites.sites) == 2
+    assert list(sites.sites.keys()) == ["anaconda.com", "foobar"]
+    assert "foobar" in sites.sites
+
+    items = list(sites.sites.items())
+    assert items[1][0] == "foobar"
+    assert items[1][1].site == expected_config.site
+    assert items[1][1].model_dump() == expected_config.model_dump()
+
+    values = list(sites.sites.values())
+    assert values[1].site == expected_config.site
+    assert values[1].model_dump() == expected_config.model_dump()
+
+
+def test_sites_remove_by_name(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    sites.remove("foobar")
+    sites.write_config()
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+
+
+def test_sites_remove_by_domain(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    sites.remove("foo.bar")
+    sites.write_config()
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+
+
+def test_sites_remove(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent("""\
+        [plugin.auth]
+        domain = "localhost"
+        use_device_flow = true
+
+        [sites.foobar]
+        domain = "foo.bar"
+    """)
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    sites.remove("foobar")
+    sites.write_config(preserve_existing_keys=False)
+
+    sites = AnacondaAuthSitesConfig()
+
+    assert len(sites.sites) == 1
+
+
+def test_sites_dump(config_toml: Path) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            [sites.local]
+            ssl_verify = false
+            """
+        )
+    )
+
+    sites = AnacondaAuthSitesConfig()
+    assert not sites.sites.root["local"].ssl_verify
+
+    sites.sites.root["local"].ssl_verify = True
+
+    # model_dump is called twice on purpose to ensure idempotency
+    assert sites.model_dump()["sites"]["local"]["ssl_verify"]
+    sites.model_validate(sites.model_dump())
+    assert sites.sites.root["local"].ssl_verify
+    assert sites.model_dump()["sites"]["local"]["ssl_verify"]
+
+
+@pytest.mark.parametrize(
+    "value,equality",
+    [
+        (True, lambda v: v is True),
+        (False, lambda v: v is False),
+        ("truststore", lambda v: v == "truststore"),
+        ("/path/to/cert", lambda v: v == "/path/to/cert"),
+    ],
+)
+def test_ssl_verify_init_values(value: str, equality: Callable) -> None:
+    site = AnacondaAuthSite(ssl_verify=value)
+    assert equality(site.ssl_verify)
+
+
+@pytest.mark.parametrize(
+    "value,equality",
+    [
+        ("true", lambda v: v is True),
+        ("false", lambda v: v is False),
+        ('"truststore"', lambda v: v == "truststore"),
+        ('"/path/to/cert"', lambda v: v == "/path/to/cert"),
+    ],
+)
+def test_ssl_verify_toml_global_values(
+    config_toml: Path, value: str, equality: Callable
+) -> None:
+    config_toml.write_text(
+        dedent(f"""\
+        [plugin.auth]
+        ssl_verify = {value}
+    """)
+    )
+
+    config = AnacondaAuthConfig()
+    assert equality(config.ssl_verify)

@@ -267,34 +267,72 @@ def _api_key_is_valid(config: AnacondaAuthSite) -> bool:
     return valid
 
 
-def login(
+def _get_config(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+) -> AnacondaAuthSite:
+    # Prepare the requested or default site config
+    if isinstance(site, AnacondaAuthSite):
+        config = site
+    elif site:
+        config = AnacondaAuthConfig(site=site)
+    else:
+        config = AnacondaAuthConfig()
+
+    return config
+
+
+def _site_or_config(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
     config: Optional[AnacondaAuthSite] = None,
-    ssl_verify: Optional[bool] = None,
+) -> AnacondaAuthSite:
+    if config and site is not None:
+        raise ValueError("You cannot set both site= and config= arguments")
+
+    if config:
+        warnings.warn(
+            "The config= keyword argument is deprecated, please use site=str | AnacondaAuthSite",
+            DeprecationWarning,
+        )
+        return config
+    else:
+        return _get_config(site)
+
+
+def login(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+    ssl_verify: Optional[Union[bool, str]] = None,
     basic: bool = False,
     force: bool = False,
+    *,
+    config: Optional[AnacondaAuthSite] = None,
 ) -> None:
-    """Log into anaconda.com and store the token information in the keyring."""
-    if config is None:
-        config = AnacondaAuthConfig()
-        if ssl_verify is not None:
-            config = config.model_copy(update={"ssl_verify": ssl_verify})
+    """Log into Anaconda Platform and store the token information in the keyring."""
+    site_config = _site_or_config(site=site, config=config)
 
-    if force or not _api_key_is_valid(config=config):
-        _do_login(config=config, basic=basic)
+    if ssl_verify is not None:
+        site_config = site_config.model_copy(
+            update={"ssl_verify": ssl_verify}, deep=True
+        )
+
+    if force or not _api_key_is_valid(config=site_config):
+        _do_login(config=site_config, basic=basic)
 
 
-def logout(config: Optional[AnacondaAuthSite] = None) -> None:
-    """Log out of anaconda.com."""
-    if config is None:
-        config = AnacondaAuthConfig()
+def logout(
+    site: Optional[Union[str, AnacondaAuthSite]] = None,
+    *,
+    config: Optional[AnacondaAuthSite] = None,
+) -> None:
+    """Log out of Anaconda Platform."""
+    site_config = _site_or_config(site=site, config=config)
 
     try:
-        token_info = TokenInfo.load(domain=config.domain)
+        token_info = TokenInfo.load(domain=site_config.domain)
         token_info.delete()
     except TokenNotFoundError:
         pass
 
-    if config.domain != "anaconda.com":
+    if site_config.domain != "anaconda.com":
         # Since anaconda.com is the default, don't do anything special if
         # User explicitly overrode the configured domain.
         return

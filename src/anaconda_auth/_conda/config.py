@@ -135,7 +135,7 @@ def _write_condarc_d_settings(overwrite: bool = False) -> None:
 def _verify_channel_settings(filtered: bool = True) -> None:
     from conda.base.context import context
 
-    context.__init__()
+    context.__init__()  # type: ignore[misc]
     expected = _build_channel_settings(include_sites=False)
     _assert_settings(context, _dictify(expected), filtered=filtered)
 
