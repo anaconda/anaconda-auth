@@ -14,7 +14,7 @@ from urllib.parse import ParseResult
 from urllib.parse import urlparse
 
 from conda import CondaError
-from conda.base.context import context as conda_context
+from conda.base.context import Context
 from conda.plugins.types import ChannelAuthBase
 from pydantic import BaseModel
 from pydantic import Field
@@ -73,7 +73,8 @@ def _load_channel_settings(channel_name: str) -> dict[str, Any]:
 
     # We ensure here if there are duplicates defined, we choose the last one
     channel_settings = {}
-    for settings in conda_context.channel_settings:
+    context = Context()
+    for settings in context.channel_settings:
         channel = settings.get("channel", "")
         if channel == channel_name:
             # First we check for exact match
