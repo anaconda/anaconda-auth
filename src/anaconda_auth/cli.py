@@ -684,7 +684,11 @@ def sites_remove(
     """Remove site configuration by name or domain."""
     sites = AnacondaAuthSitesConfig()
 
-    if len(sites.sites) == 1 and [site] == list(sites.sites):
+    if (
+        len(sites.sites) == 1
+        and ([site] == list(sites.sites))
+        or ([site] == [s.domain for s in sites.sites.values()])
+    ):
         console.print(f"{site} is the only configured site and cannot be removed")
         raise typer.Exit(code=1)
 

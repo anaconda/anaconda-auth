@@ -6,6 +6,7 @@ from textwrap import dedent
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generator
 
 import pytest
 from pytest import MonkeyPatch
@@ -22,7 +23,7 @@ def is_windows() -> bool:
 
 
 @pytest.fixture
-def console(mocker: MockerFixture) -> Console:
+def console(mocker: MockerFixture) -> Generator[Console, None, None]:
     console = Console(file=StringIO())
     mocker.patch("anaconda_auth.cli.console", console)
     yield console
@@ -629,20 +630,27 @@ def test_cannot_remove_anaconda_com(config_toml: Path, invoke_cli: CLIInvoker) -
     )
 
 
-def test_cannot_remove_only_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+@pytest.mark.parametrize("to_remove", ["foo", "foo.local"])
+def test_cannot_remove_only_site(
+    to_remove: str, config_toml: Path, invoke_cli: CLIInvoker
+) -> None:
     config_toml.write_text(
         dedent("""\
             default_site = "foo"
 
             [sites.foo]
+            domain = "foo.local"
 
         """)
     )
 
-    result = invoke_cli(["sites", "remove", "foo"])
+    result = invoke_cli(["sites", "remove", to_remove])
 
     assert result.exit_code == 1
-    assert "foo is the only configured site and cannot be removed" in result.stdout
+    assert (
+        f"{to_remove} is the only configured site and cannot be removed"
+        in result.stdout
+    )
 
 
 def test_remove_default_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
