@@ -306,7 +306,7 @@ def login(
     *,
     config: Optional[AnacondaAuthSite] = None,
 ) -> None:
-    """Log into anaconda.com and store the token information in the keyring."""
+    """Log into Anaconda Platform and store the token information in the keyring."""
     site_config = _site_or_config(site=site, config=config)
 
     if ssl_verify is not None:
@@ -323,7 +323,7 @@ def logout(
     *,
     config: Optional[AnacondaAuthSite] = None,
 ) -> None:
-    """Log out of anaconda.com."""
+    """Log out of Anaconda Platform."""
     site_config = _site_or_config(site=site, config=config)
 
     try:
