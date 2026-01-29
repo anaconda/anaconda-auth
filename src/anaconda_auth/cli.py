@@ -5,6 +5,7 @@ import warnings
 from textwrap import dedent
 from typing import Annotated
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -531,7 +532,7 @@ def _sites_add_or_modify(
         ),
     ] = None,
 ) -> None:
-    kwargs: dict[str, Any] = {}
+    kwargs: Dict[str, Any] = {}
 
     if ssl_verify is None and use_truststore is None:
         pass
