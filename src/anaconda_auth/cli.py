@@ -32,6 +32,10 @@ from anaconda_cli_base.exceptions import register_error_handler
 
 CHECK_MARK = "[bold green]✔︎[/bold green]"
 
+PROGRAM_ERROR: int = 1
+ARGUMENT_ERROR: int = 2
+SUCCESS: int = 0
+
 
 def _continue_with_login() -> int:
     if sys.stdout.isatty():
@@ -249,7 +253,7 @@ def main(
             f"anaconda-auth, version [cyan]{__version__}[/cyan]",
             style="bold green",
         )
-        raise typer.Exit()
+        raise typer.Exit(code=SUCCESS)
 
     # We have to manually handle subcommands due the the handling of the auth subcommand
     # as a top-level subcommand in anaconda-client
@@ -330,7 +334,7 @@ def auth_login(
         if token_info.expired:
             console.print(f"Your API key has expired, logging into {domain}")
             login(force=True, ssl_verify=ssl_verify)
-            raise typer.Exit()
+            raise typer.Exit(code=SUCCESS)
     except TokenNotFoundError:
         pass  # Proceed to login
     else:
@@ -339,7 +343,7 @@ def auth_login(
             default=False,
         )
         if not force:
-            raise typer.Exit()
+            raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
 
@@ -540,7 +544,7 @@ def _sites_add_or_modify(
         kwargs["ssl_verify"] = "truststore"
     elif ssl_verify is False and use_truststore:
         console.print("Cannot set both --use-truststore and --no-ssl-verify")
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=ARGUMENT_ERROR)
     elif ssl_verify is False:
         kwargs["ssl_verify"] = False
     else:
@@ -563,14 +567,14 @@ def _sites_add_or_modify(
             kwargs["extra_headers"] = parsed_extra_headers
         except json.JSONDecodeError:
             console.print(f"extra-headers={extra_headers} could not be parsed as JSON")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ARGUMENT_ERROR)
     if proxy_servers is not None:
         try:
             parsed_proxy_servers = json.loads(proxy_servers)
             kwargs["proxy_servers"] = parsed_proxy_servers
         except json.JSONDecodeError:
             console.print(f"proxy-servers={proxy_servers} could not be parsed as JSON")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ARGUMENT_ERROR)
     if client_cert is not None:
         kwargs["client_cert"] = client_cert
     if client_cert_key is not None:
@@ -596,7 +600,7 @@ def _sites_add_or_modify(
             kwargs["keyring"] = parsed_keyring
         except json.JSONDecodeError:
             console.print("The keyring argument could not be parsed as JSON")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=ARGUMENT_ERROR)
     if client_id is not None:
         kwargs["client_id"] = client_id
     if redirect_uri is not None:
@@ -617,7 +621,7 @@ def _sites_add_or_modify(
     if ctx.command.name == "add":
         if domain is None:
             console.print("You must supply at least --domain to a add a new site")
-            raise typer.Exit(code=2)
+            raise typer.Exit(code=ARGUMENT_ERROR)
 
         if name is None:
             name = domain
@@ -626,7 +630,7 @@ def _sites_add_or_modify(
             console.print(
                 f"A site with name {name} already exists, use the modify subcommand to alter it"
             )
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=PROGRAM_ERROR)
 
         if remove_anaconda_com and "anaconda.com" in sites.sites.root:
             del sites.sites.root["anaconda.com"]
@@ -642,7 +646,7 @@ def _sites_add_or_modify(
             console.print(
                 "You must supply at least one of --domain or --name to modify a site"
             )
-            raise typer.Exit(code=2)
+            raise typer.Exit(code=ARGUMENT_ERROR)
 
         key = sites.sites._find_at(name or domain)
         config = sites.sites.root[key]
@@ -690,13 +694,13 @@ def sites_remove(
         or ([site] == [s.domain for s in sites.sites.values()])
     ):
         console.print(f"{site} is the only configured site and cannot be removed")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=PROGRAM_ERROR)
 
     try:
         config = sites.sites[site]
     except UnknownSiteName as e:
         console.print(e.args[0])
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=PROGRAM_ERROR)
 
     sites.remove(site)
     if sites.default_site == config.site:

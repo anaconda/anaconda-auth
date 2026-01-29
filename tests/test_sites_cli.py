@@ -248,7 +248,7 @@ def test_add_new_site_bad_json(
             "--yes",
         ]
     )
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "could not be parsed as JSON" in result.stdout
 
 
