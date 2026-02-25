@@ -379,6 +379,16 @@ def conda_search_path(monkeypatch, tmp_path):
 
     monkeypatch.setattr(Path, "write_text", write_text)
 
+    # Also patch writes to condarc if we use the CondaRC.save() method
+    orig_save = condarc_module.CondaRC.save
+
+    def new_save(self, *args, **kwargs):
+        result = orig_save(self, *args, **kwargs)
+        context.reset_context()
+        return result
+
+    monkeypatch.setattr(condarc_module.CondaRC, "save", new_save)
+
     yield CondaRCPaths(user_path, prefix_path, sites_path)
 
 
