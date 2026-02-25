@@ -248,7 +248,7 @@ conda_deps =
     anaconda-anon-usage
     anaconda-client
     # Optionally install conda to test plugins
-    conda: conda
+    conda: conda=25
     # Keep testing semver<3 until version 3+ released to defaults
     # mattkram: Drop semver2 testing because of issues installing on Windows
     #           See: https://github.com/anaconda/anaconda-auth/issues/221
