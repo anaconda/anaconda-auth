@@ -367,6 +367,18 @@ def conda_search_path(monkeypatch, tmp_path):
         # Reset the context object with these new settings
         context.reset_context()
 
+    # Patch write_text to reset conda's context after writing condarc. This
+    # forces reload of the configuration, which is cached.
+    orig_write_text = Path.write_text
+
+    def write_text(self, *args, **kwargs):
+        result = orig_write_text(self, *args, **kwargs)
+        if self is user_path:
+            context.reset_context()
+        return result
+
+    monkeypatch.setattr(Path, "write_text", write_text)
+
     yield CondaRCPaths(user_path, prefix_path, sites_path)
 
 

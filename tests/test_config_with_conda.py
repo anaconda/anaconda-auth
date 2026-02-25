@@ -7,7 +7,6 @@ from pytest import MonkeyPatch
 from anaconda_auth.config import AnacondaAuthConfig
 
 conda = pytest.importorskip("conda")
-from conda.base import context  # noqa: E402
 
 
 @pytest.mark.usefixtures("disable_dot_env")
@@ -23,7 +22,6 @@ def test_conda_context_apply_to_default_site(
             https: 127.0.0.1:80
     """)
     )
-    context.reset_context()
 
     config = AnacondaAuthConfig()
     assert config.proxy_servers == {"http": "127.0.0.1:80", "https": "127.0.0.1:80"}
@@ -46,7 +44,6 @@ def test_conda_context_ssl_verify_cert_path(
             """
         )
     )
-    context.reset_context()
 
     config = AnacondaAuthConfig()
     assert config.ssl_verify == str(cert_path)
@@ -66,7 +63,6 @@ def test_conda_context_priority_config_toml(
             https: 127.0.0.1:80
     """)
     )
-    context.reset_context()
 
     config_toml.write_text(
         dedent("""\
@@ -112,7 +108,6 @@ def test_conda_context_priority_sites(
             https: 127.0.0.1:80
     """)
     )
-    context.reset_context()
 
     config_toml.write_text(
         dedent("""\
