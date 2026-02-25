@@ -170,10 +170,8 @@ class CondaContextSettingsSource(AnacondaSettingsSource):
 
         try:
             from conda.base.context import Context
-            from conda.base.context import reset_context
 
             context = Context()
-            context = reset_context()
 
             if context.proxy_servers:
                 values["proxy_servers"] = dict(context.proxy_servers)
