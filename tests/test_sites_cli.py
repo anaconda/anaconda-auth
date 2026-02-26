@@ -485,6 +485,82 @@ def test_modify_keeps_ssl_verify_false(
     )
 
 
+def test_modify_preserves_default(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "anaconda.com"
+
+            [sites."anaconda.com"]
+
+            [sites."foo.local"]
+            domain = "foo.local"
+            use_device_flow = true
+            """
+        )
+    )
+
+    result = invoke_cli(
+        ["sites", "modify", "--domain", "foo.local", "--no-use-device-flow", "--yes"]
+    )
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "anaconda.com"
+
+        [sites."anaconda.com"]
+
+        [sites."foo.local"]
+        domain = "foo.local"
+        use_device_flow = false
+        """
+    )
+
+
+def test_modify_preserves_default_with_no_default_flag(
+    config_toml: Path, invoke_cli: CLIInvoker
+) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "anaconda.com"
+
+            [sites."anaconda.com"]
+
+            [sites."foo.local"]
+            domain = "foo.local"
+            use_device_flow = true
+            """
+        )
+    )
+
+    result = invoke_cli(
+        [
+            "sites",
+            "modify",
+            "--domain",
+            "foo.local",
+            "--no-use-device-flow",
+            "--no-default",
+            "--yes",
+        ]
+    )
+    assert result.exit_code == 0
+
+    assert config_toml.read_text() == dedent(
+        """\
+        default_site = "anaconda.com"
+
+        [sites."anaconda.com"]
+
+        [sites."foo.local"]
+        domain = "foo.local"
+        use_device_flow = false
+        """
+    )
+
+
 def test_swap_default_keeps_ssl_verify_false(
     config_toml: Path, invoke_cli: CLIInvoker
 ) -> None:

@@ -654,7 +654,7 @@ def _sites_add_or_modify(
 
         sites.add(config, name=config.site)
 
-        if default is not None:
+        if default:
             sites.default_site = config.site
 
     _confirm_write(sites, yes)
