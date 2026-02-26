@@ -1,6 +1,6 @@
 try:
     from anaconda_auth._version import version as __version__
-except ImportError:  # pragma: nocover
+except ImportError:  # pragma: no cover
     __version__ = "unknown"
 
 from anaconda_auth.actions import login  # noqa: E402
