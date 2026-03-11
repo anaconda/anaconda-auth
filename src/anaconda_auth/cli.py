@@ -24,6 +24,7 @@ from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
+from anaconda_auth.environments import check_and_configure_environments
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
@@ -318,6 +319,12 @@ def main(
     console.print(ctx.get_help())
 
 
+def _post_login_setup() -> None:
+    """Post-login pipeline: fetch org features, check for environments,
+    configure conda if needed."""
+    check_and_configure_environments()
+
+
 @app.command("login")
 def auth_login(
     force: Annotated[bool, typer.Option()] = False,
@@ -346,6 +353,7 @@ def auth_login(
             raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
+    _post_login_setup()
 
 
 @app.command(name="whoami")
