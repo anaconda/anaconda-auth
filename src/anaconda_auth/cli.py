@@ -30,7 +30,6 @@ from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
-from anaconda_cli_base.console import select_from_list
 from anaconda_cli_base.exceptions import register_error_handler
 
 CHECK_MARK = "[bold green]✔︎[/bold green]"
@@ -353,26 +352,8 @@ def _post_login_setup() -> None:
             return
         console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
 
-    if len(env_orgs) == 1:
-        org_name = env_orgs[0]
-        console.print(
-            f"Only one organization found, automatically selecting: [cyan]{org_name}[/cyan]"
-        )
-    else:
-        org_name = select_from_list(
-            "Please select an organization to register:",
-            choices=env_orgs,
-        )
-
-    console.print(f"Registering with organization [cyan]{org_name}[/cyan]...")
-    if register_org(org_name):
-        console.print(
-            f"{CHECK_MARK} Registered with [cyan]{org_name}[/cyan] successfully."
-        )
-    else:
-        console.print(
-            f"[bold red]Error:[/bold red] Failed to register with [cyan]{org_name}[/cyan]."
-        )
+    # Delegate org selection and registration to the plugin
+    register_org()
 
 
 @app.command("login")
