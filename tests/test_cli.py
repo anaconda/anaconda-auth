@@ -165,3 +165,38 @@ def test_fallback_to_anaconda_client(
     # Calls are delegated to anaconda-client
     binstar_main.assert_called_once()
     binstar_main.assert_called_once_with(args, allow_plugin_main=False)
+
+
+def test_post_login_setup_called_after_login(
+    mocker: MockerFixture,
+) -> None:
+    from anaconda_auth.token import TokenNotFoundError
+
+    mocker.patch("anaconda_auth.cli.login")
+    mocker.patch(
+        "anaconda_auth.cli.TokenInfo.load",
+        side_effect=TokenNotFoundError,
+    )
+    mock_setup = mocker.patch("anaconda_auth.cli._post_login_setup")
+
+    from anaconda_auth.cli import auth_login
+
+    try:
+        auth_login(force=False, ssl_verify=None, at=None)
+    except SystemExit:
+        pass
+
+    mock_setup.assert_called_once()
+
+
+def test_post_login_setup_calls_check_and_configure(
+    mocker: MockerFixture,
+) -> None:
+    mock_check = mocker.patch(
+        "anaconda_auth.cli.check_and_configure_environments"
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_check.assert_called_once()
