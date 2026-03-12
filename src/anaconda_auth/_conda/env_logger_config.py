@@ -54,10 +54,11 @@ def register_org() -> bool:
     """Register with an organization via conda env-log.
 
     Delegates org selection and registration to the plugin command.
+    The subprocess inherits stdio so the plugin can interact with the user.
     """
     args = ["conda", "env-log", "register"]
     proc = subprocess.run(args)
     if proc.returncode != 0:
-        logger.debug("Failed to register org: %s", proc.stderr)
+        logger.debug("Failed to register org (exit code %d)", proc.returncode)
         return False
     return True
