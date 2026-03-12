@@ -30,6 +30,7 @@ from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
+from anaconda_cli_base.console import select_from_list
 from anaconda_cli_base.exceptions import register_error_handler
 
 CHECK_MARK = "[bold green]✔︎[/bold green]"
@@ -348,28 +349,26 @@ def _post_login_setup() -> None:
         console.print("Installing anaconda-env-manager...")
         success, error = install_env_manager()
         if not success:
-            console.print(f"[red]Failed to install anaconda-env-manager.[/red]\n{error}")
+            console.print(f"[bold red]Error:[/bold red] Failed to install anaconda-env-manager.\n{error}")
             return
-        console.print("[green]anaconda-env-manager installed successfully.[/green]")
+        console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
 
     if len(env_orgs) == 1:
         org_name = env_orgs[0]
+        console.print(
+            f"Only one organization found, automatically selecting: [cyan]{org_name}[/cyan]"
+        )
     else:
-        console.print("Multiple organizations have the environments feature:")
-        for i, org in enumerate(env_orgs, 1):
-            console.print(f"  {i}. {org}")
+        org_name = select_from_list(
+            "Please select an organization to register:",
+            choices=env_orgs,
+        )
 
-        choice = typer.prompt("Select an organization", type=int, default=1)
-        if choice < 1 or choice > len(env_orgs):
-            console.print("[red]Invalid selection.[/red]")
-            return
-        org_name = env_orgs[choice - 1]
-
-    console.print(f"Registering with organization '{org_name}'...")
+    console.print(f"Registering with organization [cyan]{org_name}[/cyan]...")
     if register_org(org_name):
-        console.print(f"[green]Registered with '{org_name}' successfully.[/green]")
+        console.print(f"{CHECK_MARK} Registered with [cyan]{org_name}[/cyan] successfully.")
     else:
-        console.print(f"[red]Failed to register with '{org_name}'.[/red]")
+        console.print(f"[bold red]Error:[/bold red] Failed to register with [cyan]{org_name}[/cyan].")
 
 
 @app.command("login")
