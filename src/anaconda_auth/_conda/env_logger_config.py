@@ -50,11 +50,14 @@ def install_env_manager() -> tuple[bool, str]:
     return True, ""
 
 
-def register_org(org_name: str) -> bool:
-    """Register with an organization via conda env-log."""
-    args = ["conda", "env-log", "register", "--organization-name", org_name]
-    proc = subprocess.run(args, capture_output=True, text=True)
+def register_org() -> bool:
+    """Register with an organization via conda env-log.
+
+    Delegates org selection and registration to the plugin command.
+    """
+    args = ["conda", "env-log", "register"]
+    proc = subprocess.run(args)
     if proc.returncode != 0:
-        logger.debug("Failed to register org '%s': %s", org_name, proc.stderr)
+        logger.debug("Failed to register org: %s", proc.stderr)
         return False
     return True
