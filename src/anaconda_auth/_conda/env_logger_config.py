@@ -2,7 +2,8 @@ import json
 import logging
 import subprocess
 
-from anaconda_auth._conda.conda_api import Commands, run_command
+from anaconda_auth._conda.conda_api import Commands
+from anaconda_auth._conda.conda_api import run_command
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,12 @@ def install_env_manager() -> tuple[bool, str]:
         Tuple of (success, error_message).
     """
     args = [
-        "conda", "install", "--name", "base",
-        f"{ENV_MANAGER_CHANNEL}::{ENV_MANAGER_PACKAGE}", "-y",
+        "conda",
+        "install",
+        "--name",
+        "base",
+        f"{ENV_MANAGER_CHANNEL}::{ENV_MANAGER_PACKAGE}",
+        "-y",
     ]
     proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:

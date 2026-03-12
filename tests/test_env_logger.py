@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from pytest_mock import MockerFixture
 
 
@@ -45,9 +44,7 @@ class TestFetchOrgFeatures:
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
         mock_resp.json.return_value = {
-            "organization_features": [
-                {"org": "my-org", "features": ["environments"]}
-            ]
+            "organization_features": [{"org": "my-org", "features": ["environments"]}]
         }
         mock_client.return_value = mock_client
         mock_client.get.return_value = mock_resp
