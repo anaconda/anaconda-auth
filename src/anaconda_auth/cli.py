@@ -323,11 +323,9 @@ def main(
 def _post_login_setup() -> None:
     """Post-login pipeline: fetch org features, check for environments,
     install env-manager and register org if needed."""
-    from anaconda_auth._conda.env_logger_config import (
-        install_env_manager,
-        is_env_manager_installed,
-        register_org,
-    )
+    from anaconda_auth._conda.env_logger_config import install_env_manager
+    from anaconda_auth._conda.env_logger_config import is_env_manager_installed
+    from anaconda_auth._conda.env_logger_config import register_org
 
     org_features = fetch_org_features()
     if org_features is None:
