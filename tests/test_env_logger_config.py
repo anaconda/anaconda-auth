@@ -89,7 +89,7 @@ class TestRegisterOrg:
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
         )
-        assert register_org("my-org") is True
+        assert register_org() is True
 
     def test_returns_false_on_failure(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import register_org
@@ -99,4 +99,4 @@ class TestRegisterOrg:
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
         )
-        assert register_org("my-org") is False
+        assert register_org() is False

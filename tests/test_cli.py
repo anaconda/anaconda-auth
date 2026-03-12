@@ -245,7 +245,7 @@ def test_post_login_setup_installs_and_registers_single_org(
 
     _post_login_setup()
     mock_install.assert_called_once()
-    mock_register.assert_called_once_with("my-org")
+    mock_register.assert_called_once()
 
 
 def test_post_login_setup_skips_install_when_already_installed(
@@ -271,7 +271,7 @@ def test_post_login_setup_skips_install_when_already_installed(
 
     _post_login_setup()
     mock_install.assert_not_called()
-    mock_register.assert_called_once_with("my-org")
+    mock_register.assert_called_once()
 
 
 def test_post_login_setup_aborts_when_user_declines_install(
