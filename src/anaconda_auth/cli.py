@@ -22,7 +22,8 @@ from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
-from anaconda_auth.environments import check_and_configure_environments
+from anaconda_auth.environments import fetch_org_features
+from anaconda_auth.environments import get_environments_orgs
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -321,8 +322,53 @@ def main(
 
 def _post_login_setup() -> None:
     """Post-login pipeline: fetch org features, check for environments,
-    configure conda if needed."""
-    check_and_configure_environments()
+    install env-manager and register org if needed."""
+    from anaconda_auth._conda.environments_config import (
+        install_env_manager,
+        is_env_manager_installed,
+        register_org,
+    )
+
+    org_features = fetch_org_features()
+    if org_features is None:
+        return
+
+    env_orgs = get_environments_orgs(org_features)
+    if not env_orgs:
+        return
+
+    if not is_env_manager_installed():
+        install = Confirm.ask(
+            "Anaconda Environment Manager is available for your organization. Install it?",
+            default=True,
+        )
+        if not install:
+            return
+
+        console.print("Installing anaconda-env-manager...")
+        if not install_env_manager():
+            console.print("[red]Failed to install anaconda-env-manager.[/red]")
+            return
+        console.print("[green]anaconda-env-manager installed successfully.[/green]")
+
+    if len(env_orgs) == 1:
+        org_name = env_orgs[0]
+    else:
+        console.print("Multiple organizations have the environments feature:")
+        for i, org in enumerate(env_orgs, 1):
+            console.print(f"  {i}. {org}")
+
+        choice = typer.prompt("Select an organization", type=int, default=1)
+        if choice < 1 or choice > len(env_orgs):
+            console.print("[red]Invalid selection.[/red]")
+            return
+        org_name = env_orgs[choice - 1]
+
+    console.print(f"Registering with organization '{org_name}'...")
+    if register_org(org_name):
+        console.print(f"[green]Registered with '{org_name}' successfully.[/green]")
+    else:
+        console.print(f"[red]Failed to register with '{org_name}'.[/red]")
 
 
 @app.command("login")
