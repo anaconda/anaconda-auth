@@ -339,7 +339,7 @@ def _post_login_setup() -> None:
 
     if not is_env_manager_installed():
         install = Confirm.ask(
-            "Anaconda Environment Manager is available for your organization. Install it?",
+            "Anaconda Environment Manager is required by your organization. It is recommended to install. Proceed?",
             default=True,
         )
         if not install:
