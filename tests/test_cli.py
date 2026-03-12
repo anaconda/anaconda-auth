@@ -189,12 +189,108 @@ def test_post_login_setup_called_after_login(
     mock_setup.assert_called_once()
 
 
-def test_post_login_setup_calls_check_and_configure(
+def test_post_login_setup_skips_when_fetch_fails(
     mocker: MockerFixture,
 ) -> None:
-    mock_check = mocker.patch("anaconda_auth.cli.check_and_configure_environments")
+    mocker.patch("anaconda_auth.cli.fetch_org_features", return_value=None)
+    mock_installed = mocker.patch(
+        "anaconda_auth._conda.environments_config.is_env_manager_installed"
+    )
 
     from anaconda_auth.cli import _post_login_setup
 
     _post_login_setup()
-    mock_check.assert_called_once()
+    mock_installed.assert_not_called()
+
+
+def test_post_login_setup_skips_when_no_env_orgs(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["community"]}],
+    )
+    mock_installed = mocker.patch(
+        "anaconda_auth._conda.environments_config.is_env_manager_installed"
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_installed.assert_not_called()
+
+
+def test_post_login_setup_installs_and_registers_single_org(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.environments_config.is_env_manager_installed",
+        return_value=False,
+    )
+    mocker.patch("rich.prompt.Confirm.ask", return_value=True)
+    mock_install = mocker.patch(
+        "anaconda_auth._conda.environments_config.install_env_manager",
+        return_value=True,
+    )
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.environments_config.register_org",
+        return_value=True,
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_install.assert_called_once()
+    mock_register.assert_called_once_with("my-org")
+
+
+def test_post_login_setup_skips_install_when_already_installed(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.environments_config.is_env_manager_installed",
+        return_value=True,
+    )
+    mock_install = mocker.patch(
+        "anaconda_auth._conda.environments_config.install_env_manager",
+    )
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.environments_config.register_org",
+        return_value=True,
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_install.assert_not_called()
+    mock_register.assert_called_once_with("my-org")
+
+
+def test_post_login_setup_aborts_when_user_declines_install(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.environments_config.is_env_manager_installed",
+        return_value=False,
+    )
+    mocker.patch("rich.prompt.Confirm.ask", return_value=False)
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.environments_config.register_org",
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_register.assert_not_called()
