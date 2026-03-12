@@ -22,9 +22,9 @@ from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
+from anaconda_auth.environments import check_and_configure_environments
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
-from anaconda_auth.environments import check_and_configure_environments
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path

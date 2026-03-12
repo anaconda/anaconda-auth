@@ -192,9 +192,7 @@ def test_post_login_setup_called_after_login(
 def test_post_login_setup_calls_check_and_configure(
     mocker: MockerFixture,
 ) -> None:
-    mock_check = mocker.patch(
-        "anaconda_auth.cli.check_and_configure_environments"
-    )
+    mock_check = mocker.patch("anaconda_auth.cli.check_and_configure_environments")
 
     from anaconda_auth.cli import _post_login_setup
 
