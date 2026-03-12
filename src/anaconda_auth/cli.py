@@ -347,7 +347,9 @@ def _post_login_setup() -> None:
         console.print("Installing anaconda-env-manager...")
         success, error = install_env_manager()
         if not success:
-            console.print(f"[bold red]Error:[/bold red] Failed to install anaconda-env-manager.\n{error}")
+            console.print(
+                f"[bold red]Error:[/bold red] Failed to install anaconda-env-manager.\n{error}"
+            )
             return
         console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
 
@@ -364,9 +366,13 @@ def _post_login_setup() -> None:
 
     console.print(f"Registering with organization [cyan]{org_name}[/cyan]...")
     if register_org(org_name):
-        console.print(f"{CHECK_MARK} Registered with [cyan]{org_name}[/cyan] successfully.")
+        console.print(
+            f"{CHECK_MARK} Registered with [cyan]{org_name}[/cyan] successfully."
+        )
     else:
-        console.print(f"[bold red]Error:[/bold red] Failed to register with [cyan]{org_name}[/cyan].")
+        console.print(
+            f"[bold red]Error:[/bold red] Failed to register with [cyan]{org_name}[/cyan]."
+        )
 
 
 @app.command("login")
