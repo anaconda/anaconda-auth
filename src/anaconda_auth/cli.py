@@ -346,8 +346,9 @@ def _post_login_setup() -> None:
             return
 
         console.print("Installing anaconda-env-manager...")
-        if not install_env_manager():
-            console.print("[red]Failed to install anaconda-env-manager.[/red]")
+        success, error = install_env_manager()
+        if not success:
+            console.print(f"[red]Failed to install anaconda-env-manager.[/red]\n{error}")
             return
         console.print("[green]anaconda-env-manager installed successfully.[/green]")
 
