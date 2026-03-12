@@ -353,7 +353,12 @@ def _post_login_setup() -> None:
         console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
 
     # Delegate org selection and registration to the plugin
-    register_org()
+    if not register_org():
+        console.print(
+            "\n[bold yellow]Warning:[/bold yellow] Failed to register client token.\n"
+            "You can retry registration manually by running:\n"
+            "  [green]conda env-log register[/green]"
+        )
 
 
 @app.command("login")
