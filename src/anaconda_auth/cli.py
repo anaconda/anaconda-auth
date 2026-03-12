@@ -22,8 +22,8 @@ from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
-from anaconda_auth.environments import fetch_org_features
-from anaconda_auth.environments import get_environments_orgs
+from anaconda_auth.env_logger import fetch_org_features
+from anaconda_auth.env_logger import get_orgs_with_env_logger
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -323,7 +323,7 @@ def main(
 def _post_login_setup() -> None:
     """Post-login pipeline: fetch org features, check for environments,
     install env-manager and register org if needed."""
-    from anaconda_auth._conda.environments_config import (
+    from anaconda_auth._conda.env_logger_config import (
         install_env_manager,
         is_env_manager_installed,
         register_org,
@@ -333,7 +333,7 @@ def _post_login_setup() -> None:
     if org_features is None:
         return
 
-    env_orgs = get_environments_orgs(org_features)
+    env_orgs = get_orgs_with_env_logger(org_features)
     if not env_orgs:
         return
 
