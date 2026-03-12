@@ -294,3 +294,30 @@ def test_post_login_setup_aborts_when_user_declines_install(
 
     _post_login_setup()
     mock_register.assert_not_called()
+
+
+def test_post_login_setup_shows_warning_when_register_fails(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
+        return_value=True,
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.register_org",
+        return_value=False,
+    )
+    mock_print = mocker.patch("anaconda_auth.cli.console.print")
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+
+    # Verify the warning message includes the retry command
+    warning_call = mock_print.call_args_list[-1]
+    message = warning_call[0][0]
+    assert "conda env-log register" in message

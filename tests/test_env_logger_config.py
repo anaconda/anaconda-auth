@@ -84,7 +84,7 @@ class TestRegisterOrg:
     def test_returns_true_on_success(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import register_org
 
-        mock_proc = mocker.MagicMock(returncode=0, stderr="")
+        mock_proc = mocker.MagicMock(returncode=0)
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
@@ -94,7 +94,7 @@ class TestRegisterOrg:
     def test_returns_false_on_failure(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import register_org
 
-        mock_proc = mocker.MagicMock(returncode=1, stderr="error")
+        mock_proc = mocker.MagicMock(returncode=1)
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
