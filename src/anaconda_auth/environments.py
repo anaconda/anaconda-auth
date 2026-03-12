@@ -1,7 +1,9 @@
+import logging
 from typing import Optional
 
-from anaconda_auth._conda.environments_config import configure_conda_for_environments
 from anaconda_auth.client import BaseClient
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_org_features() -> Optional[list]:
@@ -15,21 +17,10 @@ def fetch_org_features() -> Optional[list]:
         return None
 
 
-def get_environments_org(org_features: list) -> Optional[str]:
-    """Return the org name of the first org with environments enabled,
-    or None if no org has it."""
-    for org in org_features:
-        if "environments" in org.get("features", []):
-            return org.get("org", "")
-    return None
-
-
-def check_and_configure_environments() -> None:
-    """Fetch org features, check for environments, configure conda."""
-    org_features = fetch_org_features()
-    if org_features is None:
-        return
-
-    org_name = get_environments_org(org_features)
-    if org_name is not None:
-        configure_conda_for_environments(org_name)
+def get_environments_orgs(org_features: list) -> list[str]:
+    """Return org names that have the environments feature enabled."""
+    return [
+        org.get("org", "")
+        for org in org_features
+        if "environments" in org.get("features", [])
+    ]
