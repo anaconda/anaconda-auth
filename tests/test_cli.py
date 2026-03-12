@@ -234,7 +234,7 @@ def test_post_login_setup_installs_and_registers_single_org(
     mocker.patch("rich.prompt.Confirm.ask", return_value=True)
     mock_install = mocker.patch(
         "anaconda_auth._conda.env_logger_config.install_env_manager",
-        return_value=True,
+        return_value=(True, ""),
     )
     mock_register = mocker.patch(
         "anaconda_auth._conda.env_logger_config.register_org",
