@@ -189,9 +189,22 @@ def test_post_login_setup_called_after_login(
     mock_setup.assert_called_once()
 
 
+def test_post_login_setup_skips_when_conda_not_available(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value=None)
+    mock_fetch = mocker.patch("anaconda_auth.cli.fetch_org_features")
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_fetch.assert_not_called()
+
+
 def test_post_login_setup_skips_when_fetch_fails(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch("anaconda_auth.cli.fetch_org_features", return_value=None)
     mock_installed = mocker.patch(
         "anaconda_auth._conda.env_logger_config.is_env_manager_installed"
@@ -206,6 +219,7 @@ def test_post_login_setup_skips_when_fetch_fails(
 def test_post_login_setup_skips_when_no_env_orgs(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch(
         "anaconda_auth.cli.fetch_org_features",
         return_value=[{"org": "my-org", "features": ["community"]}],
@@ -223,6 +237,7 @@ def test_post_login_setup_skips_when_no_env_orgs(
 def test_post_login_setup_installs_and_registers_single_org(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch(
         "anaconda_auth.cli.fetch_org_features",
         return_value=[{"org": "my-org", "features": ["environments"]}],
@@ -251,6 +266,7 @@ def test_post_login_setup_installs_and_registers_single_org(
 def test_post_login_setup_skips_install_when_already_installed(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch(
         "anaconda_auth.cli.fetch_org_features",
         return_value=[{"org": "my-org", "features": ["environments"]}],
@@ -277,6 +293,7 @@ def test_post_login_setup_skips_install_when_already_installed(
 def test_post_login_setup_aborts_when_user_declines_install(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch(
         "anaconda_auth.cli.fetch_org_features",
         return_value=[{"org": "my-org", "features": ["environments"]}],
@@ -299,6 +316,7 @@ def test_post_login_setup_aborts_when_user_declines_install(
 def test_post_login_setup_shows_warning_when_register_fails(
     mocker: MockerFixture,
 ) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
     mocker.patch(
         "anaconda_auth.cli.fetch_org_features",
         return_value=[{"org": "my-org", "features": ["environments"]}],
