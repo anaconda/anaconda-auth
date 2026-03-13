@@ -12,7 +12,9 @@ class TestIsEnvManagerInstalled:
         from anaconda_auth._conda.env_logger_config import is_env_manager_installed
 
         packages = [{"name": "anaconda-env-manager", "version": "0.1.0"}]
-        mock_proc = mocker.MagicMock(returncode=0, stdout=json.dumps(packages), stderr="")
+        mock_proc = mocker.MagicMock(
+            returncode=0, stdout=json.dumps(packages), stderr=""
+        )
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
@@ -53,7 +55,9 @@ class TestIsEnvManagerInstalled:
         from anaconda_auth._conda.env_logger_config import is_env_manager_installed
 
         packages = [{"name": "some-other-package", "version": "1.0"}]
-        mock_proc = mocker.MagicMock(returncode=0, stdout=json.dumps(packages), stderr="")
+        mock_proc = mocker.MagicMock(
+            returncode=0, stdout=json.dumps(packages), stderr=""
+        )
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
