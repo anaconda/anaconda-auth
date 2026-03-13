@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import warnings
+from pathlib import Path
 from textwrap import dedent
 from typing import Annotated
 from typing import Any
@@ -323,13 +324,20 @@ def main(
     console.print(ctx.get_help())
 
 
+_ENV_MANAGER_SETUP_MARKER = Path.home() / ".anaconda" / ".env-manager-setup-complete"
+
+
 def _post_login_setup() -> None:
     """Post-login pipeline: fetch org features, check for environments,
     install env-manager and register org if needed.
 
-    Skipped entirely when conda is not available on PATH.
+    Skipped entirely when conda is not available on PATH or when
+    setup has already been completed (marker file exists).
     """
     import shutil
+
+    if _ENV_MANAGER_SETUP_MARKER.exists():
+        return
 
     conda_path = shutil.which("conda")
     if not conda_path:
@@ -371,6 +379,11 @@ def _post_login_setup() -> None:
             "You can retry registration manually by running:\n"
             "  [green]conda env-log register[/green]"
         )
+        return
+
+    # Mark setup as complete so subsequent logins skip this flow
+    _ENV_MANAGER_SETUP_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    _ENV_MANAGER_SETUP_MARKER.touch()
 
 
 @app.command("login")
