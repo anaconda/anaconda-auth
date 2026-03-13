@@ -17,8 +17,6 @@ from rich.prompt import Confirm
 from rich.syntax import Syntax
 from rich.table import Table
 
-logger = logging.getLogger(__name__)
-
 from anaconda_auth import __version__
 from anaconda_auth.actions import login
 from anaconda_auth.actions import logout
@@ -34,6 +32,8 @@ from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+
+logger = logging.getLogger(__name__)
 
 CHECK_MARK = "[bold green]✔︎[/bold green]"
 
