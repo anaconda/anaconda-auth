@@ -322,7 +322,15 @@ def main(
 
 def _post_login_setup() -> None:
     """Post-login pipeline: fetch org features, check for environments,
-    install env-manager and register org if needed."""
+    install env-manager and register org if needed.
+
+    Skipped entirely when conda is not available on PATH.
+    """
+    import shutil
+
+    if not shutil.which("conda"):
+        return
+
     from anaconda_auth._conda.env_logger_config import install_env_manager
     from anaconda_auth._conda.env_logger_config import is_env_manager_installed
     from anaconda_auth._conda.env_logger_config import register_org
