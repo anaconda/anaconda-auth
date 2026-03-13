@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 import warnings
@@ -15,6 +16,8 @@ from requests.exceptions import JSONDecodeError
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 from rich.table import Table
+
+logger = logging.getLogger(__name__)
 
 from anaconda_auth import __version__
 from anaconda_auth.actions import login
@@ -398,7 +401,15 @@ def auth_login(
             raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
-    _post_login_setup()
+    try:
+        _post_login_setup()
+    except Exception:
+        logger.debug("Post-login setup failed", exc_info=True)
+        console.print(
+            "\n[bold yellow]Warning:[/bold yellow] Post-login setup could not be completed.\n"
+            "You can configure environment management manually by running:\n"
+            "  [green]conda env-log register[/green]"
+        )
 
 
 @app.command(name="whoami")
