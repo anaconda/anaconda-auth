@@ -328,7 +328,8 @@ def _post_login_setup() -> None:
     """
     import shutil
 
-    if not shutil.which("conda"):
+    conda_path = shutil.which("conda")
+    if not conda_path:
         return
 
     from anaconda_auth._conda.env_logger_config import install_env_manager
@@ -343,7 +344,7 @@ def _post_login_setup() -> None:
     if not env_orgs:
         return
 
-    if not is_env_manager_installed():
+    if not is_env_manager_installed(conda_path):
         install = Confirm.ask(
             "Anaconda Environment Manager is required by your organization. It is recommended to install. Proceed?",
             default=True,
@@ -352,7 +353,7 @@ def _post_login_setup() -> None:
             return
 
         console.print("Installing anaconda-env-manager...")
-        success, error = install_env_manager()
+        success, error = install_env_manager(conda_path)
         if not success:
             console.print(
                 f"[bold red]Error:[/bold red] Failed to install anaconda-env-manager.\n{error}"
@@ -361,7 +362,7 @@ def _post_login_setup() -> None:
         console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
 
     # Delegate org selection and registration to the plugin
-    if not register_org():
+    if not register_org(conda_path):
         console.print(
             "\n[bold yellow]Warning:[/bold yellow] Failed to register client token.\n"
             "You can retry registration manually by running:\n"
