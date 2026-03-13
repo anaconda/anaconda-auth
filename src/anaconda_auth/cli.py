@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import os
 import sys
 import warnings
@@ -329,7 +330,6 @@ def _post_login_setup() -> None:
 
     Skipped entirely when conda is not available on PATH.
     """
-    import shutil
 
     conda_path = shutil.which("conda")
     if not conda_path:
