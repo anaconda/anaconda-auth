@@ -268,7 +268,7 @@ def main(
     ] = None,
 ) -> None:
     cmd_start_time = datetime.now()
-    setup_telemetry(_obtain_site_config(), __version__)
+    setup_telemetry(AnacondaAuthSitesConfig(), __version__)
     log = get_telemetry_logger(__name__)
 
     if version:

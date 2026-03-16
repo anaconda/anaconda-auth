@@ -24,7 +24,7 @@ def setup_telemetry(cfg: AnacondaAuthSite, version: str) -> None:
 
         initialize_telemetry(config=config, attributes=attributes)
 
-    except:
+    except Exception:
         console.print("Otel failed to initialize.")
         pass
 
@@ -34,7 +34,7 @@ def get_telemetry_logger(name: str) -> logging.Logger:
     try:
         log.addHandler(get_telemetry_logger_handler())
         return log
-    except:
+    except Exception:
         console.print("Otel logger failed to initialize.")
 
     return log
