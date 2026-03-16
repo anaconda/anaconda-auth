@@ -12,19 +12,21 @@ dependencies = [
   "requests",
   "cryptography >=3.4.0",  # see pyjwt
   "semver<4",
-  "anaconda-cli-base >=0.5.4"
+  "anaconda-cli-base >=0.8.1",
+  "httpx"
 ]
 description = "A client auth library for Anaconda APIs"
 dynamic = ["version"]
 license = {text = "BSD-3-Clause"}
 name = "anaconda-auth"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.entry-points."anaconda_cli.subcommand"]
 auth = "anaconda_auth.cli:app"
 # TODO: Deprecated plugin name
 cloud = "anaconda_cloud_auth.cli:app"
+sites = "anaconda_auth.cli:sites_app"
 token = "anaconda_auth.repo:app"
 
 [project.entry-points.conda]
@@ -96,7 +98,7 @@ disallow_untyped_defs = true
 files = [
   "src/**/*.py"
 ]
-python_version = "3.9"
+python_version = "3.10"
 
 [[tool.mypy.overrides]]
 ignore_errors = true
@@ -180,7 +182,7 @@ target-version = "py38"
 [tool.ruff.lint]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
-ignore = ["E501"]
+ignore = ["E501", "UP007"]
 # see https://docs.astral.sh/ruff/rules/
 select = ["F", "E", "W", "I", "UP", "TID"]
 
@@ -201,7 +203,7 @@ legacy_tox_ini = """
 [tox]
 envlist =
     py39
-    py310-{old-keyring,new-keyring,pydantic1,pydantic2,semver2,semver3,conda}
+    py310-{old-keyring,new-keyring,pydantic1,pydantic2,conda}
     py311-{conda}
     py312-{conda}
     py313-{no-conda,conda}
@@ -215,11 +217,11 @@ requires =
 
 [gh-actions]
 python =
-    3.9: py39, mypy
     3.10: py310, mypy
     3.11: py311, mypy
     3.12: py312, mypy
     3.13: py313, mypy
+    3.14: py314, mypy
 
 [testenv]
 passenv =
@@ -233,6 +235,7 @@ deps =
     pytest
     pytest-cov
     pytest-mock
+    pytest-asyncio
     requests-mock
     # Exclude a release with a bug: see https://github.com/tiangolo/typer/discussions/795
     typer !=0.12.2
@@ -241,26 +244,33 @@ deps =
     old-keyring: keyring <=23.4.0
     pydantic1: pydantic <2.0
     pydantic2: pydantic >=2.0
-    # Keep testing semver<3 until version 3+ released to defaults
-    semver2: semver<3
-    semver3: semver>=3,<4
 conda_deps =
     anaconda-anon-usage
     anaconda-client
     # Optionally install conda to test plugins
     conda: conda
+    # Keep testing semver<3 until version 3+ released to defaults
+    # mattkram: Drop semver2 testing because of issues installing on Windows
+    #           See: https://github.com/anaconda/anaconda-auth/issues/221
+    # semver2: semver<3
+    # semver3: semver>=3,<4
 conda_channels =
     anaconda-cloud
     defaults
     conda-forge
 commands = pytest {posargs}
 
+[testenv:.package]
+conda_deps =
+
 [testenv:mypy]
+conda_deps =
 deps =
     mypy
     pytest
     pytest-cov
     pytest-mock
+    pytest-asyncio
     types-requests
     anaconda-cli-base
     typer

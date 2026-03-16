@@ -4,16 +4,21 @@ import os
 import traceback
 import warnings
 from collections import defaultdict
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import IO
 from typing import Any
 from typing import Generator
 from typing import Mapping
+from typing import NamedTuple
 from typing import Protocol
 from typing import Sequence
 from typing import cast
+from uuid import UUID
+from uuid import uuid4
 
+import jwt
 import pytest
 import typer
 from click.testing import Result
@@ -21,9 +26,13 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
 from anaconda_auth.client import BaseClient
+from anaconda_auth.repo import OrganizationData
+from anaconda_auth.repo import TokenCreateResponse
+from anaconda_auth.repo import TokenInfoResponse
 from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
 
@@ -212,12 +221,12 @@ def pytest_collection_modifyitems(config, items):  # type: ignore
 
 @pytest.fixture
 def with_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", "anon-token")
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", "anon-token")
 
 
 @pytest.fixture
 def without_aau_token(mocker: MockerFixture) -> None:
-    mocker.patch("anaconda_auth.config.AnacondaAuthConfig.aau_token", None)
+    mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", None)
 
 
 class MockResponse:
@@ -234,6 +243,12 @@ class MockResponse:
 
     def json(self) -> dict[str, Any]:
         return self.json_data or {}
+
+    def raise_for_status(self) -> None:
+        from requests.exceptions import HTTPError
+
+        if self.status_code >= 400:
+            raise HTTPError(f"Mocked HTTP error: {self.status_code}")
 
 
 class MockedRequest:
@@ -291,41 +306,259 @@ def config_toml(
     yield config_file
 
 
+class CondaRCPaths(NamedTuple):
+    user: Path
+    prefix: Path
+    sites: Path
+
+
 @pytest.fixture()
-def condarc_path(tmp_path):
-    """Returns the path of a temporary, empty .condarc file."""
-    condarc_path = tmp_path / ".condarc"
-    condarc_path.touch()
-    yield condarc_path
-
-
-@pytest.fixture(autouse=is_conda_installed())
-def patch_conda_config_to_use_temp_condarc(monkeypatch, condarc_path):
-    """Patch operations that modify .condarc to prevent modifying
-    the ~/.condarc of the user running the tests.
+def conda_search_path(monkeypatch, tmp_path):
     """
-    from conda.base import context as conda_context
-    from conda.base.context import reset_context
+    Build an independent, empty set of conda configuration locations
+    that we can write to to emulate various combinations of user,
+    prefix, and site configuration data, while remaining isolated
+    from the local user's existing configuration.
+    """
+    user_path = tmp_path / ".condarc"
+    prefix_path = tmp_path / "prefix" / "condarc.d"
+    sites_path = tmp_path / ".conda" / "condarc.d"
+    user_path.touch()
+    prefix_path.mkdir(parents=True)
+    sites_path.mkdir(parents=True)
 
+    # Patch where the condarc object looks for the user file
     from anaconda_auth._conda import condarc as condarc_module
-    from anaconda_auth._conda import repo_config
 
-    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", condarc_path)
+    monkeypatch.setattr(condarc_module, "DEFAULT_CONDARC_PATH", user_path)
+
+    # Patch where the default channel_settings config is written
+    from anaconda_auth._conda import config as plugin_config
+
+    config_path = prefix_path / "anaconda-auth.yml"
+    monkeypatch.setattr(plugin_config, "PREFIX_CONDARC_PATH", config_path)
 
     # Patch the handling of conda CLI arguments to pass the path to the condarc file
+    from anaconda_auth._conda import repo_config
+
     orig_get_condarc_args = repo_config._get_condarc_args
 
     def _new_get_condarc_args(*args, **kwargs) -> None:
-        return orig_get_condarc_args(condarc_file=str(condarc_path))
+        return orig_get_condarc_args(condarc_file=str(user_path))
 
     monkeypatch.setattr(repo_config, "_get_condarc_args", _new_get_condarc_args)
 
-    # Patch reset_context function such that it only loads config from our temp file
-    orig_reset_context = reset_context
+    if is_conda_installed():
+        # Patch the default conda search path
+        from conda.base import context
 
-    def _new_reset_context(*args, **kwargs):
-        return orig_reset_context([condarc_path])
+        # In the standard conda search path, CONDA_ROOT/condarc.d has
+        search_path = [prefix_path, sites_path, user_path, prefix_path]
+        monkeypatch.setattr(context, "SEARCH_PATH", search_path)
 
-    monkeypatch.setattr(conda_context, "reset_context", _new_reset_context)
-    reset_context()
-    yield condarc_path
+        # Patch reset_context function such that it only loads config from our temp file
+        orig_reset_context = context.reset_context
+
+        def _new_reset_context(*args, **kwargs):
+            return orig_reset_context(search_path)
+
+        monkeypatch.setattr(context, "reset_context", _new_reset_context)
+
+        # Reset the context object with these new settings
+        context.reset_context()
+
+        # Patch write_text to reset conda's context after writing condarc. This
+        # forces reload of the configuration, which is cached.
+        orig_write_text = Path.write_text
+
+        def write_text(self, *args, **kwargs):
+            result = orig_write_text(self, *args, **kwargs)
+            if self is user_path:
+                context.reset_context()
+            return result
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+
+        # Also patch writes to condarc if we use the CondaRC.save() method
+        orig_save = condarc_module.CondaRC.save
+
+        def new_save(self, *args, **kwargs):
+            result = orig_save(self, *args, **kwargs)
+            context.reset_context()
+            return result
+
+        monkeypatch.setattr(condarc_module.CondaRC, "save", new_save)
+
+    yield CondaRCPaths(user_path, prefix_path, sites_path)
+
+
+@pytest.fixture()
+def condarc_path(conda_search_path):
+    """
+    This is the old condarc_path fixture used in a lot of tests that need
+    nothing more than the user condarc pathname.
+    """
+    yield conda_search_path.user
+
+
+@pytest.fixture()
+def org_name() -> str:
+    return "test-org-name"
+
+
+@pytest.fixture()
+def token_is_installed(org_name: str, valid_api_key: TokenInfo) -> TokenInfo:
+    valid_api_key.set_repo_token(org_name=org_name, token="test-token")
+    valid_api_key.save()
+    return valid_api_key
+
+
+@pytest.fixture(params=[True, False])
+def no_tokens_installed(
+    request, mocker: MockerFixture, valid_api_key: TokenInfo
+) -> None:
+    if request.param:
+        # Remove the API key
+        valid_api_key.delete()
+    else:
+        # Models the situation where we have a valid API key but it has no attached repo tokens.
+        pass
+
+    # No legacy tokens either
+    mocker.patch(
+        "anaconda_auth._conda.repo_config.read_binstar_tokens",
+        return_value={},
+    )
+
+
+@pytest.fixture()
+def token_does_not_exist_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> None:
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        status_code=404,
+    )
+
+
+@pytest.fixture()
+def token_exists_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenInfoResponse:
+    token_info = TokenInfoResponse(
+        id=uuid4(), expires_at=datetime(year=2025, month=1, day=1)
+    )
+    requests_mock.get(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=token_info.model_dump(mode="json"),
+    )
+    return token_info
+
+
+@pytest.fixture()
+def token_created_in_service(
+    requests_mock: RequestMocker, org_name: str
+) -> TokenCreateResponse:
+    test_token = "test-token"
+    payload = {"token": test_token, "expires_at": "2025-01-01T00:00:00"}
+    requests_mock.put(
+        f"https://anaconda.com/api/organizations/{org_name}/ce/current-token",
+        json=payload,
+    )
+    return TokenCreateResponse(**payload)
+
+
+@pytest.fixture()
+def user_has_one_org(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Cool Organization",
+            }
+        ],
+    )
+    return [
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Cool Organization"
+        )
+    ]
+
+
+@pytest.fixture()
+def user_has_multiple_orgs(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> TokenCreateResponse:
+    first_id = uuid4()
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[
+            {
+                "id": str(first_id),
+                "name": "first-org",
+                "title": "My First Organization",
+            },
+            {
+                "id": str(business_org_id),
+                "name": org_name,
+                "title": "My Business Organization",
+            },
+        ],
+    )
+    return [
+        OrganizationData(id=first_id, name="first-org", title="My First Organizatoin"),
+        OrganizationData(
+            id=business_org_id, name=org_name, title="My Business Organization"
+        ),
+    ]
+
+
+@pytest.fixture()
+def user_has_no_orgs(
+    requests_mock: RequestMocker, user_has_no_subscriptions: None
+) -> list[OrganizationData]:
+    requests_mock.get(
+        "https://anaconda.com/api/organizations/my",
+        json=[],
+    )
+    return []
+
+
+@pytest.fixture()
+def business_org_id() -> UUID:
+    return uuid4()
+
+
+@pytest.fixture()
+def user_has_starter_subscription(
+    request, requests_mock: RequestMocker, business_org_id: UUID
+) -> None:
+    requests_mock.get(
+        "https://anaconda.com/api/account",
+        json={
+            "subscriptions": [
+                {
+                    "org_id": str(business_org_id),
+                    "product_code": "starter_subscription",
+                }
+            ]
+        },
+    )
+
+
+@pytest.fixture()
+def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
+    requests_mock.get("https://anaconda.com/api/account", json={})
+
+
+@pytest.fixture()
+def valid_api_key():
+    token_info = TokenInfo.load(create=True)
+    exp = int(datetime(2099, 1, 1).timestamp())
+    token_info.api_key = jwt.encode({"exp": exp}, key="secret", algorithm="HS256")
+    token_info.save()
+    return token_info

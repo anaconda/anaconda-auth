@@ -41,11 +41,22 @@ to Anaconda API Services.
 ╰────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
+### Change site
+
+To change the default site for all `anaconda` CLI plugins you can run
+
+```text
+anaconda sites add --name <site-name> --domain <domain> --default [extra-flags]
+```
+
+For the list of extra flags see the next section. This will edit your `~/.anaconda/config.toml`.
+
 ## Configuration
 
 You can configure `anaconda-auth` by either:
 
 1. Setting parameters in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
+1. Setting one or more sites in the `[sites.<name>]` section of the `~/.anaconda/config.toml` file.
 1. Setting one or more `ANACONDA_AUTH_` environment variables or using a `.env` file in your working directory.
 
 `ANACONDA_AUTH_` env vars or a `.env` file take precedence over the `~/.anaconda/config.toml` file.
@@ -54,14 +65,16 @@ You can configure `anaconda-auth` by either:
 
 The following parameters in the `plugin.auth` section control the login actions and API requests to Anaconda Services.
 
-| Parameter | Env variable | Description | Default value |
-|-|-|-|-|
-| `domain` | `ANACONDA_AUTH_DOMAIN` | Authentication and API request domain | `"anaconda.com"` |
-| `ssl_verify` | `ANACONDA_AUTH_SSL_VERIFY` | SSL verification for all requests | `True` |
-| `preferred_token_storage` | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE` | Where to store the login token; can be `"anaconda-keyring"` or `"system"` | `"anaconda-keyring"` |
-| `api_key` | `ANACONDA_AUTH_API_KEY` | API key; if `None`, defaults to keyring storage | `None` |
-| `extra_headers` | `ANACONDA_AUTH_EXTRA_HEADERS` | Extra request headers in JSON format | `None` |
-| `use_unified_repo_api_key` | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY` | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False` |
+| Parameter                   | Env variable                              | Description                                                                                                 | Default value        |
+| --------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| `domain`                    | `ANACONDA_AUTH_DOMAIN`                    | Authentication and API request domain                                                                       | `"anaconda.com"`     |
+| `ssl_verify`                | `ANACONDA_AUTH_SSL_VERIFY`                | SSL verification for all requests                                                                           | `True`               |
+| `preferred_token_storage`   | `ANACONDA_AUTH_PREFERRED_TOKEN_STORAGE`   | Where to store the login token; can be `"anaconda-keyring"` or `"system"`                                   | `"anaconda-keyring"` |
+| `api_key`                   | `ANACONDA_AUTH_API_KEY`                   | API key; if `None`, defaults to keyring storage                                                             | `None`               |
+| `extra_headers`             | `ANACONDA_AUTH_EXTRA_HEADERS`             | Extra request headers in JSON format                                                                        | `None`               |
+| `use_unified_repo_api_key`  | `ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY`  | Configures `anaconda-auth` to use unified api key for conda repository access instead of default repo token | `False`              |
+| `use_device_flow`           | `ANACONDA_AUTH_USE_DEVICE_FLOW`           | Configures `anaconda-auth` to use device flow grant                                                         | `False`              |
+| `disable_conda_auto_config` | `ANACONDA_AUTH_DISABLE_CONDA_AUTO_CONFIG` | Disable automatic configuration of conda's `channel_settings`                                               | `False`              |
 
 ### Example
 
@@ -74,6 +87,72 @@ ssl_verify = false
 preferred_token_storage = "system"
 ```
 
+### Multi-site configuration
+
+This plugin supports configuration of multiple sites for use with
+`anaconda login` and `BaseClient`. Each of the above parameters can be
+set within a `[sites.<name>]` table within `~/.anaconda/config.toml`.
+For example
+
+```toml
+[sites.on-prem]
+domain = "my.site.foo.com"
+ssl_verify = false
+```
+
+When utilizing a site with `BaseClient(site="<name>")` the global
+`[plugin.auth]` table acts as a fallback, the site config will utilize any value in `[plugin.auth]` that is *not* explicitly overridden in the `[sites]` table. Finally, all value of any configured site can be overridden with the `ANACONDA_AUTH_*` env vars above.
+
+You can have any number of this tables within the config file. To set
+a site as default use `default_site = "<name>"` where the `<name>` is the
+name of one of the `sites` tables. For example, you can have an extra
+site in addition to the default `anaconda.com` site make it the default
+for `BaseClient()` and CLI operations.
+
+```toml
+default_site = "on-prem"
+
+[sites."anaconda.com"]
+# Empty table means use default values
+
+[sites.on-prem]
+domain = "my.site.foo.com"
+ssl_verify = false
+```
+
+#### CLI commands
+
+A top-level `--at <site-name>` flag is added to all `anaconda` CLI commands to switch the site.
+
+```text
+anaconda --at <site-name> <cmd> [flags]
+```
+
+This works across *all* Anaconda CLI plugins and subcommands.
+
+Multi-site configuration can be controlled using the `anaconda sites`
+subcommand to list, add, modify, and remove sites.
+
+```text
+❯ anaconda sites
+
+ Usage: anaconda sites [OPTIONS] COMMAND [ARGS]...
+
+ Manage your Anaconda site configuration
+
+╭─ Options ─────────────────────────────────────────────────────────────────────────────────────╮
+│ --help  -h        Show this message and exit.                                                 │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ────────────────────────────────────────────────────────────────────────────────────╮
+│ list     List configured sites by name and domain.                                            │
+│ show     Show the site configuration for the default site or look up by the provided name or  │
+│          domain.                                                                              │
+│ add      Add new site configuration to ~/.anaconda/config.toml                                │
+│ modify   Modify site configuration in ~/.anaconda/config.toml                                 │
+│ remove   Remove site configuration by name or domain.                                         │
+╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
 ## API Keys and tokens
 
 When you `login` with `anaconda-auth`, an auth token is stored in the preferred keyring storage location and is
@@ -82,10 +161,10 @@ deleted when you run `logout`. The auth token will need to be renewed once a yea
 The `preferred_storage` configuration parameter in the `plugin.auth` section of the `config.toml` file takes two
 possible values:
 
-| Storage location | Description |
-|-|-|
-| `"system"` | Use the system keyring, if available. Otherwise, use `anaconda-keyring` |
-| `"anaconda-keyring"` | A file-based keyring at `~/.anaconda/keyring` |
+| Storage location     | Description                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| `"system"`           | Use the system keyring, if available. Otherwise, use `anaconda-keyring` |
+| `"anaconda-keyring"` | A file-based keyring at `~/.anaconda/keyring`                           |
 
 `"anaconda-keyring"` is the default value.
 
@@ -95,10 +174,10 @@ If you want to utilize Anaconda Services on a system where you do not have inter
 use the `login` command, you have two options:
 
 1. On a system where you can log in, use `anaconda auth api-key` command to print the API key to the terminal. You can then
-utilize the API key on the non-interactive system with the `ANACONDA_AUTH_API_KEY` env var (or in a `.env` file) or set
-the `key` parameter in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
+   utilize the API key on the non-interactive system with the `ANACONDA_AUTH_API_KEY` env var (or in a `.env` file) or set
+   the `key` parameter in the `plugin.auth` section of the `~/.anaconda/config.toml` file.
 1. With `preferred_token_storage` set to `"anaconda-keyring"`, run the `login` command to create the `~/.anaconda/keyring`
-file. Then, copy `~/.anaconda/keyring` to the non-interactive system.
+   file. Then, copy `~/.anaconda/keyring` to the non-interactive system.
 
 ## Python API
 
@@ -108,9 +187,13 @@ from anaconda_auth import login
 login()
 ```
 
-The `login()` function initiates a browser-based login flow. It will automatically
+The `login()` function initiates a browser-based login flow for your
+default site. It will automatically
 open your browser and, once you have completed the login flow, it will store an
 API key on your system.
+
+`login()` takes an optional keyword argument `site="<name or domain>"`
+to login to another configured site in your `~/.anaconda/config.toml`.
 
 Typically, these API keys will have a one year expiration, so you will only need
 to log in once and requests using the client class will read the token from the
@@ -126,6 +209,11 @@ from anaconda_auth import logout
 
 logout()
 ```
+
+`logout()` takes an optional keyword argument `site="<name or domain>"`
+to logout from another configured site in your `~/.anaconda/config.toml`.
+Without the `site=` argument the default site from your configuration is
+used.
 
 ### API requests
 
@@ -148,12 +236,16 @@ print(response.json())
 
 BaseClient accepts the following optional arguments.
 
-* `domain`: Domain to use for requests, defaults to `anaconda.com`
-* `ssl_verify`: Enable SSL verification, defaults to `True`
-* `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
-* `user_agent`: Defaults to `anaconda-auth/<package-version>`
-* `api_version`: Requested API version, defaults to latest available from the domain
-* `extra_headers`: Dictionary or JSON string of extra headers to send in requests
+- `site`: Site name from `~/.anaconda/config.toml`
+- `domain`: Domain to use for requests, defaults to your default site
+- `ssl_verify`: Enable SSL verification, defaults to `True`
+- `api_key`: API key to use for requests, if unspecified, uses token set by `anaconda login`
+- `user_agent`: Defaults to `anaconda-auth/<package-version>`
+- `api_version`: Requested API version, defaults to latest available from the domain
+- `extra_headers`: Dictionary or JSON string of extra headers to send in requests
+
+When using the `site="<name>"` argument all other keyword args will
+override the configuration loaded from `~/.anaconda/config.toml`.
 
 To create a Client class specific to your package, subclass BaseClient and set
 an appropriate user-agent and API version for your needs.
@@ -176,10 +268,10 @@ or subclasses outside of `anaconda` CLI subcommands.
 For the following cases, the user is running the CLI command interactively and is asked if they wish to continue with
 interactive login. Once completed, the command will be re-tried.
 
-* `TokenNotFoundError`: The subcommand requested to load the token from the keyring, but none were present.
-* `TokenExpiredError`: The token was successfully loaded but has expired.
-* `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
-* `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token, but Anaconda determined that the API was invalid.
+- `TokenNotFoundError`: The subcommand requested to load the token from the keyring, but none were present.
+- `TokenExpiredError`: The token was successfully loaded but has expired.
+- `AuthenticationMissing`: Derived from `requests.exceptions.HTTPError`, the request was made without an API key or token to an endpoint that requires authentication.
+- `InvalidAuthentication`: Derived from `requests.exceptions.HTTPError`, the request was made using an API key or token, but Anaconda determined that the API was invalid.
 
 Here's an example demonstrating that the user has not previously run `anaconda login` but attempted a CLI command that at some point requires authentication. By typing `y`, the login action is triggered and their browser will open.
 

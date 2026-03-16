@@ -23,7 +23,6 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from anaconda_auth.config import AnacondaAuthConfig
-from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 
@@ -144,7 +143,7 @@ class AnacondaKeyring(KeyringBackend):
 
     @classproperty
     def priority(cls) -> float:
-        config = AnacondaAuthSitesConfig.load_site()
+        config = AnacondaAuthConfig()
         if config.preferred_token_storage == "system":
             return 0.2
         elif config.preferred_token_storage == "anaconda-keyring":
@@ -204,6 +203,34 @@ class AnacondaKeyring(KeyringBackend):
             raise PasswordDeleteError
 
 
+class ConfigKeyring(AnacondaKeyring):
+    name = "token ConfigKeyring"
+
+    @classproperty
+    def priority(cls) -> float:
+        config = AnacondaAuthConfig()
+        return 100.0 if config.api_key or config.keyring else 0.0
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise PasswordSetError("This keyring cannot set passwords")
+
+    def delete_password(self, service: str, username: str) -> None:
+        raise PasswordSetError("This keyring cannot delete passwords")
+
+    def _read(self) -> LocalKeyringData:
+        config = AnacondaAuthConfig()
+        if config.api_key:
+            # Build a keyring structure out of the api key and domain
+            decoded = TokenInfo(domain=config.domain, api_key=config.api_key)
+            encoded = base64.b64encode(
+                decoded.model_dump_json().encode("ascii")
+            ).decode("ascii")
+            return {KEYRING_NAME: {config.domain: encoded}}
+        if config.keyring:
+            return config.keyring
+        return {}
+
+
 class RepoToken(BaseModel):
     token: TokenString
     org_name: Union[OrgName, None] = None
@@ -219,9 +246,7 @@ TOKEN_INFO_VERSION = 2
 
 
 class TokenInfo(BaseModel):
-    domain: str = Field(
-        default_factory=lambda: AnacondaAuthSitesConfig.load_site().domain
-    )
+    domain: str = Field(default_factory=lambda: AnacondaAuthConfig().domain)
     api_key: Union[str, None] = None
     username: Union[str, None] = None
     repo_tokens: List[RepoToken] = []
@@ -262,7 +287,7 @@ class TokenInfo(BaseModel):
             The token information.
 
         """
-        domain = domain or AnacondaAuthSitesConfig.load_site().domain
+        domain = domain or AnacondaAuthConfig().domain
 
         keyring_data = keyring.get_password(KEYRING_NAME, domain)
         if keyring_data is not None:
@@ -390,3 +415,8 @@ class TokenInfo(BaseModel):
         # We need to remove the existing token for this org first
         # TODO: We can drop this once we just use a dictionary instead
         self.repo_tokens[:] = [t for t in self.repo_tokens if t.org_name != org_name]
+
+    def delete_all_repo_token(self) -> None:
+        """Delete all repo tokens"""
+
+        self.repo_tokens[:] = []

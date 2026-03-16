@@ -11,15 +11,14 @@ from typing import cast
 from urllib.parse import urljoin
 
 import requests
-from pydantic import BaseModel
 from requests import PreparedRequest
 from requests import Response
 from requests.auth import AuthBase
 
 from anaconda_auth import __version__ as version
 from anaconda_auth.adapters import HTTPAdapter
+from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
-from anaconda_auth.config import AnacondaAuthSitesConfig
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
 from anaconda_auth.telemetry import get_telemetry_logger
@@ -57,19 +56,13 @@ def login_required(response: Response, *args: Any, **kwargs: Any) -> Response:
     return response
 
 
-class CondaConfig(BaseModel):
-    proxy_servers: Optional[MutableMapping[str, str]] = None
-    ssl_verify: Optional[Union[bool, str]] = None
-    cert: Optional[Union[str, tuple[str, str]]] = None
-
-
 class BearerAuth(AuthBase):
     def __init__(
         self, domain: Optional[str] = None, api_key: Optional[str] = None
     ) -> None:
         self.api_key = api_key
         if domain is None:
-            domain = AnacondaAuthSitesConfig.load_site().domain
+            domain = AnacondaAuthConfig().domain
 
         self._token_info = TokenInfo(domain=domain)
 
@@ -129,8 +122,10 @@ class BaseClient(requests.Session):
         # Prepare the requested or default site config
         if isinstance(site, AnacondaAuthSite):
             config = site
+        elif site:
+            config = AnacondaAuthConfig(site=site)
         else:
-            config = AnacondaAuthSitesConfig.load_site(site=site)
+            config = AnacondaAuthConfig()
 
         # Prepare site overrides
         if base_uri and domain:
@@ -157,11 +152,10 @@ class BaseClient(requests.Session):
         if client_cert is not None:
             kwargs["client_cert"] = client_cert
 
-        conda_config = self.retrieve_base_conda_ssl_config()
+        self.config = config.model_copy(update=kwargs, deep=True)
 
-        self.config = config.model_copy(update=kwargs)
-
-        self.configure_ssl(conda_config)
+        self.proxies = self.config.proxy_servers or {}
+        self.configure_ssl()
 
         # base_url overrides domain
         self._base_uri = base_uri or f"https://{self.config.domain}"
@@ -190,15 +184,10 @@ class BaseClient(requests.Session):
         self.hooks["response"].append(login_required)
         self.hooks["response"].append(post_request_telemetry_logger)
 
-    def configure_ssl(self, cfg: CondaConfig) -> None:
-        if cfg.proxy_servers and self.config.proxy_servers is None:
-            self.proxies = cfg.proxy_servers
-        elif self.config.proxy_servers:
-            self.proxies = self.config.proxy_servers
-
+    def configure_ssl(self) -> None:
         ssl_context = None
 
-        if self.config.ssl_verify == "truststore" or cfg.ssl_verify == "truststore":
+        if self.config.ssl_verify == "truststore":
             try:
                 import ssl
 
@@ -215,6 +204,7 @@ class BaseClient(requests.Session):
             self.verify = self.config.ssl_verify
 
         http_adapter = HTTPAdapter(ssl_context=ssl_context)
+        self._ssl = ssl_context
 
         self.mount("http://", http_adapter)
         self.mount("https://", http_adapter)
@@ -223,32 +213,6 @@ class BaseClient(requests.Session):
             self.cert = (self.config.client_cert, self.config.client_cert_key)
         elif self.config.client_cert:
             self.cert = self.config.client_cert
-        else:
-            self.cert = cfg.cert
-
-    def retrieve_base_conda_ssl_config(self) -> CondaConfig:
-        conda_config = CondaConfig()
-        try:
-            from anaconda_auth._conda.repo_config import get_conda_context
-
-            context = get_conda_context()
-
-            conda_config.proxy_servers = context.proxy_servers
-            conda_config.ssl_verify = context.ssl_verify
-
-            if context.client_ssl_cert_key:
-                conda_config.cert = (
-                    context.client_ssl_cert,
-                    context.client_ssl_cert_key,
-                )
-            elif context.client_ssl_cert:
-                conda_config.cert = context.client_ssl_cert
-
-        except ImportError:
-            print("Here we are the import has failed")
-            pass
-
-        return conda_config
 
     def urljoin(self, url: str) -> str:
         return urljoin(self._base_uri, url)
@@ -308,9 +272,10 @@ class BaseClient(requests.Session):
     @cached_property
     def avatar(self) -> Union[bytes, None]:
         hashed = md5(self.email.encode("utf-8")).hexdigest()
-        res = requests.get(
+        res = self.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
             verify=self.config.ssl_verify,
+            auth=False,  # type: ignore
         )
         if res.ok:
             return res.content

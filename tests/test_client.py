@@ -286,8 +286,12 @@ def test_gravatar_found(mocker: MockerFixture) -> None:
         return_value=account,
         new_callable=mocker.PropertyMock,
     )
+
     client = BaseClient()
+    get = mocker.spy(BaseClient, "get")
     assert client.avatar is not None
+
+    assert not get.call_args.kwargs["auth"]
 
 
 def test_extra_headers_dict() -> None:
@@ -398,13 +402,13 @@ def test_anaconda_com_site_config_toml_and_kwargs_overrides(config_toml: Path) -
     )
 
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
     assert not client.config.ssl_verify
     assert client.config.api_key is None
 
     # specific overrides by kwargs
     client = BaseClient(api_key="bar")
-    assert client.config != AnacondaAuthConfig()
+    assert client.config.model_dump() != AnacondaAuthConfig().model_dump()
     assert not client.config.ssl_verify
     assert client.config.api_key == "bar"
 
@@ -425,7 +429,7 @@ def test_client_site_selection_by_name(config_toml: Path) -> None:
 
     # make sure the default hasn't changed
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
 
     # load configured site
     client = BaseClient(site="local")
@@ -523,7 +527,7 @@ def test_client_condarc_override_with_anaconda_toml(
     )
 
     client = BaseClient()
-    assert client.config.ssl_verify
+    assert not client.config.ssl_verify
     assert client.proxies["http"] == "toml"
     assert client.proxies["https"] == "toml"
     assert client.cert == ("toml.pem", "toml_key.key")
@@ -576,7 +580,7 @@ def test_client_kwargs_supremecy(config_toml: Path, condarc_path: Path) -> None:
         client_cert="kwarg.cert",
         client_cert_key="kwarg.key",
     )
-    assert client.config.ssl_verify
+    assert not client.config.ssl_verify
     assert client.proxies["http"] == "kwargy"
     assert client.proxies["https"] == "kwargy"
     assert client.cert == ("kwarg.cert", "kwarg.key")
@@ -655,6 +659,7 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
             """
         )
     )
+
     client = BaseClient()
     assert client.cert == ("client_cert.pem", "client_cert_key")
 
@@ -663,7 +668,7 @@ def test_client_condarc_certs(config_toml: Path, condarc_path: Path) -> None:
 def test_client_site_selection_with_config() -> None:
     # make sure the default hasn't changed
     client = BaseClient()
-    assert client.config == AnacondaAuthConfig()
+    assert client.config.model_dump() == AnacondaAuthConfig().model_dump()
 
     site = AnacondaAuthSite(domain="example.com", api_key="foo", ssl_verify=False)
 
