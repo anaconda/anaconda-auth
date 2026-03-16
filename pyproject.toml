@@ -247,6 +247,7 @@ deps =
 conda_deps =
     anaconda-anon-usage
     anaconda-client
+    anaconda-opentelemetry
     # Optionally install conda to test plugins
     conda: conda
     # Keep testing semver<3 until version 3+ released to defaults
