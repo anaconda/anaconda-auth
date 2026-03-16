@@ -183,7 +183,7 @@ class BaseClient(requests.Session):
 
         self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
-        self.hooks["response"].append(post_request_telemetry_logger)
+        # self.hooks["response"].append(post_request_telemetry_logger)
 
     def configure_ssl(self) -> None:
         ssl_context = None
