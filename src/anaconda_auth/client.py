@@ -80,9 +80,7 @@ class BearerAuth(AuthBase):
         return r
 
 
-def post_request_telemetry_logger(
-    response: Response,
-) -> Response:
+def post_request_telemetry_logger(response: Response, *args, **kwargs) -> Response:  # type: ignore
     log = get_telemetry_logger(__name__)
 
     msg = "Response url: %r status: %d data: %r"
