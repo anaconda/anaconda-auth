@@ -34,7 +34,7 @@ class OrganizationData(BaseModel):
 
 
 class SubscriptionData(BaseModel):
-    org_id: UUID
+    org_id: UUID | None = None
     product_code: str
 
 
