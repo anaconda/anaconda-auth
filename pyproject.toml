@@ -203,10 +203,10 @@ legacy_tox_ini = """
 [tox]
 envlist =
     py39
-    py310-{old-keyring,new-keyring,pydantic1,pydantic2,conda}
-    py311-{conda}
-    py312-{conda}
-    py313-{no-conda,conda}
+    py310-{old-keyring,new-keyring,pydantic1,pydantic2,conda,otel}
+    py311-{conda,otel}
+    py312-{conda,otel}
+    py313-{no-conda,conda,otel}
     pendingdeprecations
     mypy
     report
@@ -247,7 +247,7 @@ deps =
 conda_deps =
     anaconda-anon-usage
     anaconda-client
-    anaconda-opentelemetry
+    anaconda-opentelemetry: otel
     # Optionally install conda to test plugins
     conda: conda
     # Keep testing semver<3 until version 3+ released to defaults
