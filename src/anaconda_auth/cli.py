@@ -29,7 +29,6 @@ from anaconda_auth.env_logger import fetch_org_features
 from anaconda_auth.env_logger import get_orgs_with_env_logger
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
-from anaconda_auth.telemetry import record_command_duration
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
