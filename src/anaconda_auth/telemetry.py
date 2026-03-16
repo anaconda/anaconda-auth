@@ -1,16 +1,13 @@
+import logging
 from datetime import datetime
-from anaconda_opentelemetry.config import Configuration
-from anaconda_opentelemetry.attributes import ResourceAttributes
-from anaconda_opentelemetry import initialize_telemetry
-from anaconda_opentelemetry.signals import (
-    get_telemetry_logger_handler,
-    record_histogram,
-)
 
 from anaconda_auth.config import AnacondaAuthSite
-import logging
-
 from anaconda_cli_base.console import console
+from anaconda_opentelemetry import initialize_telemetry
+from anaconda_opentelemetry.attributes import ResourceAttributes
+from anaconda_opentelemetry.config import Configuration
+from anaconda_opentelemetry.signals import get_telemetry_logger_handler
+from anaconda_opentelemetry.signals import record_histogram
 
 
 def setup_telemetry(cfg: AnacondaAuthSite, version: str) -> None:

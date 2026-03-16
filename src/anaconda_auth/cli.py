@@ -1,10 +1,10 @@
-from datetime import datetime
 import json
 import logging
 import os
 import shutil
 import sys
 import warnings
+from datetime import datetime
 from textwrap import dedent
 from typing import Annotated
 from typing import Any
@@ -29,17 +29,15 @@ from anaconda_auth.env_logger import fetch_org_features
 from anaconda_auth.env_logger import get_orgs_with_env_logger
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
-from anaconda_auth.telemetry import (
-    get_telemetry_logger,
-    record_command_duration,
-    setup_telemetry,
-)
+from anaconda_auth.telemetry import get_telemetry_logger
+from anaconda_auth.telemetry import record_command_duration
+from anaconda_auth.telemetry import setup_telemetry
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
-from anaconda_opentelemetry.signals import increment_counter, record_histogram
+from anaconda_opentelemetry.signals import increment_counter
 
 logger = logging.getLogger(__name__)
 
@@ -294,7 +292,6 @@ def main(
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
     if cmd := subcommands_dict.get(subcommand_name):
-
         record_command_duration(cmd_start_time, cmd)
 
         cmd.main(

@@ -25,7 +25,8 @@ from anaconda_auth.telemetry import get_telemetry_logger
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
-from anaconda_opentelemetry.signals import increment_counter, record_histogram
+from anaconda_opentelemetry.signals import increment_counter
+from anaconda_opentelemetry.signals import record_histogram
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
