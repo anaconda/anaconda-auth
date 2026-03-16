@@ -341,7 +341,7 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
-        record_command_duration(cmd_start_time, ", ".join(sys.argv[1:]))
+        # record_command_duration(cmd_start_time, ", ".join(sys.argv[1:]))
         return
 
     # No subcommand was given, so we print help
