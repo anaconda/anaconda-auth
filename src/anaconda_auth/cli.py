@@ -268,8 +268,8 @@ def main(
     ] = None,
 ) -> None:
     cmd_start_time = datetime.now()
-    setup_telemetry(AnacondaAuthSite(), __version__)
-    log = get_telemetry_logger(__name__)
+    # setup_telemetry(AnacondaAuthSite(), __version__)
+    # log = get_telemetry_logger(__name__)
 
     if version:
         console.print(
@@ -292,7 +292,7 @@ def main(
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
     if cmd := subcommands_dict.get(subcommand_name):
-        record_command_duration(cmd_start_time, cmd)
+        # record_command_duration(cmd_start_time, cmd)
 
         cmd.main(
             extra_args[1:], prog_name=subcommand_name, standalone_mode=False, parent=ctx
@@ -323,11 +323,11 @@ def main(
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
-        log.info(
-            "has_legacy_options: %r subcommand_name: %r",
-            has_legacy_options,
-            subcommand_name,
-        )
+        # log.info(
+        #     "has_legacy_options: %r subcommand_name: %r",
+        #     has_legacy_options,
+        #     subcommand_name,
+        # )
 
         try:
             from binstar_client.scripts.cli import main as binstar_main
