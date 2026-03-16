@@ -144,6 +144,10 @@ module = "ruamel.*"
 ignore_missing_imports = true
 module = "pydantic.v1.*"
 
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "anaconda_opentelemetry.*"
+
 [tool.pytest.ini_options]
 addopts = [
   "--cov",
