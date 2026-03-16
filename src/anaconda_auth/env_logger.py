@@ -24,7 +24,7 @@ def get_orgs_with_env_logger(org_features: list) -> list[str]:
     belong to any organization with the environments feature.
     """
     return [
-        org.get("org", "")
+        org["org"]
         for org in org_features
         if "environments" in org.get("features", [])
     ]
