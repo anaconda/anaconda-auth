@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import shutil
 import sys
 import warnings
 from textwrap import dedent
@@ -22,6 +24,8 @@ from anaconda_auth.actions import logout
 from anaconda_auth.client import BaseClient
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.config import AnacondaAuthSitesConfig
+from anaconda_auth.env_logger import fetch_org_features
+from anaconda_auth.env_logger import get_orgs_with_env_logger
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
@@ -29,6 +33,8 @@ from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+
+logger = logging.getLogger(__name__)
 
 CHECK_MARK = "[bold green]✔︎[/bold green]"
 
@@ -318,6 +324,55 @@ def main(
     console.print(ctx.get_help())
 
 
+def _post_login_setup() -> None:
+    """Post-login pipeline: fetch org features, check for environments,
+    install env-manager and register org if needed.
+
+    Skipped entirely when conda is not available on PATH.
+    """
+
+    conda_path = shutil.which("conda")
+    if not conda_path:
+        return
+
+    from anaconda_auth._conda.env_logger_config import install_env_manager
+    from anaconda_auth._conda.env_logger_config import is_env_manager_installed
+    from anaconda_auth._conda.env_logger_config import register_org
+
+    org_features = fetch_org_features()
+    if org_features is None:
+        return
+
+    env_orgs = get_orgs_with_env_logger(org_features)
+    if not env_orgs:
+        return
+
+    if not is_env_manager_installed(conda_path):
+        install = Confirm.ask(
+            "Anaconda Environment Manager is required by your organization. It is recommended to install. Proceed?",
+            default=True,
+        )
+        if not install:
+            return
+
+        console.print("Installing anaconda-env-manager...")
+        success, error = install_env_manager(conda_path)
+        if not success:
+            console.print(
+                f"[bold red]Error:[/bold red] Failed to install anaconda-env-manager.\n{error}"
+            )
+            return
+        console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
+
+    # Delegate org selection and registration to the plugin
+    if not register_org(conda_path):
+        console.print(
+            "\n[bold yellow]Warning:[/bold yellow] Failed to register client token.\n"
+            "You can retry registration manually by running:\n"
+            "  [green]conda env-log register[/green]"
+        )
+
+
 @app.command("login")
 def auth_login(
     force: Annotated[bool, typer.Option()] = False,
@@ -346,6 +401,15 @@ def auth_login(
             raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
+    try:
+        _post_login_setup()
+    except Exception:
+        logger.debug("Post-login setup failed", exc_info=True)
+        console.print(
+            "\n[bold yellow]Warning:[/bold yellow] Post-login setup could not be completed.\n"
+            "You can configure environment management manually by running:\n"
+            "  [green]conda env-log register[/green]"
+        )
 
 
 @app.command(name="whoami")

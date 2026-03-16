@@ -165,3 +165,177 @@ def test_fallback_to_anaconda_client(
     # Calls are delegated to anaconda-client
     binstar_main.assert_called_once()
     binstar_main.assert_called_once_with(args, allow_plugin_main=False)
+
+
+def test_post_login_setup_called_after_login(
+    mocker: MockerFixture,
+) -> None:
+    from anaconda_auth.token import TokenNotFoundError
+
+    mocker.patch("anaconda_auth.cli.login")
+    mocker.patch(
+        "anaconda_auth.cli.TokenInfo.load",
+        side_effect=TokenNotFoundError,
+    )
+    mock_setup = mocker.patch("anaconda_auth.cli._post_login_setup")
+
+    from anaconda_auth.cli import auth_login
+
+    try:
+        auth_login(force=False, ssl_verify=None, at=None)
+    except SystemExit:
+        pass
+
+    mock_setup.assert_called_once()
+
+
+def test_post_login_setup_skips_when_conda_not_available(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value=None)
+    mock_fetch = mocker.patch("anaconda_auth.cli.fetch_org_features")
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_fetch.assert_not_called()
+
+
+def test_post_login_setup_skips_when_fetch_fails(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch("anaconda_auth.cli.fetch_org_features", return_value=None)
+    mock_installed = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed"
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_installed.assert_not_called()
+
+
+def test_post_login_setup_skips_when_no_env_orgs(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["community"]}],
+    )
+    mock_installed = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed"
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_installed.assert_not_called()
+
+
+def test_post_login_setup_installs_and_registers_single_org(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
+        return_value=False,
+    )
+    mocker.patch("rich.prompt.Confirm.ask", return_value=True)
+    mock_install = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.install_env_manager",
+        return_value=(True, ""),
+    )
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.register_org",
+        return_value=True,
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_install.assert_called_once()
+    mock_register.assert_called_once()
+
+
+def test_post_login_setup_skips_install_when_already_installed(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
+        return_value=True,
+    )
+    mock_install = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.install_env_manager",
+    )
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.register_org",
+        return_value=True,
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_install.assert_not_called()
+    mock_register.assert_called_once()
+
+
+def test_post_login_setup_aborts_when_user_declines_install(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
+        return_value=False,
+    )
+    mocker.patch("rich.prompt.Confirm.ask", return_value=False)
+    mock_register = mocker.patch(
+        "anaconda_auth._conda.env_logger_config.register_org",
+    )
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+    mock_register.assert_not_called()
+
+
+def test_post_login_setup_shows_warning_when_register_fails(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mocker.patch(
+        "anaconda_auth.cli.fetch_org_features",
+        return_value=[{"org": "my-org", "features": ["environments"]}],
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
+        return_value=True,
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.register_org",
+        return_value=False,
+    )
+    mock_print = mocker.patch("anaconda_auth.cli.console.print")
+
+    from anaconda_auth.cli import _post_login_setup
+
+    _post_login_setup()
+
+    # Verify the warning message includes the retry command
+    warning_call = mock_print.call_args_list[-1]
+    message = warning_call[0][0]
+    assert "conda env-log register" in message

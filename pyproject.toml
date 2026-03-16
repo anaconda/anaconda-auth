@@ -260,7 +260,11 @@ conda_channels =
     conda-forge
 commands = pytest {posargs}
 
+[testenv:.package]
+conda_deps =
+
 [testenv:mypy]
+conda_deps =
 deps =
     mypy
     pytest
