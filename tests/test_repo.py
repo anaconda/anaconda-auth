@@ -35,7 +35,8 @@ def user_has_business_subscription(
                 {
                     "org_id": str(business_org_id),
                     "product_code": request.param,
-                }
+                },
+                {"org_id": None, "product_code": "starter_subscription"},
             ]
         },
     )
