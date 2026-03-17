@@ -721,7 +721,7 @@ def _sites_add_or_modify(
 
         key = sites.sites._find_at(name or domain)
         config = sites.sites.root[key]
-        dump = {**config.model_dump(), **kwargs}
+        dump = {**config.model_dump(), **kwargs, "site": config.site}
         config = AnacondaAuthSite.model_validate(dump)
 
         sites.add(config, name=config.site)
