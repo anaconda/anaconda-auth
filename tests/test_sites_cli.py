@@ -398,6 +398,26 @@ def test_modify_requires_name_or_domain(
     )
 
 
+def test_modify_validates_input(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    config_toml.write_text(
+        dedent(
+            """\
+            default_site = "short-name"
+
+            [sites.short-name]
+            domain = "foo.local"
+            ssl_verify = false
+            """
+        )
+    )
+
+    result = invoke_cli(
+        ["sites", "modify", "--name", "short-name", "--domain", "http://"]
+    )
+    assert result.exit_code == 1
+    assert "Value error, http:// does not look like a domain name" in result.stdout
+
+
 def test_modify_protect_secrets(
     config_toml: Path, invoke_cli: CLIInvoker, monkeypatch: MonkeyPatch
 ) -> None:

@@ -125,6 +125,32 @@ def test_override_auth_domain_env_variable(monkeypatch: MonkeyPatch) -> None:
     assert config.auth_domain == "another-auth.anaconda.com"
 
 
+@pytest.mark.parametrize("field", ["domain", "auth_domain_override"])
+def test_domain_netloc_only(field: str) -> None:
+    for value in [
+        "foo.com",
+        "foo.com/",
+        "foo.com/api/barhttps://foo.com/",
+        "http://foo.com/",
+        "https://foo.com/api/bar",
+        "http://foo.com/api/bar",
+    ]:
+        config = AnacondaAuthSite.model_validate({field: value})
+        assert config.model_dump()[field] == "foo.com"
+
+
+@pytest.mark.parametrize("field", ["domain", "auth_domain_override"])
+def test_domain_localhost(field: str) -> None:
+    for port in [":8000", ""]:
+        for value in [
+            f"localhost{port}",
+            f"http://localhost{port}",
+            f"http://localhost{port}/",
+        ]:
+            config = AnacondaAuthSite.model_validate({field: value})
+            assert config.model_dump()[field] == f"localhost{port}"
+
+
 @pytest.mark.usefixtures("disable_dot_env", "config_toml")
 def test_default_site_no_config() -> None:
     config = AnacondaAuthSitesConfig()

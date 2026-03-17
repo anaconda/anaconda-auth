@@ -1,3 +1,4 @@
+import re
 import warnings
 from functools import cached_property
 from typing import Any
@@ -15,6 +16,7 @@ from typing import Type
 from typing import Union
 from typing import cast
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -73,6 +75,22 @@ class AnacondaAuthSite(BaseModel):
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
     _merged: bool = False
+
+    @field_validator("domain", "auth_domain_override", mode="before")
+    @classmethod
+    def domain_validator(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        if not re.match(r"http(s?)\:\/\/", value):
+            url = f"https://{value}"
+        else:
+            url = value
+
+        parsed = urlparse(url)
+        if not parsed.netloc:
+            raise ValueError(f"{value} does not look like a domain name")
+        return parsed.netloc
 
     @model_validator(mode="after")
     def set_site_name_if_none(self) -> Self:
