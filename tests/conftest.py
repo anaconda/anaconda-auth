@@ -559,6 +559,8 @@ def user_has_no_subscriptions(requests_mock: RequestMocker) -> None:
 def valid_api_key():
     token_info = TokenInfo.load(create=True)
     exp = int(datetime(2099, 1, 1).timestamp())
-    token_info.api_key = jwt.encode({"exp": exp}, key="secret", algorithm="HS256")
+    token_info.api_key = jwt.encode(
+        {"exp": exp}, key="test-secret-key-for-unit-tests!!", algorithm="HS256"
+    )
     token_info.save()
     return token_info
