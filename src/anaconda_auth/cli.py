@@ -672,7 +672,14 @@ def _sites_add_or_modify(
     if openid_config_path is not None:
         kwargs["openid_config_path"] = openid_config_path
     if oidc_request_headers is not None:
-        kwargs["oidc_request_headers"] = oidc_request_headers
+        try:
+            parsed_headers = json.loads(oidc_request_headers)
+            kwargs["oidc_request_headers"] = parsed_headers
+        except json.JSONDecodeError:
+            console.print(
+                "The oidc-request-headers argument could not be parsed as JSON"
+            )
+            raise typer.Exit(code=ARGUMENT_ERROR)
     if login_success_path is not None:
         kwargs["login_success_path"] = login_success_path
     if login_error_path is not None:
@@ -714,7 +721,8 @@ def _sites_add_or_modify(
 
         key = sites.sites._find_at(name or domain)
         config = sites.sites.root[key]
-        config = config.model_copy(update=kwargs)
+        dump = {**config.model_dump(), **kwargs}
+        config = AnacondaAuthSite.model_validate(dump)
 
         sites.add(config, name=config.site)
 
