@@ -15,7 +15,7 @@ def fetch_org_features(
         kwargs = {}
         if ssl_verify is not None:
             kwargs["ssl_verify"] = ssl_verify
-        client = BaseClient(**kwargs)
+        client = BaseClient(**kwargs)  # type: ignore
         resp = client.get("/api/auth/oauth2/userinfo")
         resp.raise_for_status()
         return resp.json().get("organization_features") or []
