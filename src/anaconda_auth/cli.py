@@ -31,6 +31,7 @@ from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
@@ -325,6 +326,19 @@ def main(
     console.print(ctx.get_help())
 
 
+def is_default_site() -> bool:
+    """Check if the site matches default_site at ~/.anaconda/config.toml"""
+    config = AnacondaConfigTomlSettingsSource(
+        AnacondaAuthSitesConfig, anaconda_config_path()
+    )
+    config_toml_default_site = config.toml_data.get("default_site")
+    if config_toml_default_site is None:
+        return True
+    else:
+        current_default_site = AnacondaAuthSitesConfig().default_site
+        return config_toml_default_site == current_default_site
+
+
 def _post_login_setup(
     ssl_verify: Optional[Union[bool, str]] = None,
 ) -> None:
@@ -385,8 +399,6 @@ def auth_login(
     at: Annotated[Optional[str], typer.Option()] = None,
 ) -> None:
     """Login"""
-    is_default_site = at is None or at == AnacondaAuthSitesConfig().default_site
-
     _override_default_site(at)
     try:
         token_info = TokenInfo.load()
@@ -407,7 +419,7 @@ def auth_login(
 
     login(force=force, ssl_verify=ssl_verify)
 
-    if not is_default_site:
+    if not is_default_site():
         return
 
     try:
