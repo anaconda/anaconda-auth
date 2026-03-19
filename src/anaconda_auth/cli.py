@@ -10,6 +10,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 
 import typer
 from requests.exceptions import HTTPError
@@ -324,7 +325,9 @@ def main(
     console.print(ctx.get_help())
 
 
-def _post_login_setup() -> None:
+def _post_login_setup(
+    ssl_verify: Optional[Union[bool, str]] = None,
+) -> None:
     """Post-login pipeline: fetch org features, check for environments,
     install env-manager and register org if needed.
 
@@ -339,7 +342,7 @@ def _post_login_setup() -> None:
     from anaconda_auth._conda.env_logger_config import is_env_manager_installed
     from anaconda_auth._conda.env_logger_config import register_org
 
-    org_features = fetch_org_features()
+    org_features = fetch_org_features(ssl_verify=ssl_verify)
     if org_features is None:
         return
 
@@ -408,7 +411,7 @@ def auth_login(
         return
 
     try:
-        _post_login_setup()
+        _post_login_setup(ssl_verify=ssl_verify)
     except Exception:
         logger.debug("Post-login setup failed", exc_info=True)
         console.print(
