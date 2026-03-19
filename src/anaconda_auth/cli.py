@@ -382,6 +382,8 @@ def auth_login(
     at: Annotated[Optional[str], typer.Option()] = None,
 ) -> None:
     """Login"""
+    is_default_site = at is None or at == AnacondaAuthSitesConfig().default_site
+
     _override_default_site(at)
     try:
         token_info = TokenInfo.load()
@@ -401,6 +403,10 @@ def auth_login(
             raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
+
+    if not is_default_site:
+        return
+
     try:
         _post_login_setup()
     except Exception:
