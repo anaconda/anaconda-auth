@@ -10,6 +10,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 
 import typer
 from requests.exceptions import HTTPError
@@ -30,6 +31,7 @@ from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.token import TokenNotFoundError
+from anaconda_cli_base.config import AnacondaConfigTomlSettingsSource
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
@@ -324,7 +326,22 @@ def main(
     console.print(ctx.get_help())
 
 
-def _post_login_setup() -> None:
+def is_default_site() -> bool:
+    """Check if the site matches default_site at ~/.anaconda/config.toml"""
+    config = AnacondaConfigTomlSettingsSource(
+        AnacondaAuthSitesConfig, anaconda_config_path()
+    )
+    config_toml_default_site = config.toml_data.get("default_site")
+    if config_toml_default_site is None:
+        return True
+    else:
+        current_default_site = AnacondaAuthSitesConfig().default_site
+        return config_toml_default_site == current_default_site
+
+
+def _post_login_setup(
+    ssl_verify: Optional[Union[bool, str]] = None,
+) -> None:
     """Post-login pipeline: fetch org features, check for environments,
     install env-manager and register org if needed.
 
@@ -339,7 +356,7 @@ def _post_login_setup() -> None:
     from anaconda_auth._conda.env_logger_config import is_env_manager_installed
     from anaconda_auth._conda.env_logger_config import register_org
 
-    org_features = fetch_org_features()
+    org_features = fetch_org_features(ssl_verify=ssl_verify)
     if org_features is None:
         return
 
@@ -401,8 +418,12 @@ def auth_login(
             raise typer.Exit(code=SUCCESS)
 
     login(force=force, ssl_verify=ssl_verify)
+
+    if not is_default_site():
+        return
+
     try:
-        _post_login_setup()
+        _post_login_setup(ssl_verify=ssl_verify)
     except Exception:
         logger.debug("Post-login setup failed", exc_info=True)
         console.print(

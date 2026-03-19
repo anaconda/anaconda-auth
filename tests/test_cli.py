@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+from textwrap import dedent
 from typing import Generator
 
 import pytest
@@ -167,9 +169,22 @@ def test_fallback_to_anaconda_client(
     binstar_main.assert_called_once_with(args, allow_plugin_main=False)
 
 
-def test_post_login_setup_called_after_login(
+@pytest.mark.parametrize("site", [None, "anaconda.com"])
+def test_post_login_setup_called_after_login_default_site(
+    site: str,
+    config_toml: Path,
     mocker: MockerFixture,
 ) -> None:
+    config_toml.write_text(
+        dedent("""\
+        default_site = "anaconda.com"
+        [sites."anaconda.com"]
+
+        [site.foo]
+        domain = "foo.bar"
+    """)
+    )
+
     from anaconda_auth.token import TokenNotFoundError
 
     mocker.patch("anaconda_auth.cli.login")
@@ -182,11 +197,74 @@ def test_post_login_setup_called_after_login(
     from anaconda_auth.cli import auth_login
 
     try:
-        auth_login(force=False, ssl_verify=None, at=None)
+        auth_login(force=False, ssl_verify=None, at=site)
     except SystemExit:
         pass
 
     mock_setup.assert_called_once()
+
+
+@pytest.mark.parametrize("ssl_verify", [None, True, False])
+def test_post_login_setup_called_after_login_with_ssl_verify(
+    ssl_verify: bool | None,
+    mocker: MockerFixture,
+) -> None:
+    from anaconda_auth.token import TokenNotFoundError
+
+    mocker.patch("anaconda_auth.cli.login")
+    mocker.patch(
+        "anaconda_auth.cli.TokenInfo.load",
+        side_effect=TokenNotFoundError,
+    )
+    import anaconda_auth.cli
+
+    mock_setup = mocker.spy(anaconda_auth.cli, "_post_login_setup")
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mock_fetch = mocker.patch("anaconda_auth.cli.fetch_org_features", return_value=None)
+
+    from anaconda_auth.cli import auth_login
+
+    try:
+        auth_login(force=False, ssl_verify=ssl_verify)
+    except SystemExit:
+        pass
+
+    mock_setup.assert_called_once()
+    assert mock_setup.call_args.kwargs == {"ssl_verify": ssl_verify}
+    assert mock_fetch.call_args.kwargs == {"ssl_verify": ssl_verify}
+
+
+def test_no_post_login_setup_called_after_login_non_default_site(
+    config_toml: Path,
+    mocker: MockerFixture,
+) -> None:
+    config_toml.write_text(
+        dedent("""\
+        default_site = "anaconda.com"
+        [sites."anaconda.com"]
+
+        [site.foo]
+        domain = "foo.bar"
+    """)
+    )
+
+    from anaconda_auth.token import TokenNotFoundError
+
+    mocker.patch("anaconda_auth.cli.login")
+    mocker.patch(
+        "anaconda_auth.cli.TokenInfo.load",
+        side_effect=TokenNotFoundError,
+    )
+    mock_setup = mocker.patch("anaconda_auth.cli._post_login_setup")
+
+    from anaconda_auth.cli import auth_login
+
+    try:
+        auth_login(force=False, ssl_verify=None, at="foo")
+    except SystemExit:
+        pass
+
+    mock_setup.assert_not_called()
 
 
 def test_post_login_setup_skips_when_conda_not_available(
