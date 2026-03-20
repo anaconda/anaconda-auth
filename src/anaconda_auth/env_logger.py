@@ -1,15 +1,19 @@
 import logging
 from typing import Optional
+from typing import Union
 
 from anaconda_auth.client import BaseClient
 
 logger = logging.getLogger(__name__)
 
 
-def fetch_org_features() -> Optional[list]:
+def fetch_org_features(ssl_verify: Optional[Union[bool, str]] = None) -> Optional[list]:
     """Fetch organization features from userinfo."""
     try:
-        client = BaseClient()
+        kwargs = {}
+        if ssl_verify is not None:
+            kwargs["ssl_verify"] = ssl_verify
+        client = BaseClient(**kwargs)  # type: ignore
         resp = client.get("/api/auth/oauth2/userinfo")
         resp.raise_for_status()
         return resp.json().get("organization_features") or []

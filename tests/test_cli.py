@@ -189,6 +189,36 @@ def test_post_login_setup_called_after_login(
     mock_setup.assert_called_once()
 
 
+@pytest.mark.parametrize("ssl_verify", [None, True, False])
+def test_post_login_setup_called_after_login_with_ssl_verify(
+    ssl_verify: bool | None,
+    mocker: MockerFixture,
+) -> None:
+    from anaconda_auth.token import TokenNotFoundError
+
+    mocker.patch("anaconda_auth.cli.login")
+    mocker.patch(
+        "anaconda_auth.cli.TokenInfo.load",
+        side_effect=TokenNotFoundError,
+    )
+    import anaconda_auth.cli
+
+    mock_setup = mocker.spy(anaconda_auth.cli, "_post_login_setup")
+    mocker.patch("shutil.which", return_value="/usr/bin/conda")
+    mock_fetch = mocker.patch("anaconda_auth.cli.fetch_org_features", return_value=None)
+
+    from anaconda_auth.cli import auth_login
+
+    try:
+        auth_login(force=False, ssl_verify=ssl_verify)
+    except SystemExit:
+        pass
+
+    mock_setup.assert_called_once()
+    assert mock_setup.call_args.kwargs == {"ssl_verify": ssl_verify}
+    assert mock_fetch.call_args.kwargs == {"ssl_verify": ssl_verify}
+
+
 def test_post_login_setup_skips_when_conda_not_available(
     mocker: MockerFixture,
 ) -> None:
