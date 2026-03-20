@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from pytest_mock import MockerFixture
 
 
@@ -51,6 +52,31 @@ class TestFetchOrgFeatures:
         mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
 
         result = fetch_org_features()
+        assert result == [{"org": "my-org", "features": ["environments"]}]
+
+    @pytest.mark.parametrize("ssl_verify", [True, False, None])
+    def test_returns_org_features_supports_ssl_verify(
+        self, ssl_verify: bool | None, mocker: MockerFixture
+    ):
+        from anaconda_auth.env_logger import fetch_org_features
+
+        mock_client = mocker.MagicMock()
+        mock_resp = mocker.MagicMock()
+        mock_resp.json.return_value = {
+            "organization_features": [{"org": "my-org", "features": ["environments"]}]
+        }
+        mock_client.return_value = mock_client
+        mock_client.get.return_value = mock_resp
+        MockedBaseClient = mocker.patch(
+            "anaconda_auth.env_logger.BaseClient", mock_client
+        )
+
+        result = fetch_org_features(ssl_verify=ssl_verify)
+        assert (
+            MockedBaseClient.call_args.kwargs == {}
+            if ssl_verify is None
+            else {"ssl_verify": ssl_verify}
+        )
         assert result == [{"org": "my-org", "features": ["environments"]}]
 
     def test_returns_none_on_failure(self, mocker: MockerFixture):
