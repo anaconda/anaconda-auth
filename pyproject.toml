@@ -144,6 +144,10 @@ module = "ruamel.*"
 ignore_missing_imports = true
 module = "pydantic.v1.*"
 
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "anaconda_opentelemetry.*"
+
 [tool.pytest.ini_options]
 addopts = [
   "--cov",
@@ -205,7 +209,7 @@ envlist =
     py39
     py310-{old-keyring,new-keyring,pydantic1,pydantic2,conda}
     py311-{conda}
-    py312-{conda}
+    py312-{condal}
     py313-{no-conda,conda}
     pendingdeprecations
     mypy
@@ -247,6 +251,7 @@ deps =
 conda_deps =
     anaconda-anon-usage
     anaconda-client
+    anaconda-opentelemetry
     # Optionally install conda to test plugins
     conda: conda
     # Keep testing semver<3 until version 3+ released to defaults
