@@ -79,6 +79,17 @@ class AnacondaAuthSite(BaseModel):
     env_manager_version: Optional[str] = None
     _merged: bool = False
 
+    @field_validator("env_manager_version", mode="before")
+    @classmethod
+    def env_manager_version_comparison(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        if re.match(r"[>=<!]", value) is None:
+            return f"={value}"
+        else:
+            return value
+
     @field_validator("domain", "auth_domain_override", mode="before")
     @classmethod
     def domain_validator(cls, value: str | None) -> str | None:

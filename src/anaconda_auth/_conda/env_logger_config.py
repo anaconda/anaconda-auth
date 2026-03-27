@@ -33,8 +33,7 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
     """
     config = AnacondaAuthConfig()
 
-    version = f"=={config.env_manager_version}" if config.env_manager_version else ""
-    pkg = f"{config.env_manager_channel}::{config.env_manager_package}{version}"
+    pkg = f"{config.env_manager_channel}::{config.env_manager_package}{config.env_manager_version or ''}"
     args = [
         conda_path,
         "install",
