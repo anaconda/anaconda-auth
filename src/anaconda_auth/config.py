@@ -74,6 +74,9 @@ class AnacondaAuthSite(BaseModel):
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
     use_device_flow: bool = False
+    env_manager_channel: str = "anaconda-cloud"
+    env_manager_package: str = "anaconda-env-manager"
+    env_manager_version: Optional[str] = None
     _merged: bool = False
 
     @field_validator("domain", "auth_domain_override", mode="before")
