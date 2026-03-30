@@ -337,6 +337,7 @@ def _post_login_setup(ssl_verify: Optional[Union[bool, str]] = None) -> None:
         return
 
     from anaconda_auth._conda.env_logger_config import install_env_manager
+    from anaconda_auth._conda.env_logger_config import is_client_registered
     from anaconda_auth._conda.env_logger_config import is_env_manager_installed
     from anaconda_auth._conda.env_logger_config import register_org
 
@@ -364,6 +365,10 @@ def _post_login_setup(ssl_verify: Optional[Union[bool, str]] = None) -> None:
             )
             return
         console.print(f"{CHECK_MARK} anaconda-env-manager installed successfully.")
+
+    # Skip registration if client token is already mapped
+    if is_client_registered(conda_path):
+        return
 
     # Delegate org selection and registration to the plugin
     if not register_org(conda_path):
