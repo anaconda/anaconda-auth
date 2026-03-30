@@ -49,7 +49,11 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
 def get_client_token(conda_path: str) -> str | None:
     """Retrieve the anaconda-anon-usage client token via subprocess."""
     python_path = conda_path.replace("/bin/conda", "/bin/python")
-    args = [python_path, "-c", "from anaconda_anon_usage.tokens import client_token; print(client_token())"]
+    args = [
+        python_path,
+        "-c",
+        "from anaconda_anon_usage.tokens import client_token; print(client_token())",
+    ]
     proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
         logger.debug("Failed to get client token: %s", proc.stderr)
@@ -68,6 +72,7 @@ def is_client_registered(conda_path: str) -> bool:
         return False
 
     from anaconda_auth.env_logger import is_client_registered as _check
+
     return _check(token)
 
 
