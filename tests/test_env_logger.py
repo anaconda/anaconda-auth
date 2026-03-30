@@ -102,3 +102,43 @@ class TestFetchOrgFeatures:
 
         result = fetch_org_features()
         assert result == []
+
+
+class TestIsClientRegistered:
+    def test_returns_true_when_registered(self, mocker: MockerFixture):
+        from anaconda_auth.env_logger import is_client_registered
+
+        mock_client = mocker.MagicMock()
+        mock_resp = mocker.MagicMock()
+        mock_resp.status_code = 200
+        mock_client.return_value = mock_client
+        mock_client.get.return_value = mock_resp
+        mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
+
+        assert is_client_registered("test-token") is True
+        mock_client.get.assert_called_once_with(
+            "/api/environments/client-token-status",
+            params={"client_token": "test-token"},
+        )
+
+    def test_returns_false_when_not_registered(self, mocker: MockerFixture):
+        from anaconda_auth.env_logger import is_client_registered
+
+        mock_client = mocker.MagicMock()
+        mock_resp = mocker.MagicMock()
+        mock_resp.status_code = 404
+        mock_client.return_value = mock_client
+        mock_client.get.return_value = mock_resp
+        mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
+
+        assert is_client_registered("test-token") is False
+
+    def test_returns_false_on_exception(self, mocker: MockerFixture):
+        from anaconda_auth.env_logger import is_client_registered
+
+        mock_client = mocker.MagicMock()
+        mock_client.return_value = mock_client
+        mock_client.get.side_effect = Exception("connection error")
+        mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
+
+        assert is_client_registered("test-token") is False
