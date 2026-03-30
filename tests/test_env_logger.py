@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import pytest
 from pytest_mock import MockerFixture
-from anaconda_auth.env_logger import is_client_registered
-from anaconda_auth.env_logger import get_orgs_with_env_logger
+
 from anaconda_auth.env_logger import fetch_org_features
+from anaconda_auth.env_logger import get_orgs_with_env_logger
+from anaconda_auth.env_logger import is_client_registered
 
 
 class TestGetOrgsWithEnvLogger:
@@ -51,7 +52,6 @@ class TestFetchOrgFeatures:
     def test_returns_org_features_supports_ssl_verify(
         self, ssl_verify: bool | None, mocker: MockerFixture
     ):
-
 
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
