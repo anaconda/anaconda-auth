@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import pytest
 from pytest_mock import MockerFixture
+from anaconda_auth.env_logger import is_client_registered
+from anaconda_auth.env_logger import get_orgs_with_env_logger
+from anaconda_auth.env_logger import fetch_org_features
 
 
 class TestGetOrgsWithEnvLogger:
     def test_returns_all_matching_orgs(self):
-        from anaconda_auth.env_logger import get_orgs_with_env_logger
-
         org_features = [
             {"org": "first-org", "features": ["environments"]},
             {"org": "second-org", "features": ["community"]},
@@ -17,8 +18,6 @@ class TestGetOrgsWithEnvLogger:
         assert result == ["first-org", "third-org"]
 
     def test_returns_empty_when_no_environments(self):
-        from anaconda_auth.env_logger import get_orgs_with_env_logger
-
         org_features = [
             {"org": "my-org", "features": ["notebooks"]},
         ]
@@ -26,13 +25,9 @@ class TestGetOrgsWithEnvLogger:
         assert result == []
 
     def test_returns_empty_for_empty_list(self):
-        from anaconda_auth.env_logger import get_orgs_with_env_logger
-
         assert get_orgs_with_env_logger([]) == []
 
     def test_handles_missing_features_key(self):
-        from anaconda_auth.env_logger import get_orgs_with_env_logger
-
         org_features = [{"org": "my-org"}]
         result = get_orgs_with_env_logger(org_features)
         assert result == []
@@ -40,8 +35,6 @@ class TestGetOrgsWithEnvLogger:
 
 class TestFetchOrgFeatures:
     def test_returns_org_features(self, mocker: MockerFixture):
-        from anaconda_auth.env_logger import fetch_org_features
-
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
         mock_resp.json.return_value = {
@@ -58,7 +51,7 @@ class TestFetchOrgFeatures:
     def test_returns_org_features_supports_ssl_verify(
         self, ssl_verify: bool | None, mocker: MockerFixture
     ):
-        from anaconda_auth.env_logger import fetch_org_features
+
 
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
@@ -80,8 +73,6 @@ class TestFetchOrgFeatures:
         assert result == [{"org": "my-org", "features": ["environments"]}]
 
     def test_returns_none_on_failure(self, mocker: MockerFixture):
-        from anaconda_auth.env_logger import fetch_org_features
-
         mock_client = mocker.MagicMock()
         mock_client.return_value = mock_client
         mock_client.get.side_effect = Exception("connection error")
@@ -106,7 +97,6 @@ class TestFetchOrgFeatures:
 
 class TestIsClientRegistered:
     def test_returns_true_when_registered(self, mocker: MockerFixture):
-        from anaconda_auth.env_logger import is_client_registered
 
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
@@ -122,7 +112,6 @@ class TestIsClientRegistered:
         )
 
     def test_returns_false_when_not_registered(self, mocker: MockerFixture):
-        from anaconda_auth.env_logger import is_client_registered
 
         mock_client = mocker.MagicMock()
         mock_resp = mocker.MagicMock()
@@ -134,7 +123,6 @@ class TestIsClientRegistered:
         assert is_client_registered("test-token") is False
 
     def test_returns_false_on_exception(self, mocker: MockerFixture):
-        from anaconda_auth.env_logger import is_client_registered
 
         mock_client = mocker.MagicMock()
         mock_client.return_value = mock_client
