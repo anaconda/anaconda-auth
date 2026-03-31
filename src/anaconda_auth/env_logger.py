@@ -21,7 +21,7 @@ def fetch_org_features(ssl_verify: Optional[Union[bool, str]] = None) -> Optiona
         return None
 
 
-def is_client_registered(token: str) -> bool:
+def check_client_token_status(token: str) -> bool:
     """Check if a client token is already mapped to a user.
 
     Uses the read-only client-token-status endpoint.  A 200 response means
