@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from pytest_mock import MockerFixture
 
+from anaconda_auth.env_logger import check_client_token_status
 from anaconda_auth.env_logger import fetch_org_features
 from anaconda_auth.env_logger import get_orgs_with_env_logger
-from anaconda_auth.env_logger import check_client_token_status
 
 
 class TestGetOrgsWithEnvLogger:
