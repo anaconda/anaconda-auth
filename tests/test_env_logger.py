@@ -5,7 +5,7 @@ from pytest_mock import MockerFixture
 
 from anaconda_auth.env_logger import fetch_org_features
 from anaconda_auth.env_logger import get_orgs_with_env_logger
-from anaconda_auth.env_logger import is_client_registered
+from anaconda_auth.env_logger import check_client_token_status
 
 
 class TestGetOrgsWithEnvLogger:
@@ -95,7 +95,7 @@ class TestFetchOrgFeatures:
         assert result == []
 
 
-class TestIsClientRegistered:
+class TestCheckClientTokenStatus:
     def test_returns_true_when_registered(self, mocker: MockerFixture):
 
         mock_client = mocker.MagicMock()
@@ -105,7 +105,7 @@ class TestIsClientRegistered:
         mock_client.get.return_value = mock_resp
         mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
 
-        assert is_client_registered("test-token") is True
+        assert check_client_token_status("test-token") is True
         mock_client.get.assert_called_once_with(
             "/api/environments/client-token-status",
             params={"client_token": "test-token"},
@@ -120,7 +120,7 @@ class TestIsClientRegistered:
         mock_client.get.return_value = mock_resp
         mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
 
-        assert is_client_registered("test-token") is False
+        assert check_client_token_status("test-token") is False
 
     def test_returns_false_on_exception(self, mocker: MockerFixture):
 
@@ -129,4 +129,4 @@ class TestIsClientRegistered:
         mock_client.get.side_effect = Exception("connection error")
         mocker.patch("anaconda_auth.env_logger.BaseClient", mock_client)
 
-        assert is_client_registered("test-token") is False
+        assert check_client_token_status("test-token") is False
