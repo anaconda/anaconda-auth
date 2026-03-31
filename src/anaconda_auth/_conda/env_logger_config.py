@@ -47,10 +47,14 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
 
 
 def get_client_token(conda_path: str) -> str | None:
-    """Retrieve the anaconda-anon-usage client token via subprocess."""
-    python_path = conda_path.replace("/bin/conda", "/bin/python")
+    """Retrieve the anaconda-anon-usage client token via conda run."""
     args = [
-        python_path,
+        conda_path,
+        "run",
+        "-n",
+        "base",
+        "--no-capture-output",
+        "python",
         "-c",
         "from anaconda_anon_usage.tokens import client_token; print(client_token())",
     ]
