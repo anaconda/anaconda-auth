@@ -71,9 +71,9 @@ def is_client_registered(conda_path: str) -> bool:
     if not token:
         return False
 
-    from anaconda_auth.env_logger import is_client_registered as _check
+    from anaconda_auth.env_logger import check_client_token_status
 
-    return _check(token)
+    return check_client_token_status(token)
 
 
 def register_org(conda_path: str) -> bool:
