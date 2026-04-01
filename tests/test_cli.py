@@ -281,6 +281,10 @@ def test_post_login_setup_installs_and_registers_single_org(
         "anaconda_auth._conda.env_logger_config.install_env_manager",
         return_value=(True, ""),
     )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_client_registered",
+        return_value=False,
+    )
     mock_register = mocker.patch(
         "anaconda_auth._conda.env_logger_config.register_org",
         return_value=True,
@@ -307,6 +311,10 @@ def test_post_login_setup_skips_install_when_already_installed(
     )
     mock_install = mocker.patch(
         "anaconda_auth._conda.env_logger_config.install_env_manager",
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_client_registered",
+        return_value=False,
     )
     mock_register = mocker.patch(
         "anaconda_auth._conda.env_logger_config.register_org",
@@ -354,6 +362,10 @@ def test_post_login_setup_shows_warning_when_register_fails(
     mocker.patch(
         "anaconda_auth._conda.env_logger_config.is_env_manager_installed",
         return_value=True,
+    )
+    mocker.patch(
+        "anaconda_auth._conda.env_logger_config.is_client_registered",
+        return_value=False,
     )
     mocker.patch(
         "anaconda_auth._conda.env_logger_config.register_org",
