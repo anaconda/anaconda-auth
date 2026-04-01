@@ -1,6 +1,8 @@
 import re
 import warnings
 from functools import cached_property
+from os.path import expandvars
+from pathlib import Path
 from typing import Any
 from typing import ClassVar
 from typing import Dict
@@ -21,6 +23,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
+from pydantic import field_serializer
 from pydantic import field_validator
 from pydantic import model_validator
 from pydantic.fields import FieldInfo
@@ -60,6 +63,7 @@ class AnacondaAuthSite(BaseModel):
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
     keyring: Optional[Dict[str, Dict[str, str]]] = None
+    keyring_path: Path = Path("~/.anaconda/keyring").expanduser()
     ssl_verify: Union[bool, str] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
@@ -78,6 +82,15 @@ class AnacondaAuthSite(BaseModel):
     env_manager_package: str = "anaconda-env-manager"
     env_manager_version: Optional[str] = None
     _merged: bool = False
+
+    @field_validator("keyring_path", mode="before")
+    @classmethod
+    def expand_keyring_path(cls, value: str) -> Path:
+        return Path(expandvars(value)).expanduser()
+
+    @field_serializer("keyring_path")
+    def serialize_path(self, path: Path, _info) -> str:
+        return str(path.absolute())
 
     @field_validator("env_manager_version", mode="before")
     @classmethod
