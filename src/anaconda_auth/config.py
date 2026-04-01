@@ -85,7 +85,7 @@ class AnacondaAuthSite(BaseModel):
         if value is None:
             return value
 
-        if re.match( r"^[>=<!]", value) is None:
+        if re.match(r"^[>=<!]", value) is None:
             return f"={value}"
         else:
             return value
