@@ -73,6 +73,11 @@ class AnacondaAuthSite(BaseModel):
     proxy_servers: Optional[MutableMapping[str, str]] = None
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
+    otel_token: Optional[str] = None
+    otel_console_exporter: bool = False
+    otel_logging_level: str = "warn"
+    otel_exporter_interval: int = 10000
+    otel_service_name: str = "anaconda-cli"
     use_device_flow: bool = False
     _merged: bool = False
 

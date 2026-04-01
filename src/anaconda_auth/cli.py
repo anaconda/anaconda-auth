@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import warnings
+from datetime import datetime
 from textwrap import dedent
 from typing import Annotated
 from typing import Any
@@ -34,6 +35,7 @@ from anaconda_auth.token import TokenNotFoundError
 from anaconda_cli_base.config import anaconda_config_path
 from anaconda_cli_base.console import console
 from anaconda_cli_base.exceptions import register_error_handler
+from anaconda_opentelemetry.signals import increment_counter
 
 logger = logging.getLogger(__name__)
 
@@ -52,14 +54,16 @@ def _continue_with_login() -> int:
             return -1
         else:
             console.print(
-                dedent("""
+                dedent(
+                    """
                 To configure your credentials you can run
                   [green]anaconda login --at anaconda.com[/green]
 
                 or set your API key using the [green]ANACONDA_AUTH_API_KEY[/green] env var
 
                 or set
-                """)
+                """
+                )
             )
             console.print(
                 Syntax(
@@ -104,6 +108,12 @@ def http_error(e: HTTPError) -> int:
         error_code = e.response.json().get("error", {}).get("code", "")
     except JSONDecodeError:
         error_code = ""
+
+    increment_counter(
+        "http_error",
+        by=1,
+        attributes={"name": e.__class__.__name__, "error_code": error_code},
+    )
 
     if error_code == "auth_required":
         if "Authorization" in e.request.headers:
@@ -255,6 +265,10 @@ def main(
         Optional[List[str]], typer.Argument(hidden=True, metavar="")
     ] = None,
 ) -> None:
+    cmd_start_time = datetime.now()
+    # setup_telemetry(AnacondaAuthSite(), __version__)
+    # log = get_telemetry_logger(__name__)
+
     if version:
         console.print(
             f"anaconda-auth, version [cyan]{__version__}[/cyan]",
@@ -276,6 +290,8 @@ def main(
 
     # If the subcommand is known, then we delegate to the actual functions defined in this module
     if cmd := subcommands_dict.get(subcommand_name):
+        # record_command_duration(cmd_start_time, cmd)
+
         cmd.main(
             extra_args[1:], prog_name=subcommand_name, standalone_mode=False, parent=ctx
         )
@@ -305,6 +321,12 @@ def main(
         # If any of the anaconda-client options are passed, try to delegate to
         # binstar_main if it exists. Otherwise, we just exit gracefully.
 
+        # log.info(
+        #     "has_legacy_options: %r subcommand_name: %r",
+        #     has_legacy_options,
+        #     subcommand_name,
+        # )
+
         try:
             from binstar_client.scripts.cli import main as binstar_main
         except (ImportError, ModuleNotFoundError):
@@ -319,6 +341,7 @@ def main(
         )
 
         binstar_main(sys.argv[1:], allow_plugin_main=False)
+        # record_command_duration(cmd_start_time, ", ".join(sys.argv[1:]))
         return
 
     # No subcommand was given, so we print help
