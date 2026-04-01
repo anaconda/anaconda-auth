@@ -580,3 +580,17 @@ def test_ssl_verify_toml_global_values(
 
     config = AnacondaAuthConfig()
     assert equality(config.ssl_verify)
+
+
+@pytest.mark.parametrize(
+    "version,expected",
+    [
+        ("1.2.3", "=1.2.3"),
+        ("==1.2.3", "==1.2.3"),
+        (">1.2.3", ">1.2.3"),
+        ("<=1.2.3", "<=1.2.3"),
+    ],
+)
+def test_env_mgr_version(version: str, expected: str) -> None:
+    config = AnacondaAuthSite(env_manager_version=version)
+    assert config.env_manager_version == expected

@@ -504,6 +504,9 @@ def sites_show(
         "openid_config_path",
         "oidc_request_headers",
         "redirect_uri",
+        "env_manager_channel",
+        "env_manager_package",
+        "env_manager_version",
     }
 
     exclude = None if show_hidden else hidden
