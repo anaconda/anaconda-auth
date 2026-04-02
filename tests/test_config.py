@@ -601,10 +601,13 @@ def test_env_mgr_version(version: str, expected: str) -> None:
     [
         ("~/.anaconda/keyring", Path("~/.anaconda/keyring").expanduser()),
         ("/tmp/custom/keyring", Path("/tmp/custom/keyring")),
-        ("$HOME/.keyring", Path.home() / ".keyring"),
+        ("$KEYRING_ROOT/keyring", Path("/tmp/anaconda/keyring")),
     ],
 )
-def test_keyring_path_validation(value: str, expected: Path) -> None:
+def test_keyring_path_validation(
+    value: str, expected: Path, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setenv("KEYRING_ROOT", "/tmp/anaconda")
     site = AnacondaAuthSite.model_validate({"keyring_path": value})
     assert site.keyring_path == expected
     assert isinstance(site.keyring_path, Path)
