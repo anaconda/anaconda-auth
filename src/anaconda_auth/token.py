@@ -139,7 +139,10 @@ class NavigatorFallback(KeyringBackend):
 
 class AnacondaKeyring(KeyringBackend):
     name = "token AnacondaKeyring"  # Pinning name explicitly instead of relying on module.submodule automatic naming convention.
-    keyring_path = Path("~/.anaconda/keyring").expanduser()
+
+    @classproperty
+    def keyring_path(cls) -> Path:
+        return AnacondaAuthConfig().keyring_path
 
     @classproperty
     def priority(cls) -> float:
