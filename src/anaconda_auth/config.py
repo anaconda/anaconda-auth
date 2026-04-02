@@ -23,8 +23,8 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
-from pydantic import field_serializer
 from pydantic import field_validator
+from pydantic import model_serializer
 from pydantic import model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
@@ -88,9 +88,16 @@ class AnacondaAuthSite(BaseModel):
     def expand_keyring_path(cls, value: str) -> Path:
         return Path(expandvars(value)).expanduser()
 
-    @field_serializer("keyring_path")
-    def serialize_path(self, path: Path, _info) -> str:
-        return str(path.absolute())
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, handler: Any) -> dict:
+        # model_serializer (not field_serializer) so exclude_defaults compares
+        # raw Path vs Path default, not serialized str vs Path default.
+        data = handler(self)
+        if "keyring_path" in data:
+            kp = data["keyring_path"]
+            if isinstance(kp, Path):
+                data["keyring_path"] = str(kp.absolute())
+        return data
 
     @field_validator("env_manager_version", mode="before")
     @classmethod

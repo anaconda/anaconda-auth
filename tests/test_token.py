@@ -69,11 +69,11 @@ def test_preferred_token_storage(monkeypatch: MonkeyPatch) -> None:
     )
 
 
-def test_anaconda_keyring_save_delete(tmp_path: Path) -> None:
+def test_anaconda_keyring_save_delete(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    keyring_path = tmp_path / "keyring"
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(keyring_path))
     from anaconda_auth.token import AnacondaKeyring
 
-    fn = tmp_path / "keyring"
-    AnacondaKeyring.keyring_path = fn
     assert AnacondaKeyring.viable
 
     anaconda_keyring = AnacondaKeyring()
@@ -113,14 +113,14 @@ def test_anaconda_keyring_save_delete(tmp_path: Path) -> None:
     assert anaconda_keyring.get_password("s3", "u4") is None
 
 
-def test_anaconda_keyring_empty(tmp_path: Path) -> None:
+def test_anaconda_keyring_empty(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     fn = tmp_path / "keyring"
     fn.touch()
     assert fn.exists()
 
-    from anaconda_auth.token import AnacondaKeyring
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(fn))
 
-    AnacondaKeyring.keyring_path = fn
+    from anaconda_auth.token import AnacondaKeyring
 
     anaconda_keyring = AnacondaKeyring()
     assert anaconda_keyring.get_password("s", "u") is None
@@ -129,22 +129,27 @@ def test_anaconda_keyring_empty(tmp_path: Path) -> None:
         anaconda_keyring.delete_password("s", "u")
 
 
-def test_anaconda_keyring_not_writable(tmp_path: Path) -> None:
+def test_anaconda_keyring_not_writable(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    keyring_path = tmp_path / "keyring"
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(keyring_path))
     from anaconda_auth.token import AnacondaKeyring
 
-    AnacondaKeyring.keyring_path = tmp_path / "keyring"
     AnacondaKeyring.keyring_path.touch()
     AnacondaKeyring.keyring_path.chmod(0x444)
 
     assert not AnacondaKeyring.viable
 
 
-def test_anaconda_keyring_dir_not_a_dir(tmp_path: Path) -> None:
-    from anaconda_auth.token import AnacondaKeyring
-
+def test_anaconda_keyring_dir_not_a_dir(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
     keyring_dir = tmp_path / "anaconda"
     keyring_dir.touch()
-    AnacondaKeyring.keyring_path = keyring_dir / "keyring"
+    kerying_path = keyring_dir / "keyring"
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(kerying_path))
+    from anaconda_auth.token import AnacondaKeyring
 
     assert not AnacondaKeyring.viable
 
