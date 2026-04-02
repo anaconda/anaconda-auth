@@ -620,7 +620,7 @@ def test_keyring_path_serialization_excludes_default() -> None:
 
     custom = AnacondaAuthSite.model_validate({"keyring_path": "/tmp/custom/keyring"})
     dump = custom.model_dump(exclude_defaults=True)
-    assert dump["keyring_path"] == "/tmp/custom/keyring"
+    assert dump["keyring_path"] == str(Path("/tmp/custom/keyring").absolute())
     assert isinstance(dump["keyring_path"], str)
 
     roundtrip = AnacondaAuthSite.model_validate(site.model_dump())
