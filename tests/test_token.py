@@ -147,8 +147,8 @@ def test_anaconda_keyring_dir_not_a_dir(
 ) -> None:
     keyring_dir = tmp_path / "anaconda"
     keyring_dir.touch()
-    kerying_path = keyring_dir / "keyring"
-    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(kerying_path))
+    keyring_path = keyring_dir / "keyring"
+    monkeypatch.setenv("ANACONDA_AUTH_KEYRING_PATH", str(keyring_path))
     from anaconda_auth.token import AnacondaKeyring
 
     assert not AnacondaKeyring.viable
