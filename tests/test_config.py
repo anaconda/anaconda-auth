@@ -594,3 +594,34 @@ def test_ssl_verify_toml_global_values(
 def test_env_mgr_version(version: str, expected: str) -> None:
     config = AnacondaAuthSite(env_manager_version=version)
     assert config.env_manager_version == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("~/.anaconda/keyring", Path("~/.anaconda/keyring").expanduser()),
+        ("/tmp/custom/keyring", Path("/tmp/custom/keyring")),
+        ("$KEYRING_ROOT/keyring", Path("/tmp/anaconda/keyring")),
+    ],
+)
+def test_keyring_path_validation(
+    value: str, expected: Path, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setenv("KEYRING_ROOT", "/tmp/anaconda")
+    site = AnacondaAuthSite.model_validate({"keyring_path": value})
+    assert site.keyring_path == expected
+    assert isinstance(site.keyring_path, Path)
+
+
+def test_keyring_path_serialization_excludes_default() -> None:
+    site = AnacondaAuthSite()
+    dump = site.model_dump(exclude_defaults=True)
+    assert "keyring_path" not in dump
+
+    custom = AnacondaAuthSite.model_validate({"keyring_path": "/tmp/custom/keyring"})
+    dump = custom.model_dump(exclude_defaults=True)
+    assert dump["keyring_path"] == str(Path("/tmp/custom/keyring").absolute())
+    assert isinstance(dump["keyring_path"], str)
+
+    roundtrip = AnacondaAuthSite.model_validate(site.model_dump())
+    assert "keyring_path" not in roundtrip.model_dump(exclude_defaults=True)
