@@ -216,12 +216,29 @@ class AnacondaAuthHandler(ChannelAuthBase):
                     return AccessCredential(token, CredentialType.REPO_TOKEN)
         return None
 
+    @staticmethod
+    def _load_token_from_env(
+        token_domain: str,
+        credential_type: CredentialType,
+    ) -> Optional[AccessCredential]:
+        """Attempt to load the token from environment variable via config.
+
+        This serves as a fallback when the keyring lookup fails, checking if
+        ANACONDA_AUTH_API_KEY env var is set.
+
+        """
+        config = AnacondaAuthConfig(domain=token_domain)
+        if config.api_key and credential_type == CredentialType.API_KEY:
+            return AccessCredential(config.api_key, CredentialType.API_KEY)
+        return None
+
     @lru_cache
     def _load_token(self, url: str) -> AccessCredential:
         """Load the appropriate token based on URL matching.
 
         First, attempts to load from the keyring. If that fails, we attempt
-        to load the legacy repo token via conda-token.
+        to load from the ANACONDA_AUTH_API_KEY env var, then fall back to
+        the legacy repo token via conda-token.
 
         Cached for performance.
 
@@ -239,6 +256,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
         if token := self._load_token_from_keyring(
             token_domain, credential_type, parsed_url
         ):
+            return token
+        elif token := self._load_token_from_env(token_domain, credential_type):
             return token
         elif token := self._load_token_via_conda_token(parsed_url):
             return token
