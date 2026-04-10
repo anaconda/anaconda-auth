@@ -183,6 +183,36 @@ def test_get_token_missing(handler):
     assert token == AccessCredential(None, CredentialType.REPO_TOKEN)
 
 
+@pytest.mark.usefixtures("mocked_empty_conda_token")
+def test_get_token_from_env_var_when_keyring_empty(handler, monkeypatch):
+    """When keyring lookup fails, the handler should fall back to ANACONDA_AUTH_API_KEY env var."""
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "my-env-var-api-key")
+
+    # Clear the lru_cache to ensure fresh lookup
+    handler._load_token.cache_clear()
+
+    token = handler._load_token(
+        "https://repo.anaconda.com/pkgs/main/noarch/repodata.json"
+    )
+    assert token == AccessCredential("my-env-var-api-key", CredentialType.API_KEY)
+
+
+@pytest.mark.usefixtures("mocked_token_info_with_api_key")
+def test_keyring_takes_precedence_over_env_var(handler, monkeypatch):
+    """Keyring token should be used even when ANACONDA_AUTH_API_KEY env var is set."""
+    monkeypatch.setenv("ANACONDA_AUTH_API_KEY", "my-env-var-api-key")
+    monkeypatch.setenv("ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY", "True")
+
+    # Clear the lru_cache to ensure fresh lookup
+    handler._load_token.cache_clear()
+
+    token = handler._load_token(
+        "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+    )
+    # Should use keyring token, not env var
+    assert token == AccessCredential("my-test-api-key", CredentialType.API_KEY)
+
+
 @pytest.mark.usefixtures("mocked_token_info")
 def test_inject_header_during_request(session, url, monkeypatch):
     # Set up a dummy function that will capture the PreparedRequest without sending it.
