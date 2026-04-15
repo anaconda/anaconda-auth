@@ -4,6 +4,7 @@ Tokens are assumed to be installed onto a user's system via a separate CLI comma
 
 """
 
+import os
 from fnmatch import fnmatch
 from functools import lru_cache
 from typing import Any
@@ -252,6 +253,15 @@ class AnacondaAuthHandler(ChannelAuthBase):
         credential is a legacy repo token or an API key.
 
         """
+
+        # Preempt all token loading with the environment variable, if it exists.
+        # This allows us to bypass all of the configuration and keyring interactions,
+        # which in some rare cases can cause race conditions when there are many
+        # component channels across a custom multi-channel, over which concurrent
+        # requests are made.
+        if api_key := os.getenv("ANACONDA_AUTH_API_KEY"):
+            return f"Bearer {api_key}", CredentialType.API_KEY
+
         try:
             token = self._load_token(url)
             if token.value is None:
