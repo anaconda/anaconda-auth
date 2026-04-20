@@ -21,9 +21,12 @@ from anaconda_auth.config import AnacondaAuthConfig
 from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.exceptions import TokenExpiredError
 from anaconda_auth.exceptions import TokenNotFoundError
+from anaconda_auth.telemetry import get_telemetry_logger
 from anaconda_auth.token import TokenInfo
 from anaconda_auth.utils import get_hostname
 from anaconda_cli_base.exceptions import AnacondaConfigValidationError
+from anaconda_opentelemetry.signals import increment_counter
+from anaconda_opentelemetry.signals import record_histogram
 
 # VersionInfo was renamed and is deprecated in semver>=3
 try:
@@ -75,6 +78,24 @@ class BearerAuth(AuthBase):
         else:
             r.headers["Authorization"] = f"Bearer {self.api_key}"
         return r
+
+
+def post_request_telemetry_logger(response: Response, *args, **kwargs) -> Response:  # type: ignore
+    log = get_telemetry_logger(__name__)
+
+    msg = "Response url: %r status: %d data: %r"
+    log.info(msg, response.url, response.status_code, response.json())
+
+    increment_counter(
+        f"base_client_status::{response.status_code}",
+        by=1,
+        attributes={"url": response.url},
+    )
+
+    record_histogram(
+        "request_duration_ms", value=response.elapsed, attributes={"url": response.url}
+    )
+    return response
 
 
 class BaseClient(requests.Session):
@@ -162,6 +183,7 @@ class BaseClient(requests.Session):
 
         self.auth = BearerAuth(domain=self.config.domain, api_key=self.config.api_key)
         self.hooks["response"].append(login_required)
+        # self.hooks["response"].append(post_request_telemetry_logger)
 
     def configure_ssl(self) -> None:
         ssl_context = None
