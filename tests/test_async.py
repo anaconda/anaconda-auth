@@ -8,6 +8,12 @@ from .conftest import MockedRequest
 from .conftest import MockResponse
 
 
+def test_async_client_init_without_credentials(monkeypatch) -> None:
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
+    client = AsyncBaseClient()
+    assert isinstance(client, AsyncBaseClient)
+
+
 @pytest.fixture()
 def mocked_request(mocker):
     """A mocked request, returning a custom response."""
