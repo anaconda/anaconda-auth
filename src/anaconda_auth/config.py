@@ -1,6 +1,8 @@
 import re
 import warnings
 from functools import cached_property
+from os.path import expandvars
+from pathlib import Path
 from typing import Any
 from typing import ClassVar
 from typing import Dict
@@ -22,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import RootModel
 from pydantic import field_validator
+from pydantic import model_serializer
 from pydantic import model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
@@ -60,6 +63,7 @@ class AnacondaAuthSite(BaseModel):
     auth_domain_override: Optional[str] = None
     api_key: Optional[str] = None
     keyring: Optional[Dict[str, Dict[str, str]]] = None
+    keyring_path: Path = Path("~/.anaconda/keyring").expanduser()
     ssl_verify: Union[bool, str] = True
     extra_headers: Optional[Union[Dict[str, str], str]] = None
     client_id: str = "b4ad7f1d-c784-46b5-a9fe-106e50441f5a"
@@ -78,6 +82,22 @@ class AnacondaAuthSite(BaseModel):
     env_manager_package: str = "anaconda-env-manager"
     env_manager_version: Optional[str] = None
     _merged: bool = False
+
+    @field_validator("keyring_path", mode="before")
+    @classmethod
+    def expand_keyring_path(cls, value: str) -> Path:
+        return Path(expandvars(value)).expanduser()
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, handler: Any) -> dict:
+        # model_serializer (not field_serializer) so exclude_defaults compares
+        # raw Path vs Path default, not serialized str vs Path default.
+        data = handler(self)
+        if "keyring_path" in data:
+            kp = data["keyring_path"]
+            if isinstance(kp, Path):
+                data["keyring_path"] = str(kp.absolute())
+        return data
 
     @field_validator("env_manager_version", mode="before")
     @classmethod

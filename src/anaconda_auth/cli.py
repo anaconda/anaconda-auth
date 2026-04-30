@@ -498,6 +498,7 @@ def sites_show(
         "client_id",
         "hash_hostname",
         "keyring",
+        "keyring_path",
         "preferred_token_storage",
         "login_success_path",
         "login_error_path",
