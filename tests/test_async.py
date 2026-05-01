@@ -12,6 +12,8 @@ def test_async_client_init_without_credentials(monkeypatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
     client = AsyncBaseClient()
     assert isinstance(client, AsyncBaseClient)
+    assert client.account["user"]["id"] is None
+    assert client.account["domain"] == client.config.domain
 
 
 @pytest.fixture()

@@ -29,6 +29,8 @@ def test_client_init_without_credentials(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
     client = BaseClient()
     assert isinstance(client, BaseClient)
+    assert client.account["user"]["id"] is None
+    assert client.account["domain"] == client.config.domain
 
 
 @pytest.mark.integration

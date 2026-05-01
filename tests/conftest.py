@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 from keyring.backend import KeyringBackend
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
+from requests.exceptions import HTTPError
 from requests_mock import Mocker as RequestMocker
 from typer.testing import CliRunner
 
@@ -244,9 +245,15 @@ class MockResponse:
     def json(self) -> dict[str, Any]:
         return self.json_data or {}
 
-    def raise_for_status(self) -> None:
-        from requests.exceptions import HTTPError
+    @property
+    def ok(self) -> bool:
+        try:
+            self.raise_for_status()
+        except HTTPError:
+            return False
+        return True
 
+    def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise HTTPError(f"Mocked HTTP error: {self.status_code}")
 

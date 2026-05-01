@@ -223,8 +223,27 @@ class BaseClient(requests.Session):
     @cached_property
     def account(self) -> dict:
         res = self.get("/api/account")
-        res.raise_for_status()
-        account = res.json()
+        if not res.ok and "Authorization" not in res.request.headers:
+            account = {
+                "user": {
+                    "id": None,
+                    "email": None,
+                    "username": "",
+                    "first_name": "",
+                    "last_name": "",
+                },
+                "profile": {
+                    "is_confirmed": False,
+                    "is_disabled": False,
+                    "is_consented": False,
+                },
+                "subscriptions": [],
+            }
+        else:
+            res.raise_for_status()
+            account = res.json()
+
+        account["domain"] = self.config.domain
         return account
 
     @property
