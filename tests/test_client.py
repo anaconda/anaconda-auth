@@ -25,6 +25,14 @@ from .conftest import is_conda_installed
 HERE = os.path.dirname(__file__)
 
 
+def test_client_init_without_credentials(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
+    client = BaseClient()
+    assert isinstance(client, BaseClient)
+    assert client.account["user"]["id"] is None
+    assert client.account["domain"] == client.config.domain
+
+
 @pytest.mark.integration
 @pytest.mark.usefixtures("disable_dot_env")
 def test_login_required_error(monkeypatch: MonkeyPatch) -> None:

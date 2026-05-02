@@ -39,6 +39,7 @@ anaconda_auth = "anaconda_auth.panel:AnacondaLoginHandler"
 dev = [
   "mypy",
   "pytest",
+  "pytest-asyncio",
   "pytest-cov",
   "pytest-mock",
   "requests-mock",
@@ -245,6 +246,7 @@ deps =
     pydantic1: pydantic <2.0
     pydantic2: pydantic >=2.0
 conda_deps =
+    pip
     anaconda-anon-usage
     anaconda-client
     # Optionally install conda to test plugins
@@ -262,9 +264,11 @@ commands = pytest {posargs}
 
 [testenv:.package]
 conda_deps =
+    pip
 
 [testenv:mypy]
 conda_deps =
+    pip
 deps =
     mypy
     pytest

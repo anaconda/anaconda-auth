@@ -18,23 +18,22 @@ class AsyncBaseClient(httpx.AsyncClient, BaseClient):  # type: ignore
            from the sync client: headers, verify, cert, base_url and auth.
         kwargs: passed to BaseClient and its requests.Session superclass
         """
-        sync_client = BaseClient(**kwargs)  # type: ignore
-        self._account = sync_client.account
-        self.config = sync_client.config
-        self.api_version = sync_client.api_version
+        self._sync_client = BaseClient(**kwargs)  # type: ignore
+        self.config = self._sync_client.config
+        self.api_version = self._sync_client.api_version
 
         super().__init__(
-            headers=sync_client.headers,  # type: ignore
-            verify=sync_client._ssl,  # type: ignore
-            cert=sync_client.config.client_cert,
-            base_url=sync_client._base_uri,
-            auth=sync_client.auth,  # type: ignore
+            headers=self._sync_client.headers,  # type: ignore
+            verify=self._sync_client._ssl,  # type: ignore
+            cert=self._sync_client.config.client_cert,
+            base_url=self._sync_client._base_uri,
+            auth=self._sync_client.auth,  # type: ignore
             **(httpx_kwargs or {}),
         )
 
     @cached_property
     def account(self) -> dict:
-        return self._account
+        return self._sync_client.account
 
     async def request(  # type: ignore
         self,

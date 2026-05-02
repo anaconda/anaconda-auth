@@ -27,7 +27,7 @@ jobs:
           miniconda-version: latest
       - name: Install testing dependencies
         run: |
-          conda install conda-forge::tox
+          conda install conda-forge::tox "conda-forge::virtualenv<21"
           pip install tox-conda tox-gh-actions
       - name: Test with tox
         env:
