@@ -32,6 +32,10 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
+# Temporary special case: main-x channel requires API_KEY instead of REPO_TOKEN
+# TODO: Remove this when the default for repo.anaconda.cloud wildcard changes
+MAIN_X_PATH_PREFIX = "/repo/main-x/"
+
 
 class ResponseHook(Protocol):
     # Type alias/protocol for requests response hook
@@ -137,6 +141,13 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # For specific channel domains, we override the defaults
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, credential_type, _ = TOKEN_DOMAIN_MAP[channel_domain]
+
+        # Special case: main-x channel on repo.anaconda.cloud requires API_KEY
+        if (
+            channel_domain == "repo.anaconda.cloud"
+            and parsed_url.path.lower().startswith(MAIN_X_PATH_PREFIX)
+        ):
+            credential_type = CredentialType.API_KEY
 
         # Allow users to override default via configuration
         config = AnacondaAuthConfig(domain=token_domain)

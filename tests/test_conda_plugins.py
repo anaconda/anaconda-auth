@@ -467,3 +467,54 @@ def test_load_token_domain_user_provided_credential_type_override_invalid(
 
     with pytest.raises(AnacondaAuthError):
         AnacondaAuthHandler(channel_name=channel_url)
+
+
+def test_load_token_domain_anaconda_cloud_main_x_uses_api_key(conda_search_path):
+    """The main-x channel on repo.anaconda.cloud requires API_KEY."""
+    channel_url = "https://repo.anaconda.cloud/repo/main-x"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert credential_type == CredentialType.API_KEY
+
+
+def test_load_token_domain_anaconda_cloud_other_channels_use_repo_token(
+    conda_search_path,
+):
+    """Other channels on repo.anaconda.cloud should still use REPO_TOKEN."""
+    for channel in ["some-channel", "main", "my-org"]:
+        channel_url = f"https://repo.anaconda.cloud/repo/{channel}"
+        handler = AnacondaAuthHandler(channel_name=channel_url)
+        url = channel_url + "/noarch/repodata.json"
+        token_domain, credential_type = handler._load_token_domain(
+            parsed_url=urlparse(url)
+        )
+
+        assert token_domain == "anaconda.com"
+        assert credential_type == CredentialType.REPO_TOKEN
+
+
+@pytest.mark.parametrize(
+    "override_credential_type", [CredentialType.API_KEY, CredentialType.REPO_TOKEN]
+)
+def test_load_token_domain_main_x_user_override_takes_precedence(
+    override_credential_type, conda_search_path
+):
+    """User-provided credential_type override should take precedence over main-x special case."""
+    channel_url = "https://repo.anaconda.cloud/repo/main-x"
+    condarc = CondaRC()
+    condarc.update_channel_settings(
+        channel=channel_url + "/*",
+        auth_type="anaconda-auth",
+        credential_type=override_credential_type,
+    )
+    condarc.save()
+
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+    url = channel_url + "/noarch/repodata.json"
+    token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
+
+    assert token_domain == "anaconda.com"
+    assert credential_type == override_credential_type
