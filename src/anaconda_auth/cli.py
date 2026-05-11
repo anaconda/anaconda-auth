@@ -462,11 +462,24 @@ def sites_list() -> None:
     """List configured sites by name and domain."""
     sites_config = AnacondaAuthSitesConfig()
 
-    table = Table("Site name", "Domain name", "Default site", header_style="bold green")
+    table = Table(
+        "Site name",
+        "Domain name",
+        "Default site",
+        "Logged in",
+        header_style="bold green",
+    )
 
     for name, site in sites_config.sites.items():
         is_default = CHECK_MARK if name == sites_config.default_site else ""
-        table.add_row(name, site.domain, is_default)
+
+        try:
+            api_key = TokenInfo.load(site.domain).api_key
+        except TokenNotFoundError:
+            api_key = None
+        is_logged_in = CHECK_MARK if api_key is not None else ""
+
+        table.add_row(name, site.domain, is_default, is_logged_in)
 
     console.print(table)
     console.print(
