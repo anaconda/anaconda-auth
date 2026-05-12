@@ -230,6 +230,13 @@ def without_aau_token(mocker: MockerFixture) -> None:
     mocker.patch("anaconda_auth.config.AnacondaAuthSite.aau_token", None)
 
 
+class _MockRequest:
+    """Minimal mock request object for MockResponse."""
+
+    def __init__(self, headers: dict[str, str] | None = None):
+        self.headers = headers or {}
+
+
 class MockResponse:
     def __init__(
         self,
@@ -237,10 +244,12 @@ class MockResponse:
         status_code: int,
         json_data: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        request_headers: dict[str, str] | None = None,
     ):
         self.status_code = status_code
         self.json_data = json_data
         self.headers = headers or {}
+        self.request = _MockRequest(request_headers)
 
     def json(self) -> dict[str, Any]:
         return self.json_data or {}

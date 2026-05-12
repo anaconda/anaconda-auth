@@ -27,7 +27,7 @@ HERE = os.path.dirname(__file__)
 
 def test_login_to_api_key(mocker: MockerFixture) -> None:
     mocker.patch("anaconda_auth.actions.get_api_key", return_value="api-key")
-    mocker.patch("anaconda_auth.actions._do_auth_flow")
+    mocker.patch("anaconda_auth.actions._do_device_flow", return_value="access-token")
 
     login()
 
@@ -66,10 +66,12 @@ def test_login_ssl_verify(
 ) -> None:
     monkeypatch.setenv("ANACONDA_AUTH_SSL_VERIFY", ssl_verify_config)
     mocker.patch("anaconda_auth.actions.get_api_key", return_value=api_key)
-    do_auth_flow = mocker.patch("anaconda_auth.actions._do_auth_flow")
+    do_device_flow = mocker.patch(
+        "anaconda_auth.actions._do_device_flow", return_value="access-token"
+    )
 
     login(ssl_verify=ssl_verify_kwarg)
-    assert do_auth_flow.call_args_list[-1].kwargs["config"].ssl_verify is eq_value
+    assert do_device_flow.call_args_list[-1].kwargs["config"].ssl_verify is eq_value
 
 
 @pytest.mark.integration
