@@ -77,7 +77,7 @@ class AnacondaAuthSite(BaseModel):
     proxy_servers: Optional[MutableMapping[str, str]] = None
     client_cert: Optional[str] = None
     client_cert_key: Optional[str] = None
-    use_device_flow: bool = False
+    use_device_flow: bool = True
     env_manager_channel: str = "anaconda-cloud"
     env_manager_package: str = "anaconda-env-manager"
     env_manager_version: Optional[str] = None
