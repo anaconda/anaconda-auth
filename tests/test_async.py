@@ -8,8 +8,10 @@ from .conftest import MockedRequest
 from .conftest import MockResponse
 
 
-def test_async_client_init_without_credentials(monkeypatch) -> None:
+def test_async_client_init_without_credentials(monkeypatch, mocker) -> None:
     monkeypatch.delenv("ANACONDA_AUTH_API_KEY", raising=False)
+    mocked_request = MockedRequest(response_status_code=401)
+    mocker.patch("requests.Session.request", mocked_request)
     client = AsyncBaseClient()
     assert isinstance(client, AsyncBaseClient)
     assert client.account["user"]["id"] is None

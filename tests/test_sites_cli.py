@@ -457,13 +457,13 @@ def test_modify_protect_secrets(
     )
     assert result.exit_code == 0
 
+    # use_device_flow = true is the default, so it's not written to the config
     assert config_toml.read_text() == dedent(
         """\
         default_site = "short-name"
 
         [sites.short-name]
         domain = "foo.local"
-        use_device_flow = true
         """
     )
 
@@ -493,6 +493,7 @@ def test_modify_keeps_ssl_verify_false(
     )
     assert result.exit_code == 0
 
+    # use_device_flow = true is the default, so it's not written to the config
     assert config_toml.read_text() == dedent(
         """\
         default_site = "short-name"
@@ -500,12 +501,12 @@ def test_modify_keeps_ssl_verify_false(
         [sites.short-name]
         domain = "foo.local"
         ssl_verify = false
-        use_device_flow = true
         """
     )
 
 
 def test_modify_preserves_default(config_toml: Path, invoke_cli: CLIInvoker) -> None:
+    # Note: use_device_flow = true is the default, so we don't need to include it
     config_toml.write_text(
         dedent(
             """\
@@ -515,7 +516,6 @@ def test_modify_preserves_default(config_toml: Path, invoke_cli: CLIInvoker) -> 
 
             [sites."foo.local"]
             domain = "foo.local"
-            use_device_flow = true
             """
         )
     )
@@ -541,6 +541,7 @@ def test_modify_preserves_default(config_toml: Path, invoke_cli: CLIInvoker) -> 
 def test_modify_preserves_default_with_no_default_flag(
     config_toml: Path, invoke_cli: CLIInvoker
 ) -> None:
+    # Note: use_device_flow = true is the default, so we don't need to include it
     config_toml.write_text(
         dedent(
             """\
@@ -550,7 +551,6 @@ def test_modify_preserves_default_with_no_default_flag(
 
             [sites."foo.local"]
             domain = "foo.local"
-            use_device_flow = true
             """
         )
     )
@@ -637,6 +637,7 @@ def test_modify_lookup_domain(config_toml: Path, invoke_cli: CLIInvoker) -> None
     )
     assert result.exit_code == 0
 
+    # use_device_flow = true is the default, so it's not written to the config
     assert config_toml.read_text() == dedent(
         """\
         default_site = "foo"
@@ -644,7 +645,6 @@ def test_modify_lookup_domain(config_toml: Path, invoke_cli: CLIInvoker) -> None
         [sites.foo]
         domain = "foo.local"
         ssl_verify = false
-        use_device_flow = true
 
         [sites.bar]
         domain = "bar.local"
@@ -904,7 +904,7 @@ def test_sites_show_default(config_toml: Path, invoke_cli: CLIInvoker) -> None:
         "proxy_servers": None,
         "client_cert": None,
         "client_cert_key": None,
-        "use_device_flow": False,
+        "use_device_flow": True,
     }
 
     assert data == expected
@@ -939,7 +939,7 @@ def test_sites_show_site(config_toml: Path, invoke_cli: CLIInvoker) -> None:
         "proxy_servers": None,
         "client_cert": None,
         "client_cert_key": None,
-        "use_device_flow": False,
+        "use_device_flow": True,
     }
 
     assert data == expected
@@ -974,7 +974,7 @@ def test_sites_show_all(config_toml: Path, invoke_cli: CLIInvoker) -> None:
             "proxy_servers": None,
             "client_cert": None,
             "client_cert_key": None,
-            "use_device_flow": False,
+            "use_device_flow": True,
         },
         "bar": {
             "domain": "bar.local",
@@ -984,7 +984,7 @@ def test_sites_show_all(config_toml: Path, invoke_cli: CLIInvoker) -> None:
             "proxy_servers": None,
             "client_cert": None,
             "client_cert_key": None,
-            "use_device_flow": False,
+            "use_device_flow": True,
         },
     }
 
