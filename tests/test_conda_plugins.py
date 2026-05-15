@@ -518,3 +518,31 @@ def test_load_token_domain_main_x_user_override_takes_precedence(
 
     assert token_domain == "anaconda.com"
     assert credential_type == override_credential_type
+
+
+def test_build_header_handles_exception_in_load_token(mocker):
+    """Test that _build_header handles exceptions without UnboundLocalError.
+
+    When _load_token raises an exception, the except block should not try to
+    access token.type since token was never assigned.
+
+    Regression test for https://github.com/anaconda/anaconda-auth/issues/251
+    """
+    channel_url = "https://repo.anaconda.cloud/repo/my-org/my-channel"
+    handler = AnacondaAuthHandler(channel_name=channel_url)
+
+    # Mock _load_token to raise an exception (simulating IO contention in keyring)
+    mocker.patch.object(
+        handler,
+        "_load_token",
+        side_effect=Exception("Simulated keyring IO error"),
+    )
+
+    url = "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+
+    # This should not raise UnboundLocalError
+    header, credential_type = handler._build_header(url)
+
+    # When an exception occurs, we expect None header and a default credential type
+    assert header is None
+    assert credential_type == CredentialType.API_KEY
