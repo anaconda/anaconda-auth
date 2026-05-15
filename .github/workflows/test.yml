@@ -52,7 +52,7 @@ jobs:
             source $CONDA/bin/activate && conda activate build
             mkdir -p ./conda-bld
             VERSION=`hatch version` \
-            conda build \
+            conda-build \
               -c conda-forge \
               -c defaults \
               -c anaconda-cloud \
