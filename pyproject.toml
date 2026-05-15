@@ -231,6 +231,9 @@ passenv =
     ANACONDA_AUTH_DOMAIN
     ANACONDA_AUTH_CLIENT_ID
     ANACONDA_AUTH_USE_UNIFIED_REPO_API_KEY
+setenv =
+    # Allow pip to install into conda environments that are marked as externally-managed
+    conda: PIP_BREAK_SYSTEM_PACKAGES=1
 deps =
     mypy
     pytest
