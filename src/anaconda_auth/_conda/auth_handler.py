@@ -284,7 +284,8 @@ class AnacondaAuthHandler(ChannelAuthBase):
             return f"Bearer {token.value}", token.type
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
-            return None, token.type
+            # Return a default credential type since token may not have been assigned
+            return None, CredentialType.API_KEY
 
     def _build_response_handler(
         self,
