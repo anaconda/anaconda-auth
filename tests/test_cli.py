@@ -400,7 +400,9 @@ def test_create_org(
         },
     )
 
-    result = invoke_cli(["auth", "create-org", "--name", "my-new-org", "--title", "My New Org"])
+    result = invoke_cli(
+        ["auth", "create-org", "--name", "my-new-org", "--title", "My New Org"]
+    )
     assert result.exit_code == 0
     assert "my-new-org" in result.output
     assert "created successfully" in result.output
