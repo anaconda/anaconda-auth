@@ -381,3 +381,26 @@ def test_post_login_setup_shows_warning_when_register_fails(
     warning_call = mock_print.call_args_list[-1]
     message = warning_call[0][0]
     assert "conda env-log register" in message
+
+
+@pytest.mark.usefixtures("valid_api_key")
+def test_create_org(
+    invoke_cli: CLIInvoker,
+    requests_mock,
+) -> None:
+    from uuid import uuid4
+
+    org_id = uuid4()
+    requests_mock.post(
+        "https://anaconda.com/api/organizations",
+        json={
+            "id": str(org_id),
+            "name": "my-new-org",
+            "title": "My New Org",
+        },
+    )
+
+    result = invoke_cli(["auth", "create-org", "--name", "my-new-org", "--title", "My New Org"])
+    assert result.exit_code == 0
+    assert "my-new-org" in result.output
+    assert "created successfully" in result.output

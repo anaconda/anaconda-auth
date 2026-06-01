@@ -94,6 +94,15 @@ class RepoAPIClient(BaseClient):
         )
         return response.token
 
+    def create_organization(self, name: str, title: str) -> OrganizationData:
+        """Create a new organization."""
+        response = self.post(
+            "/api/organizations",
+            json={"name": name, "title": title},
+        )
+        response.raise_for_status()
+        return OrganizationData(**response.json())
+
     def get_organizations_for_user(self) -> list[OrganizationData]:
         """Get a list of all organizations the user belongs to."""
         response = self.get("/api/organizations/my")

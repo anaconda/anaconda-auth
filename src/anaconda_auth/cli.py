@@ -445,6 +445,21 @@ def auth_logout(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     logout()
 
 
+@app.command(name="create-org")
+def auth_create_org(
+    name: Annotated[str, typer.Option(help="Organization name (slug).")],
+    title: Annotated[str, typer.Option(help="Organization display title.")],
+    at: Annotated[Optional[str], typer.Option()] = None,
+) -> None:
+    """Create a new organization."""
+    _override_default_site(at)
+    from anaconda_auth.repo import RepoAPIClient
+
+    client = RepoAPIClient()
+    org = client.create_organization(name=name, title=title)
+    console.print(f"Organization [cyan]{org.name}[/cyan] created successfully.")
+
+
 sites_app = typer.Typer(
     name="sites",
     add_completion=False,

@@ -110,6 +110,28 @@ def test_get_business_organizations_for_user_only_starter(
     assert organizations == []
 
 
+def test_create_organization(
+    requests_mock: RequestMocker, org_name: str, business_org_id: UUID
+) -> None:
+    requests_mock.post(
+        "https://anaconda.com/api/organizations",
+        json={
+            "id": str(business_org_id),
+            "name": org_name,
+            "title": "My New Organization",
+        },
+    )
+    client = RepoAPIClient()
+    org = client.create_organization(name=org_name, title="My New Organization")
+    assert org == OrganizationData(
+        id=business_org_id, name=org_name, title="My New Organization"
+    )
+    assert requests_mock.last_request.json() == {
+        "name": org_name,
+        "title": "My New Organization",
+    }
+
+
 def test_issue_new_token_prints_success_message_via_client(
     org_name: str, mocker: MockerFixture, capsys: pytest.CaptureFixture
 ) -> None:
