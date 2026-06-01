@@ -392,7 +392,7 @@ def test_create_org(
 
     org_id = uuid4()
     requests_mock.post(
-        "https://anaconda.com/api/organizations",
+        "https://anaconda.com/api/auth/organizations",
         json={
             "id": str(org_id),
             "name": "my-new-org",

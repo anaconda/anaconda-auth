@@ -489,7 +489,7 @@ def user_has_one_org(
     requests_mock: RequestMocker, org_name: str, business_org_id: UUID
 ) -> TokenCreateResponse:
     requests_mock.get(
-        "https://anaconda.com/api/organizations/my",
+        "https://anaconda.com/api/auth/organizations/my",
         json=[
             {
                 "id": str(business_org_id),
@@ -511,7 +511,7 @@ def user_has_multiple_orgs(
 ) -> TokenCreateResponse:
     first_id = uuid4()
     requests_mock.get(
-        "https://anaconda.com/api/organizations/my",
+        "https://anaconda.com/api/auth/organizations/my",
         json=[
             {
                 "id": str(first_id),
@@ -538,7 +538,7 @@ def user_has_no_orgs(
     requests_mock: RequestMocker, user_has_no_subscriptions: None
 ) -> list[OrganizationData]:
     requests_mock.get(
-        "https://anaconda.com/api/organizations/my",
+        "https://anaconda.com/api/auth/organizations/my",
         json=[],
     )
     return []

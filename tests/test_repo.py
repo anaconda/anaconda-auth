@@ -114,7 +114,7 @@ def test_create_organization(
     requests_mock: RequestMocker, org_name: str, business_org_id: UUID
 ) -> None:
     requests_mock.post(
-        "https://anaconda.com/api/organizations",
+        "https://anaconda.com/api/auth/organizations",
         json={
             "id": str(business_org_id),
             "name": org_name,
