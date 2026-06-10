@@ -423,7 +423,11 @@ def auth_info(at: Annotated[Optional[str], typer.Option()] = None) -> None:
     """Display information about the currently signed-in user"""
     _override_default_site(at)
     client = BaseClient()
-    console.print_json(data=client.account, indent=2, sort_keys=True)
+    passport = client.passport
+    if passport:
+        console.print_json(data=passport, indent=2, sort_keys=True)
+    else:
+        console.print_json(data=client.account, indent=2, sort_keys=True)
 
 
 @app.command(name="api-key")

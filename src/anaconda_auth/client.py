@@ -246,6 +246,13 @@ class BaseClient(requests.Session):
         account["domain"] = self.config.domain
         return account
 
+    @cached_property
+    def passport(self) -> dict:
+        res = self.get("/api/auth/passport")
+        if res.ok:
+            return res.json()
+        return {}
+
     @property
     def name(self) -> str:
         user = self.account.get("user", {})
