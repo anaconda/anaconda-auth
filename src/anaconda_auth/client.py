@@ -65,6 +65,12 @@ class BearerAuth(AuthBase):
         self._token_info = TokenInfo(domain=domain)
 
     def __call__(self, r: PreparedRequest) -> PreparedRequest:
+        import os
+
+        if repo_token := os.getenv("REPO_TOKEN"):
+            r.headers["X-Auth"] = repo_token
+            return r
+
         if not self.api_key:
             try:
                 r.headers["Authorization"] = (

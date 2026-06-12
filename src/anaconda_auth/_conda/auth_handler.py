@@ -257,7 +257,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
         return AccessCredential(None, credential_type)
 
     @lru_cache
-    def _build_header(self, url: str) -> tuple[Optional[str], CredentialType]:
+    def _build_header(self, url: str) -> tuple[Optional[str], str, CredentialType]:
         """Build the Authorization header based on the request URL.
 
         The result can vary in terms of "token" vs. "Bearer" as well as whether the
@@ -265,27 +265,30 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         """
 
+        if repo_token := os.getenv("REPO_TOKEN"):
+            return repo_token, "X-Auth", CredentialType.X_AUTH_TOKEN
+
         # Preempt all token loading with the environment variable, if it exists.
         # This allows us to bypass all of the configuration and keyring interactions,
         # which in some rare cases can cause race conditions when there are many
         # component channels across a custom multi-channel, over which concurrent
         # requests are made.
         if api_key := os.getenv("ANACONDA_AUTH_API_KEY"):
-            return f"Bearer {api_key}", CredentialType.API_KEY
+            return f"Bearer {api_key}", "Authorization", CredentialType.API_KEY
 
         try:
             token = self._load_token(url)
             if token.value is None:
-                return None, token.type
+                return None, "Authorization", token.type
 
             if token.type == CredentialType.REPO_TOKEN:
-                return f"token {token.value}", token.type
+                return f"token {token.value}", "Authorization", token.type
 
-            return f"Bearer {token.value}", token.type
+            return f"Bearer {token.value}", "Authorization", token.type
         except Exception:
             # TODO(mattkram): We need to be very resilient about exceptions here for now
             # Return a default credential type since token may not have been assigned
-            return None, CredentialType.API_KEY
+            return None, "Authorization", CredentialType.API_KEY
 
     def _build_response_handler(
         self,
@@ -324,7 +327,7 @@ class AnacondaAuthHandler(ChannelAuthBase):
 
         # Build the authorization header if there is a credential stored, and
         # determine the credential type expected for the channel
-        header, credential_type = self._build_header(request.url)
+        header, header_name, credential_type = self._build_header(request.url)
 
         # Register a hook to handle error responses
         request.register_hook(
@@ -333,6 +336,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
         )
 
         if header:
-            request.headers["Authorization"] = header
+            request.headers[header_name] = header
 
         return request

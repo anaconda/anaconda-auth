@@ -27,6 +27,7 @@ __all__ = []
 class CredentialType(Enum):
     API_KEY = "api-key"
     REPO_TOKEN = "repo-token"
+    X_AUTH_TOKEN = "x-auth-token"
 
 
 PREFIX_CONDARC_PATH = Path(sys.prefix) / "condarc.d" / "anaconda-auth.yml"
