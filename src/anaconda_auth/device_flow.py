@@ -67,7 +67,7 @@ class DeviceCodeFlow:
             response = self.client.post(
                 self.config.oidc.device_authorization_endpoint,
                 data=data,
-                verify=self.config.ssl_verify,
+                verify=self.client.verify,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
@@ -134,7 +134,7 @@ class DeviceCodeFlow:
         response = self.client.post(
             self.config.oidc.token_endpoint,
             data=data,
-            verify=self.config.ssl_verify,
+            verify=self.client.verify,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 

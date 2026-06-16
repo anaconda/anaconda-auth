@@ -210,8 +210,10 @@ class BaseClient(requests.Session):
         joined_url = self.urljoin(str(url))
 
         # Ensure we don't set `verify` twice. If it is passed as a kwarg to this method,
-        # that becomes the value. Otherwise, we use the value in `self.config.ssl_verify`.
-        kwargs.setdefault("verify", self.config.ssl_verify)
+        # that becomes the value. Otherwise, we use the resolved value from
+        # `configure_ssl()` (e.g. `True` with a mounted truststore SSLContext), not the
+        # raw config string, which `requests` would treat as a CA bundle path.
+        kwargs.setdefault("verify", self.verify)
 
         response = super().request(method, joined_url, *args, **kwargs)
 
@@ -272,7 +274,7 @@ class BaseClient(requests.Session):
         hashed = md5(self.email.encode("utf-8")).hexdigest()
         res = self.get(
             f"https://gravatar.com/avatar/{hashed}.png?size=120&d=404",
-            verify=self.config.ssl_verify,
+            verify=self.verify,
             auth=False,  # type: ignore
         )
         if res.ok:
