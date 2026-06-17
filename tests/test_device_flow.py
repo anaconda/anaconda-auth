@@ -8,6 +8,7 @@ from anaconda_auth.config import OpenIDConfiguration
 from anaconda_auth.device_flow import DeviceAuthorizationResponse
 from anaconda_auth.device_flow import DeviceCodeFlow
 
+from .conftest import SKIP_IF_TRUSTSTORE_UNSUPPORTED
 from .conftest import MockedRequest
 
 DEVICE_AUTH_RESPONSE = {
@@ -38,7 +39,9 @@ def oidc_config(mocker: MockerFixture) -> None:
 @pytest.mark.parametrize(
     "ssl_verify, expected_verify",
     [
-        pytest.param("truststore", True, id="truststore"),
+        pytest.param(
+            "truststore", True, id="truststore", marks=SKIP_IF_TRUSTSTORE_UNSUPPORTED
+        ),
         pytest.param(True, True, id="true"),
         pytest.param(False, False, id="false"),
     ],
@@ -67,7 +70,9 @@ def test_initiate_device_authorization_forwards_resolved_verify(
 @pytest.mark.parametrize(
     "ssl_verify, expected_verify",
     [
-        pytest.param("truststore", True, id="truststore"),
+        pytest.param(
+            "truststore", True, id="truststore", marks=SKIP_IF_TRUSTSTORE_UNSUPPORTED
+        ),
         pytest.param(True, True, id="true"),
         pytest.param(False, False, id="false"),
     ],

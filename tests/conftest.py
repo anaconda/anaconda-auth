@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import traceback
 import warnings
 from collections import defaultdict
@@ -38,6 +39,12 @@ from anaconda_auth.token import TokenInfo
 from anaconda_cli_base.cli import app
 
 load_dotenv()
+
+TRUSTSTORE_MIN_PYTHON = (3, 10)
+SKIP_IF_TRUSTSTORE_UNSUPPORTED = pytest.mark.skipif(
+    sys.version_info < TRUSTSTORE_MIN_PYTHON,
+    reason=f"truststore requires Python {'.'.join(map(str, TRUSTSTORE_MIN_PYTHON))}+",
+)
 
 
 def is_conda_installed():

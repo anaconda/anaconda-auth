@@ -19,6 +19,7 @@ from anaconda_auth.config import AnacondaAuthSite
 from anaconda_auth.exceptions import UnknownSiteName
 from anaconda_auth.token import TokenInfo
 
+from .conftest import SKIP_IF_TRUSTSTORE_UNSUPPORTED
 from .conftest import MockedRequest
 from .conftest import is_conda_installed
 
@@ -373,7 +374,9 @@ def test_login_ssl_verify_false(monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.parametrize(
     "ssl_verify, expected_verify",
     [
-        pytest.param("truststore", True, id="truststore"),
+        pytest.param(
+            "truststore", True, id="truststore", marks=SKIP_IF_TRUSTSTORE_UNSUPPORTED
+        ),
         pytest.param(True, True, id="true"),
         pytest.param(False, False, id="false"),
         pytest.param("/path/to/ca.pem", "/path/to/ca.pem", id="ca-bundle-path"),
@@ -395,6 +398,7 @@ def test_request_forwards_resolved_verify(
     assert mocked_request.called_with_kwargs["verify"] == expected_verify
 
 
+@SKIP_IF_TRUSTSTORE_UNSUPPORTED
 def test_request_explicit_verify_kwarg_wins(mocked_request: MockedRequest) -> None:
     """An explicit `verify=` passed by a caller is preserved over the resolved value."""
     client = BaseClient(ssl_verify="truststore", api_key="foo")
