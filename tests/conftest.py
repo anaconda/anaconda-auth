@@ -40,6 +40,22 @@ from anaconda_cli_base.cli import app
 load_dotenv()
 
 
+def _truststore_available() -> bool:
+    """Check if truststore module is available."""
+    try:
+        import truststore  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+SKIP_IF_TRUSTSTORE_UNSUPPORTED = pytest.mark.skipif(
+    not _truststore_available(),
+    reason="truststore module not available",
+)
+
+
 def is_conda_installed():
     try:
         import conda  # noqa: F401
