@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import traceback
 import warnings
 from collections import defaultdict
@@ -40,10 +39,20 @@ from anaconda_cli_base.cli import app
 
 load_dotenv()
 
-TRUSTSTORE_MIN_PYTHON = (3, 10)
+
+def _truststore_available() -> bool:
+    """Check if truststore module is available."""
+    try:
+        import truststore  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 SKIP_IF_TRUSTSTORE_UNSUPPORTED = pytest.mark.skipif(
-    sys.version_info < TRUSTSTORE_MIN_PYTHON,
-    reason=f"truststore requires Python {'.'.join(map(str, TRUSTSTORE_MIN_PYTHON))}+",
+    not _truststore_available(),
+    reason="truststore module not available",
 )
 
 
