@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 from pytest import MonkeyPatch
 
 from anaconda_auth.adapters import HTTPAdapter
@@ -58,7 +57,9 @@ def test_client_truststore_ssl_context_reaches_proxy(monkeypatch: MonkeyPatch) -
     client = BaseClient(ssl_verify="truststore", api_key="foo")
     assert client._ssl is not None
 
-    adapter = client.get_adapter("https://anaconda.com/.well-known/openid-configuration")
+    adapter = client.get_adapter(
+        "https://anaconda.com/.well-known/openid-configuration"
+    )
     proxy_manager = adapter.proxy_manager_for("http://127.0.0.1:8080")
 
     assert proxy_manager.connection_pool_kw.get("ssl_context") is client._ssl
