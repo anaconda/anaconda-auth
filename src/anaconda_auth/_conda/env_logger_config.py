@@ -28,6 +28,10 @@ def is_env_manager_installed(conda_path: str) -> bool:
 def install_env_manager(conda_path: str) -> tuple[bool, str]:
     """Install anaconda-env-manager into the base environment.
 
+    Note: The subprocess inherits stdio (no `-y`, no captured output) so that
+    conda's own install confirmation and the `conda-anaconda-tos` plugin's
+    Terms of Service prompt can interact with the user.
+
     Returns:
         Tuple of (success, error_message).
     """
@@ -40,11 +44,10 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
         "--name",
         "base",
         pkg,
-        "-y",
     ]
-    proc = subprocess.run(args, capture_output=True, text=True)
+    proc = subprocess.run(args)
     if proc.returncode != 0:
-        error = proc.stderr.strip() or proc.stdout.strip()
+        error = f"conda install exited with code {proc.returncode}. See output above for details."
         logger.debug("Failed to install %s: %s", pkg, error)
         return False, error
     return True, ""
