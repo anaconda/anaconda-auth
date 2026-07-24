@@ -218,7 +218,10 @@ def _do_login(config: AnacondaAuthSite, basic: bool) -> None:
         config=config,
     )
 
-    token_info = TokenInfo(api_key=api_key, domain=config.domain)
+    # `save()` rewrites the whole keyring entry, so update the existing one: a
+    # fresh TokenInfo would discard repo tokens from `anaconda token install`.
+    token_info = TokenInfo.load(domain=config.domain, create=True)
+    token_info.api_key = api_key
     token_info.save()
 
 
