@@ -90,7 +90,6 @@ class TestInstallEnvManager:
         assert success is False
         assert "1" in error
 
-
     def test_pins_version_when_configured(self, monkeypatch, mocker: MockerFixture):
         monkeypatch.setenv("ANACONDA_AUTH_ENV_MANAGER_VERSION", "1.2.3")
 
