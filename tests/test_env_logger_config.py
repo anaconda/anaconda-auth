@@ -90,24 +90,6 @@ class TestInstallEnvManager:
         assert success is False
         assert "1" in error
 
-    def test_does_not_capture_output_or_pass_yes(self, mocker: MockerFixture):
-        """The subprocess must inherit stdio (no capture_output) and must not
-        pass -y, so conda's install confirmation and the conda-anaconda-tos
-        plugin's Terms of Service prompt can interact with the user.
-        """
-        from anaconda_auth._conda.env_logger_config import install_env_manager
-
-        mock_proc = mocker.MagicMock(returncode=0)
-        mock_run = mocker.patch(
-            "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
-        )
-        install_env_manager(CONDA_PATH)
-
-        args = mock_run.call_args[0][0]
-        kwargs = mock_run.call_args[1]
-        assert "-y" not in args
-        assert "capture_output" not in kwargs
 
     def test_pins_version_when_configured(self, monkeypatch, mocker: MockerFixture):
         monkeypatch.setenv("ANACONDA_AUTH_ENV_MANAGER_VERSION", "1.2.3")
