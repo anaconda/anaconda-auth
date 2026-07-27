@@ -28,27 +28,34 @@ def is_env_manager_installed(conda_path: str) -> bool:
 def install_env_manager(conda_path: str) -> tuple[bool, str]:
     """Install anaconda-env-manager into the base environment.
 
-    Note: The subprocess inherits stdio (no `-y`, no captured output) so that
-    conda's own install confirmation and the `conda-anaconda-tos` plugin's
-    Terms of Service prompt can interact with the user.
+    Accepts Terms of Service first, then installs quietly.
 
-    Returns:
-        Tuple of (success, error_message).
+    Note:
+        ToS acceptance runs via the plugin's own `conda tos interactive`
+        command with inherited stdio, so it can prompt the user; it's a
+        silent no-op if already accepted or if `conda-anaconda-tos` isn't
+        installed. The install runs after.
     """
     config = AnacondaAuthConfig()
 
+    tos_args = [conda_path, "tos", "interactive"]
+    tos_proc = subprocess.run(tos_args)
+    # Exit code 2 means `tos` isn't a recognized subcommand (plugin not installed).
+    if tos_proc.returncode not in (0, 2):
+        return False, "Terms of Service were not accepted."
+
     pkg = f"{config.env_manager_channel}::{config.env_manager_package}{config.env_manager_version or ''}"
-    args = [
-        conda_path,
-        "install",
-        "--name",
-        "base",
-        pkg,
-    ]
-    proc = subprocess.run(args)
+    args = [conda_path, "install", "--name", "base", pkg, "--yes", "--json"]
+    proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
-        error = f"conda install exited with code {proc.returncode}. See output above for details."
-        logger.debug("Failed to install %s: %s", pkg, error)
+        error = f"conda install exited with code {proc.returncode}."
+        try:
+            message = json.loads(proc.stdout).get("message")
+            if message:
+                error = f"{error} {message}"
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        logger.debug("Failed to install %s: %s\nstderr: %s", pkg, error, proc.stderr)
         return False, error
     return True, ""
 

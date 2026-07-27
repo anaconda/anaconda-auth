@@ -69,10 +69,49 @@ class TestInstallEnvManager:
     def test_returns_true_on_success(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        mock_proc = mocker.MagicMock(returncode=0, stderr="")
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
+        mock_run = mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            side_effect=[mock_tos_proc, mock_install_proc],
+        )
+        success, error = install_env_manager(CONDA_PATH)
+        assert success is True
+        assert error == ""
+
+        tos_args = mock_run.call_args_list[0][0][0]
+        assert "tos" in tos_args
+        assert "interactive" in tos_args
+        # ToS step inherits stdio: no capture_output kwarg passed.
+        assert "capture_output" not in mock_run.call_args_list[0].kwargs
+
+        install_args = mock_run.call_args_list[1][0][0]
+        assert "--yes" in install_args
+        assert "--json" in install_args
+        assert mock_run.call_args_list[1].kwargs.get("capture_output") is True
+
+    def test_returns_false_when_tos_rejected(self, mocker: MockerFixture):
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        mock_tos_proc = mocker.MagicMock(returncode=1)
+        mock_run = mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            return_value=mock_tos_proc,
+        )
+        success, error = install_env_manager(CONDA_PATH)
+        assert success is False
+        assert "Terms of Service" in error
+        # Install should never be attempted if ToS wasn't accepted.
+        mock_run.assert_called_once()
+
+    def test_proceeds_when_tos_plugin_not_installed(self, mocker: MockerFixture):
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        mock_tos_proc = mocker.MagicMock(returncode=2)
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
+            side_effect=[mock_tos_proc, mock_install_proc],
         )
         success, error = install_env_manager(CONDA_PATH)
         assert success is True
@@ -81,29 +120,47 @@ class TestInstallEnvManager:
     def test_returns_false_on_failure(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        mock_proc = mocker.MagicMock(returncode=1)
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(returncode=1, stdout="{}", stderr="")
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
+            side_effect=[mock_tos_proc, mock_install_proc],
         )
         success, error = install_env_manager(CONDA_PATH)
         assert success is False
         assert "1" in error
-        assert "See output above for details." in error
+
+    def test_includes_json_error_message_on_failure(self, mocker: MockerFixture):
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(
+            returncode=1,
+            stdout='{"message": "PackagesNotFoundError: nope"}',
+            stderr="",
+        )
+        mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            side_effect=[mock_tos_proc, mock_install_proc],
+        )
+        success, error = install_env_manager(CONDA_PATH)
+        assert success is False
+        assert "PackagesNotFoundError: nope" in error
 
     def test_pins_version_when_configured(self, monkeypatch, mocker: MockerFixture):
         monkeypatch.setenv("ANACONDA_AUTH_ENV_MANAGER_VERSION", "1.2.3")
 
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        mock_proc = mocker.MagicMock(returncode=0, stderr="")
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
         mock_run = mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
+            side_effect=[mock_tos_proc, mock_install_proc],
         )
         install_env_manager(CONDA_PATH)
 
-        args = mock_run.call_args[0][0]
+        args = mock_run.call_args_list[1][0][0]
         assert "anaconda-cloud::anaconda-env-manager=1.2.3" in args
 
     def test_uses_custom_channel(self, monkeypatch, mocker: MockerFixture):
@@ -111,29 +168,31 @@ class TestInstallEnvManager:
 
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        mock_proc = mocker.MagicMock(returncode=0, stderr="")
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
         mock_run = mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
+            side_effect=[mock_tos_proc, mock_install_proc],
         )
         install_env_manager(CONDA_PATH)
 
-        args = mock_run.call_args[0][0]
-        assert "my-channel::anaconda-env-manager" in args
+        install_args = mock_run.call_args_list[1][0][0]
+        assert "my-channel::anaconda-env-manager" in install_args
 
     def test_uses_custom_package_name(self, monkeypatch, mocker: MockerFixture):
         monkeypatch.setenv("ANACONDA_AUTH_ENV_MANAGER_PACKAGE", "custom-pkg")
 
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        mock_proc = mocker.MagicMock(returncode=0, stderr="")
+        mock_tos_proc = mocker.MagicMock(returncode=0)
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
         mock_run = mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            return_value=mock_proc,
+            side_effect=[mock_tos_proc, mock_install_proc],
         )
         install_env_manager(CONDA_PATH)
 
-        args = mock_run.call_args[0][0]
+        args = mock_run.call_args_list[1][0][0]
         assert "anaconda-cloud::custom-pkg" in args
 
 
