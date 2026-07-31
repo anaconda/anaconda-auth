@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 
 import pytest
 from pytest_mock import MockerFixture
@@ -18,9 +19,18 @@ def mock_install_flow(mocker: MockerFixture):
     """
 
     def _mock_install_flow(mock_install_proc, probe_returncode=0, tos_returncode=0):
-        side_effect = [mocker.MagicMock(returncode=probe_returncode)]
+        probe_stdout = (
+            json.dumps([{"name": "conda-anaconda-tos"}])
+            if probe_returncode == 0
+            else ""
+        )
+        side_effect = [
+            mocker.MagicMock(
+                returncode=probe_returncode, stdout=probe_stdout, stderr=""
+            )
+        ]
         if probe_returncode == 0:
-            side_effect.append(mocker.MagicMock(returncode=tos_returncode))
+            side_effect.append(mocker.MagicMock(returncode=tos_returncode, stderr=""))
         side_effect.append(mock_install_proc)
         return mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
@@ -92,7 +102,10 @@ class TestTosPluginAvailable:
     def test_returns_true_when_available(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import _tos_plugin_available
 
-        mock_proc = mocker.MagicMock(returncode=0)
+        packages = [{"name": "conda-anaconda-tos", "version": "0.2.2"}]
+        mock_proc = mocker.MagicMock(
+            returncode=0, stdout=json.dumps(packages), stderr=""
+        )
         mock_run = mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
@@ -100,14 +113,41 @@ class TestTosPluginAvailable:
         assert _tos_plugin_available(CONDA_PATH) is True
 
         args = mock_run.call_args[0][0]
-        assert args == [CONDA_PATH, "tos", "--json", "info"]
-        # Must not inherit stdio.
+        assert args == [
+            CONDA_PATH,
+            "list",
+            "-n",
+            "base",
+            "conda-anaconda-tos",
+            "--json",
+        ]
+        # A local metadata read only, not a live network probe.
         assert mock_run.call_args.kwargs.get("capture_output") is True
 
-    def test_returns_false_when_not_available(self, mocker: MockerFixture):
+    def test_returns_false_when_not_installed(self, mocker: MockerFixture):
         from anaconda_auth._conda.env_logger_config import _tos_plugin_available
 
-        mock_proc = mocker.MagicMock(returncode=2)
+        mock_proc = mocker.MagicMock(returncode=0, stdout=json.dumps([]), stderr="")
+        mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            return_value=mock_proc,
+        )
+        assert _tos_plugin_available(CONDA_PATH) is False
+
+    def test_returns_false_on_command_failure(self, mocker: MockerFixture):
+        from anaconda_auth._conda.env_logger_config import _tos_plugin_available
+
+        mock_proc = mocker.MagicMock(returncode=1, stdout="", stderr="error")
+        mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            return_value=mock_proc,
+        )
+        assert _tos_plugin_available(CONDA_PATH) is False
+
+    def test_returns_false_on_invalid_json(self, mocker: MockerFixture):
+        from anaconda_auth._conda.env_logger_config import _tos_plugin_available
+
+        mock_proc = mocker.MagicMock(returncode=0, stdout="not json", stderr="")
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
@@ -120,9 +160,7 @@ class TestTosPluginAvailable:
 
         from anaconda_auth._conda.env_logger_config import _tos_plugin_available
 
-        mock_proc = mocker.MagicMock(
-            returncode=2, stdout="", stderr="conda tos: error: invalid choice"
-        )
+        mock_proc = mocker.MagicMock(returncode=1, stdout="", stderr="CondaError")
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
             return_value=mock_proc,
@@ -132,9 +170,10 @@ class TestTosPluginAvailable:
             _tos_plugin_available(CONDA_PATH)
 
         assert any(
-            "conda tos probe failed" in record.message for record in caplog.records
+            "conda-anaconda-tos probe failed" in record.message
+            for record in caplog.records
         )
-        assert any("invalid choice" in record.message for record in caplog.records)
+        assert any("CondaError" in record.message for record in caplog.records)
 
 
 class TestInstallEnvManager:
@@ -150,8 +189,9 @@ class TestInstallEnvManager:
         tos_args = mock_run.call_args_list[1][0][0]
         assert "tos" in tos_args
         assert "interactive" in tos_args
-        # Must inherit stdio.
+        # Prompts must inherit stdout; only stderr is captured (and logged).
         assert "capture_output" not in mock_run.call_args_list[1].kwargs
+        assert mock_run.call_args_list[1].kwargs.get("stderr") == subprocess.PIPE
 
         install_args = mock_run.call_args_list[2][0][0]
         assert "--yes" in install_args
@@ -181,7 +221,36 @@ class TestInstallEnvManager:
         mock_install_flow(mock_install_proc, tos_returncode=1)
         success, error = install_env_manager(CONDA_PATH)
         assert success is True
-        assert error == ""
+
+    def test_logs_instead_of_printing_when_tos_interactive_fails(
+        self, caplog, mocker: MockerFixture, mock_install_flow
+    ):
+        """ToS interactive stderr (e.g. rejection, transient errors) must be
+        logged, not printed, so it doesn't duplicate conda install's own
+        `--json` error message or look like a broken install."""
+        import logging
+
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        side_effect = [
+            mocker.MagicMock(
+                returncode=0, stdout=json.dumps([{"name": "conda-anaconda-tos"}])
+            ),
+            mocker.MagicMock(returncode=1, stderr="CondaToSRejectedError"),
+            mocker.MagicMock(returncode=0, stdout="{}", stderr=""),
+        ]
+        mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            side_effect=side_effect,
+        )
+        logger_name = "anaconda_auth._conda.env_logger_config"
+        with caplog.at_level(logging.DEBUG, logger=logger_name):
+            success, _ = install_env_manager(CONDA_PATH)
+
+        assert success is True
+        assert any(
+            "CondaToSRejectedError" in record.message for record in caplog.records
+        )
 
     def test_returns_false_on_failure(self, mocker: MockerFixture, mock_install_flow):
         from anaconda_auth._conda.env_logger_config import install_env_manager

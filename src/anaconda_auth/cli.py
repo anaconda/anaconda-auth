@@ -357,7 +357,7 @@ def _post_login_setup(ssl_verify: Optional[Union[bool, str]] = None) -> None:
         if not install:
             return
 
-        console.print("Installing anaconda-env-manager...")
+        console.print("Checking channel Terms of Service...")
         success, error = install_env_manager(conda_path)
         if not success:
             console.print(

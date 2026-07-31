@@ -3,6 +3,7 @@ import logging
 import subprocess
 
 from anaconda_auth.config import AnacondaAuthConfig
+from anaconda_cli_base.console import console
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +27,28 @@ def is_env_manager_installed(conda_path: str) -> bool:
 
 
 def _tos_plugin_available(conda_path: str) -> bool:
-    """Check whether conda-anaconda-tos provides the `conda tos` subcommand."""
-    proc = subprocess.run(
-        [conda_path, "tos", "--json", "info"], capture_output=True, text=True
-    )
+    """Check whether the conda-anaconda-tos plugin is installed in base.
+
+    This is a local package lookup (like `is_env_manager_installed`), not a
+    live probe of the `conda tos` subcommand: `conda tos --json info` goes
+    through the plugin's `get_remote_metadata()` and does a real per-channel
+    network fetch, which is too costly just to check availability.
+    """
+    args = [conda_path, "list", "-n", "base", "conda-anaconda-tos", "--json"]
+    proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
-        # Non-zero could mean many things (missing plugin, renamed
-        # subcommand, bad args); log it so failures stay traceable.
         logger.debug(
-            "conda tos probe failed (exit code %d): %s",
+            "conda-anaconda-tos probe failed (exit code %d): %s",
             proc.returncode,
-            proc.stderr.strip() or proc.stdout.strip(),
+            proc.stderr.strip(),
         )
-    return proc.returncode == 0
+        return False
+
+    try:
+        packages = json.loads(proc.stdout)
+        return any(pkg.get("name") == "conda-anaconda-tos" for pkg in packages)
+    except (json.JSONDecodeError, TypeError):
+        return False
 
 
 def install_env_manager(conda_path: str) -> tuple[bool, str]:
@@ -46,15 +56,26 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
 
     Note:
         ToS acceptance is best-effort: `conda tos interactive` only runs
-        (with inherited stdio) when the plugin is available, and its result
-        never blocks the install. `conda install` enforces the real ToS
-        gate itself, with a proper `--json` error message if rejected.
+        when the plugin is available, and its result never blocks the
+        install. `conda install` enforces the real ToS gate itself, with a
+        proper `--json` error message if rejected. Prompts go to stdout via
+        rich (inherited, so interactivity is unaffected); stderr is
+        captured and logged instead of printed, so transient failures or a
+        prior rejection (which `conda install` will report on its own)
+        don't show up twice.
     """
     config = AnacondaAuthConfig()
 
     if _tos_plugin_available(conda_path):
-        subprocess.run([conda_path, "tos", "interactive"])
+        proc = subprocess.run(
+            [conda_path, "tos", "interactive"], stderr=subprocess.PIPE, text=True
+        )
+        if proc.returncode != 0:
+            logger.debug(
+                "conda tos interactive exited %d: %s", proc.returncode, proc.stderr
+            )
 
+    console.print("Installing anaconda-env-manager...")
     pkg = f"{config.env_manager_channel}::{config.env_manager_package}{config.env_manager_version or ''}"
     args = [conda_path, "install", "--name", "base", pkg, "--yes", "--json"]
     proc = subprocess.run(args, capture_output=True, text=True)
