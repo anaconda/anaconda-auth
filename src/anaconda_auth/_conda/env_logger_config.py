@@ -27,8 +27,7 @@ def is_env_manager_installed(conda_path: str) -> bool:
 
 
 def _tos_plugin_available(conda_path: str) -> bool:
-    """Check whether the conda-anaconda-tos plugin is installed in base environment.
-    """
+    """Check whether the conda-anaconda-tos plugin is installed in base environment."""
     args = [conda_path, "list", "-n", "base", "conda-anaconda-tos", "--json"]
     proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
