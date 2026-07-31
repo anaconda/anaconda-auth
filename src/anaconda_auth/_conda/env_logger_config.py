@@ -49,14 +49,16 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
     """Install anaconda-env-manager into the base environment.
 
     Note:
-        ToS acceptance is best-effort: `conda tos interactive` only runs
-        when the plugin is available, and its result never blocks the
-        install. `conda install` enforces the real ToS gate itself, with a
-        proper `--json` error message if rejected. Prompts go to stdout via
-        rich (inherited, so interactivity is unaffected); stderr is
-        captured and logged instead of printed, so transient failures or a
-        prior rejection (which `conda install` will report on its own)
-        don't show up twice.
+        ToS acceptance is mostly best-effort: `conda tos interactive` only
+        runs when the plugin is available, and transient failures (e.g. a
+        network blip) never block the install—`conda install` enforces the
+        real ToS gate itself, with a proper `--json` error message. Prompts
+        go to stdout via rich (inherited, so interactivity is unaffected);
+        stderr is captured and logged instead of printed, so those failures
+        don't show up on screen. The one exception is a confirmed rejection:
+        we detect it here and fail immediately, rather than printing
+        "Installing..." right before `conda install` fails for the same
+        reason.
     """
     config = AnacondaAuthConfig()
 
@@ -69,6 +71,9 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
             logger.debug(
                 "conda tos interactive exited %d: %s", proc.returncode, proc.stderr
             )
+            if "CondaToSRejectedError" in proc.stderr:
+                detail = proc.stderr.split("CondaToSRejectedError:", 1)[-1].strip()
+                return False, detail or "Terms of Service were rejected."
 
     console.print("Installing anaconda-env-manager...")
     pkg = f"{config.env_manager_channel}::{config.env_manager_package}{config.env_manager_version or ''}"
@@ -77,11 +82,16 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
     if proc.returncode != 0:
         error = f"conda install exited with code {proc.returncode}."
         message = None
-        try:
-            message = json.loads(proc.stdout).get("message")
-        except (json.JSONDecodeError, TypeError, AttributeError):
-            pass
-        # Fall back to stderr if conda crashed before writing JSON output.
+        # conda writes the --json error payload to stdout, except when it's
+        # raised from a pre-command hook (e.g. a rejected ToS), in which case
+        # it lands on stderr instead. Try both before falling back to raw text.
+        for stream in (proc.stdout, proc.stderr):
+            try:
+                message = json.loads(stream).get("message")
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                continue
+            if message:
+                break
         detail = message or proc.stderr.strip()
         if detail:
             error = f"{error} {detail}"

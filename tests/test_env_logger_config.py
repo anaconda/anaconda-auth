@@ -222,26 +222,26 @@ class TestInstallEnvManager:
         success, error = install_env_manager(CONDA_PATH)
         assert success is True
 
-    def test_logs_instead_of_printing_when_tos_interactive_fails(
+    def test_logs_instead_of_printing_transient_tos_interactive_failure(
         self, caplog, mocker: MockerFixture, mock_install_flow
     ):
-        """ToS interactive stderr (e.g. rejection, transient errors) must be
-        logged, not printed, so it doesn't duplicate conda install's own
-        `--json` error message or look like a broken install."""
+        """Transient ToS step stderr (e.g. a network blip) must be logged,
+        not printed, so it doesn't look like a broken install when the
+        subsequent conda install actually succeeds."""
         import logging
 
         from anaconda_auth._conda.env_logger_config import install_env_manager
 
-        side_effect = [
-            mocker.MagicMock(
-                returncode=0, stdout=json.dumps([{"name": "conda-anaconda-tos"}])
-            ),
-            mocker.MagicMock(returncode=1, stderr="CondaToSRejectedError"),
-            mocker.MagicMock(returncode=0, stdout="{}", stderr=""),
-        ]
+        mock_install_proc = mocker.MagicMock(returncode=0, stdout="{}", stderr="")
         mocker.patch(
             "anaconda_auth._conda.env_logger_config.subprocess.run",
-            side_effect=side_effect,
+            side_effect=[
+                mocker.MagicMock(
+                    returncode=0, stdout=json.dumps([{"name": "conda-anaconda-tos"}])
+                ),
+                mocker.MagicMock(returncode=1, stderr="CondaHTTPError: timed out"),
+                mock_install_proc,
+            ],
         )
         logger_name = "anaconda_auth._conda.env_logger_config"
         with caplog.at_level(logging.DEBUG, logger=logger_name):
@@ -249,8 +249,45 @@ class TestInstallEnvManager:
 
         assert success is True
         assert any(
-            "CondaToSRejectedError" in record.message for record in caplog.records
+            "CondaHTTPError: timed out" in record.message for record in caplog.records
         )
+
+    def test_fails_fast_on_confirmed_tos_rejection(
+        self, mocker: MockerFixture, mock_install_flow
+    ):
+        """A confirmed rejection from `conda tos interactive` must fail
+        immediately, without ever attempting (or announcing) the install—
+        `conda install` would only fail again for the same reason."""
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        rejection_text = (
+            "CondaToSRejectedError: Terms of Service has been rejected for the "
+            "following channels. Please remove or accept them before proceeding:\n"
+            "    - https://repo.anaconda.com/pkgs/main"
+        )
+        mock_run = mocker.patch(
+            "anaconda_auth._conda.env_logger_config.subprocess.run",
+            side_effect=[
+                mocker.MagicMock(
+                    returncode=0, stdout=json.dumps([{"name": "conda-anaconda-tos"}])
+                ),
+                mocker.MagicMock(returncode=1, stderr=rejection_text),
+            ],
+        )
+        printed = []
+        mocker.patch(
+            "anaconda_auth._conda.env_logger_config.console.print",
+            side_effect=lambda *a, **k: printed.append(a[0] if a else ""),
+        )
+
+        success, error = install_env_manager(CONDA_PATH)
+
+        assert success is False
+        assert "Terms of Service has been rejected" in error
+        assert "CondaToSRejectedError" not in error
+        # conda install must never be attempted, nor announced.
+        assert mock_run.call_count == 2
+        assert printed == ["Checking channel Terms of Service..."]
 
     def test_returns_false_on_failure(self, mocker: MockerFixture, mock_install_flow):
         from anaconda_auth._conda.env_logger_config import install_env_manager
@@ -291,6 +328,34 @@ class TestInstallEnvManager:
         success, error = install_env_manager(CONDA_PATH)
         assert success is False
         assert "CondaHTTPError: connection failed" in error
+
+    def test_extracts_json_error_message_from_stderr_on_tos_rejection(
+        self, mocker: MockerFixture, mock_install_flow
+    ):
+        """conda writes the --json error payload to stderr (not stdout) when
+        it's raised from a pre-command hook, e.g. a rejected ToS. The clean
+        message should still be extracted rather than falling back to the
+        raw JSON blob."""
+        from anaconda_auth._conda.env_logger_config import install_env_manager
+
+        mock_install_proc = mocker.MagicMock(
+            returncode=1,
+            stdout="",
+            stderr=json.dumps(
+                {
+                    "message": "Terms of Service has been rejected for the following channels: defaults",
+                    "exception_name": "CondaToSRejectedError",
+                }
+            ),
+        )
+        mock_install_flow(mock_install_proc)
+        success, error = install_env_manager(CONDA_PATH)
+        assert success is False
+        assert (
+            "Terms of Service has been rejected for the following channels: defaults"
+            in error
+        )
+        assert "exception_name" not in error
 
     def test_handles_none_stdout_without_raising(
         self, mocker: MockerFixture, mock_install_flow
