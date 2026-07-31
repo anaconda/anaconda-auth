@@ -27,12 +27,7 @@ def is_env_manager_installed(conda_path: str) -> bool:
 
 
 def _tos_plugin_available(conda_path: str) -> bool:
-    """Check whether the conda-anaconda-tos plugin is installed in base.
-
-    This is a local package lookup (like `is_env_manager_installed`), not a
-    live probe of the `conda tos` subcommand: `conda tos --json info` goes
-    through the plugin's `get_remote_metadata()` and does a real per-channel
-    network fetch, which is too costly just to check availability.
+    """Check whether the conda-anaconda-tos plugin is installed in base environment.
     """
     args = [conda_path, "list", "-n", "base", "conda-anaconda-tos", "--json"]
     proc = subprocess.run(args, capture_output=True, text=True)
@@ -66,6 +61,7 @@ def install_env_manager(conda_path: str) -> tuple[bool, str]:
     """
     config = AnacondaAuthConfig()
 
+    console.print("Checking channel Terms of Service...")
     if _tos_plugin_available(conda_path):
         proc = subprocess.run(
             [conda_path, "tos", "interactive"], stderr=subprocess.PIPE, text=True
