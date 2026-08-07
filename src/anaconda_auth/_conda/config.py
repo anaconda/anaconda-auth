@@ -49,7 +49,7 @@ TOKEN_DOMAIN_MAP = {
     "repo.continuum.io": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.com": TokenDomainSetting("anaconda.com"),
     "repo.anaconda.cloud": TokenDomainSetting(
-        "anaconda.com", CredentialType.REPO_TOKEN, True
+        "anaconda.com", CredentialType.API_KEY, True
     ),
 }
 

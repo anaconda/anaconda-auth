@@ -32,9 +32,7 @@ from anaconda_auth.token import TokenInfo
 
 URI_PREFIX = "/repo/"
 
-# Temporary special case: main-x channel requires API_KEY instead of REPO_TOKEN
-# TODO: Remove this when the default for repo.anaconda.cloud wildcard changes
-MAIN_X_PATH_PREFIX = "/repo/main-x/"
+REPO_ANACONDA_CLOUD = "repo.anaconda.cloud"
 
 
 class ResponseHook(Protocol):
@@ -141,13 +139,6 @@ class AnacondaAuthHandler(ChannelAuthBase):
         # For specific channel domains, we override the defaults
         if channel_domain in TOKEN_DOMAIN_MAP:
             token_domain, credential_type, _ = TOKEN_DOMAIN_MAP[channel_domain]
-
-        # Special case: main-x channel on repo.anaconda.cloud requires API_KEY
-        if (
-            channel_domain == "repo.anaconda.cloud"
-            and parsed_url.path.lower().startswith(MAIN_X_PATH_PREFIX)
-        ):
-            credential_type = CredentialType.API_KEY
 
         # Allow users to override default via configuration
         config = AnacondaAuthConfig(domain=token_domain)
@@ -297,21 +288,46 @@ class AnacondaAuthHandler(ChannelAuthBase):
             else "anaconda login"
         )
 
-        def handler(response: Response, **_: Any) -> Response:
-            """Raise a nice error message if the authentication token is missing."""
-            if response.status_code in {401, 403}:
-                if response.request.headers.get("Authorization") is not None:
-                    message = (
-                        f"Received authentication error ({response.status_code}) when accessing {self.channel_name}. "
-                        f"If your token is invalid or expired, please re-install with `{instruction}`."
-                    )
-                else:
-                    message = (
-                        f"Token not found for {self.channel_name}. "
-                        f"Please install token with `{instruction}`."
-                    )
-                raise AnacondaAuthError(message)
-            return response
+        def handler(response: Response, **kwargs: Any) -> Response:
+            """Handle auth errors, with fallback to repo token for repo.anaconda.cloud."""
+            # Return successful requests early
+            if response.status_code not in {401, 403}:
+                return response
+
+            request = response.request
+            url = request.url or ""
+            parsed_url = urlparse(url)
+
+            # Attempt fallback to repo token for repo.anaconda.cloud
+            if (
+                parsed_url.netloc.lower() == REPO_ANACONDA_CLOUD
+                and credential_type == CredentialType.API_KEY
+            ):
+                token_domain, _ = self._load_token_domain(parsed_url)
+                fallback_token = self._load_token_from_keyring(
+                    token_domain, CredentialType.REPO_TOKEN, parsed_url
+                ) or self._load_token_via_conda_token(parsed_url)
+
+                if fallback_token and fallback_token.value:
+                    response.content
+                    response.close()
+
+                    prep = request.copy()
+                    prep.headers["Authorization"] = f"token {fallback_token.value}"
+
+                    return response.connection.send(prep, **kwargs)
+
+            if request.headers.get("Authorization") is not None:
+                message = (
+                    f"Received authentication error ({response.status_code}) when accessing {self.channel_name}. "
+                    f"If your token is invalid or expired, please re-install with `{instruction}`."
+                )
+            else:
+                message = (
+                    f"Token not found for {self.channel_name}. "
+                    f"Please install token with `{instruction}`."
+                )
+            raise AnacondaAuthError(message)
 
         return handler
 
