@@ -6,6 +6,7 @@ on:
       - main
   release:
     types: [published]
+  workflow_dispatch: {}  # Allows manually running test + SBOM generation without publishing
 
 jobs:
   test:
@@ -83,6 +84,7 @@ jobs:
   publish-conda-pkg-to-anaconda-dot-org:
     name: Publish conda package to Anaconda.org
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
     needs: [test]
     steps:
     - name: Retrieve the source code
@@ -120,6 +122,7 @@ jobs:
   publish-wheel-to-anaconda-dot-org:
     name: Publish wheel to Anaconda.org
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
     needs: [test]
     steps:
     - name: Retrieve the source code
