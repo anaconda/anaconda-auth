@@ -332,6 +332,148 @@ To see a more detailed error message run the command again as
   anaconda --verbose plugin do-something
 ```
 
+## Conda Plugin
+
+This package includes a [conda auth plugin](https://docs.conda.io/projects/conda/en/latest/dev-guide/plugins/index.html) that automatically injects authentication headers when conda makes requests to private channels.
+
+### How it works
+
+When conda resolves a channel URL, it looks up plugins registered via `channel_settings` in your conda configuration. If the URL matches a pattern configured to use `anaconda-auth`, the plugin:
+
+1. Looks up an API key (or repo token) from your keyring
+2. By default, uses the **same domain** as the channel URL for credential lookup
+3. Injects the appropriate `Authorization` header into the request
+
+### Default behavior (production users)
+
+For users on production `repo.anaconda.cloud` channels, the plugin is pre-configured and should work automatically.
+The `anaconda-auth.yml` configuration file is shipped inside the conda package itself, so most users only need to:
+
+1. Install `anaconda-auth` in your base environment:
+
+   ```shell
+   conda install anaconda-auth
+   ```
+
+2. Log in:
+
+   ```shell
+   anaconda login
+   ```
+
+After this, conda will automatically authenticate requests to `repo.anaconda.cloud` channels.
+
+> **Note:** `repo.anaconda.cloud` (requires authentication) is different from `repo.anaconda.com` (public, no authentication required). The plugin is configured by default for `repo.anaconda.cloud` only. When you log in to `anaconda.com`, your credentials are automatically used for `repo.anaconda.cloud` channels.
+
+### Private channels and non-default domains
+
+For private channels or non-production environments (e.g., on-prem Anaconda installations), you need to configure conda's `channel_settings` to use `anaconda-auth`.
+
+Add the following to your `.condarc` (or any file in your conda config path):
+
+```yaml
+channels:
+  - https://my-repo.example.com/api/repo/my-channel
+
+channel_settings:
+  - channel: https://my-repo.example.com/api/repo/*
+    auth: anaconda-auth
+```
+
+The `channel` pattern uses wildcard matching, so `https://my-repo.example.com/api/repo/*` will match all channels under that path.
+
+#### Additional channel_settings options
+
+For more complex setups, you can specify additional options:
+
+| Option            | Description                                                                                  | Default                        |
+| ----------------- | -------------------------------------------------------------------------------------------- | ------------------------------ |
+| `auth_domain`     | Override the domain used to look up credentials in the keyring                               | Same as channel URL domain     |
+| `credential_type` | Type of credential to use: `api-key` or `repo-token`                                         | `api-key`                      |
+
+**Example: Channel domain differs from auth domain**
+
+If your channel URL domain differs from the domain where you logged in:
+
+```yaml
+channel_settings:
+  - channel: https://repo-automation.example.com/*
+    auth: anaconda-auth
+    auth_domain: automation.example.com
+```
+
+This tells the plugin to look up credentials stored for `automation.example.com` when accessing channels on `repo-automation.example.com`.
+
+**Example: Using legacy repo tokens**
+
+For backward compatibility with legacy repo tokens (instead of API keys):
+
+```yaml
+channel_settings:
+  - channel: https://my-repo.example.com/api/repo/*
+    auth: anaconda-auth
+    credential_type: repo-token
+```
+
+### Non-production environments
+
+When using a non-production Anaconda deployment, you need to configure both:
+
+1. **Anaconda auth** (for login and credential storage):
+
+   Add a site to `~/.anaconda/config.toml`:
+
+   ```toml
+   default_site = "my-site"
+
+   [sites.my-site]
+   domain = "my-anaconda.example.com"
+   ```
+
+   Or use the CLI:
+
+   ```shell
+   anaconda sites add --name my-site --domain my-anaconda.example.com --default
+   ```
+
+   Then log in:
+
+   ```shell
+   anaconda login
+   # Or explicitly: anaconda --at my-site login
+   ```
+
+2. **Conda** (for channel authentication):
+
+   Add the channel settings to your `.condarc`:
+
+   ```yaml
+   channels:
+     - https://repo.my-anaconda.example.com/api/repo/my-channel
+
+   channel_settings:
+     - channel: https://repo.my-anaconda.example.com/*
+       auth: anaconda-auth
+       auth_domain: my-anaconda.example.com
+   ```
+
+   Note: The `auth_domain` should match the domain you used for `anaconda login`.
+
+### Troubleshooting
+
+**Authentication errors (401/403)**
+
+If you receive authentication errors when accessing a channel:
+
+1. Verify you're logged in: `anaconda auth whoami`
+2. Check that your `channel_settings` pattern matches the channel URL (`conda config --show-sources` can help)
+3. Verify the `auth_domain` (if specified) matches where your credentials are stored
+4. Try re-logging in: `anaconda login`
+
+**Credential type mismatch**
+
+If authentication fails despite being logged in, the channel may require a different credential type. Try explicitly setting `credential_type: api-key` or `credential_type: repo-token` in your `channel_settings`.
+
 ## Panel OAuth Provider
 
 In order to use the `anaconda_auth` auth plugin, you will need an OAuth client
