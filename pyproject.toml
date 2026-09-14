@@ -168,6 +168,8 @@ filterwarnings = [
   "ignore:Please replace imports from `import anaconda_cloud_auth` to `import anaconda_auth`:DeprecationWarning",
   # TODO(mattkram): This is something we need to fix in anaconda-cli-base
   "ignore:pkg_resources is deprecated as an API:UserWarning",
+  # typer imports deprecated click symbols at import time (click>=8.5)
+  "ignore:'click.utils.*is deprecated:DeprecationWarning",
   # Ignore conda's PendingDeprecationWarning
   "ignore::PendingDeprecationWarning"
 ]

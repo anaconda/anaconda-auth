@@ -180,7 +180,8 @@ def test_get_token_missing(handler):
     token = handler._load_token(
         "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
     )
-    assert token == AccessCredential(None, CredentialType.REPO_TOKEN)
+    # repo.anaconda.cloud now defaults to API_KEY (with fallback to REPO_TOKEN on auth failure)
+    assert token == AccessCredential(None, CredentialType.API_KEY)
 
 
 @pytest.mark.usefixtures("mocked_token_info")
@@ -252,8 +253,9 @@ def test_response_callback_error_handler(
 @pytest.mark.parametrize(
     "mocked_status_code, url, expected_message",
     [
-        (401, "https://repo.anaconda.cloud", "anaconda token install"),
-        (403, "https://repo.anaconda.cloud", "anaconda token install"),
+        # repo.anaconda.cloud now defaults to API_KEY, so error message says "anaconda login"
+        (401, "https://repo.anaconda.cloud", "anaconda login"),
+        (403, "https://repo.anaconda.cloud", "anaconda login"),
         (401, "https://repo.some-domain.com", "anaconda login"),
         (403, "https://repo.some-domain.com", "anaconda login"),
     ],
@@ -294,6 +296,91 @@ def test_inject_no_header_during_request_if_no_token(
 
     assert "Token not found for" in message
     assert expected_message in message
+
+
+@pytest.mark.usefixtures("mocked_token_info")
+def test_fallback_to_repo_token_on_api_key_failure(session, monkeypatch, mocker):
+    """Test that repo.anaconda.cloud falls back to repo token when API key fails."""
+    url = "https://repo.anaconda.cloud/repo/my-org/my-channel/noarch/repodata.json"
+
+    # Track all requests made
+    requests_made = []
+
+    class MockConnection:
+        def send(self, prep, **kwargs):
+            requests_made.append(prep)
+            # Fallback request should succeed
+            response = Response()
+            response.status_code = 200
+            response.request = prep
+            return response
+
+    def _mocked_request(req, *args, **kwargs):
+        requests_made.append(req)
+        # First request with API key fails
+        response = Response()
+        response.request = req
+        response.status_code = 401
+        response.connection = MockConnection()
+        response._content = b""
+        response = dispatch_hook("response", req.hooks, response, **kwargs)
+        return response
+
+    monkeypatch.setattr(session, "send", _mocked_request)
+
+    # Mock token info with both API key and repo tokens
+    mocker.patch(
+        "anaconda_auth.token.TokenInfo.load",
+        return_value=TokenInfo(
+            domain="anaconda.com",
+            api_key="my-api-key",
+            repo_tokens=[
+                {"org_name": "my-org", "token": "my-repo-token"},
+            ],
+        ),
+    )
+
+    # Make the request
+    response = session.get(url)
+
+    # Should have made 2 requests: first with API key, then fallback with repo token
+    assert len(requests_made) == 2
+    assert requests_made[0].headers.get("Authorization") == "Bearer my-api-key"
+    assert requests_made[1].headers.get("Authorization") == "token my-repo-token"
+    assert response.status_code == 200
+
+
+@pytest.mark.usefixtures("mocked_token_info")
+def test_no_fallback_for_non_repo_anaconda_cloud(session, monkeypatch, mocker):
+    """Test that fallback only happens for repo.anaconda.cloud, not other domains."""
+    url = "https://repo.some-domain.com/noarch/repodata.json"
+
+    # Mock token info with API key
+    mocker.patch(
+        "anaconda_auth.token.TokenInfo.load",
+        return_value=TokenInfo(
+            domain="repo.some-domain.com",
+            api_key="my-api-key",
+            repo_tokens=[
+                {"org_name": "my-org", "token": "my-repo-token"},
+            ],
+        ),
+    )
+
+    def _mocked_request(req, *args, **kwargs):
+        response = Response()
+        response.request = req
+        response.status_code = 401
+        response = dispatch_hook("response", req.hooks, response, **kwargs)
+        return response
+
+    monkeypatch.setattr(session, "send", _mocked_request)
+
+    # Should raise error without fallback attempt
+    with pytest.raises(AnacondaAuthError) as exc_info:
+        session.get(url)
+
+    assert "anaconda login" in str(exc_info.value)
 
 
 REFERENCE = {
@@ -376,7 +463,8 @@ def test_load_token_domain_anaconda_cloud_default(conda_search_path):
     token_domain, credential_type = handler._load_token_domain(parsed_url=urlparse(url))
 
     assert token_domain == "anaconda.com"
-    assert credential_type == CredentialType.REPO_TOKEN
+    # repo.anaconda.cloud now defaults to API_KEY (with fallback to REPO_TOKEN on auth failure)
+    assert credential_type == CredentialType.API_KEY
 
 
 def test_load_token_domain_anaconda_cloud_api_key(conda_search_path, monkeypatch):
@@ -480,11 +568,11 @@ def test_load_token_domain_anaconda_cloud_main_x_uses_api_key(conda_search_path)
     assert credential_type == CredentialType.API_KEY
 
 
-def test_load_token_domain_anaconda_cloud_other_channels_use_repo_token(
+def test_load_token_domain_anaconda_cloud_all_channels_use_api_key(
     conda_search_path,
 ):
-    """Other channels on repo.anaconda.cloud should still use REPO_TOKEN."""
-    for channel in ["some-channel", "main", "my-org"]:
+    """All channels on repo.anaconda.cloud should now default to API_KEY."""
+    for channel in ["some-channel", "main", "my-org", "main-x"]:
         channel_url = f"https://repo.anaconda.cloud/repo/{channel}"
         handler = AnacondaAuthHandler(channel_name=channel_url)
         url = channel_url + "/noarch/repodata.json"
@@ -493,7 +581,7 @@ def test_load_token_domain_anaconda_cloud_other_channels_use_repo_token(
         )
 
         assert token_domain == "anaconda.com"
-        assert credential_type == CredentialType.REPO_TOKEN
+        assert credential_type == CredentialType.API_KEY
 
 
 @pytest.mark.parametrize(

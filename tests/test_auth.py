@@ -43,6 +43,26 @@ def test_login_to_api_key(mocker: MockerFixture) -> None:
     }
 
 
+def test_login_preserves_installed_repo_tokens(mocker: MockerFixture) -> None:
+    """Login must not wipe repo tokens installed by `anaconda token install`."""
+    mocker.patch("anaconda_auth.actions.get_api_key", return_value="new-api-key")
+    # Mock both branches; config.toml may set use_device_flow per site.
+    mocker.patch("anaconda_auth.actions._do_auth_flow")
+    mocker.patch("anaconda_auth.actions._do_device_flow")
+
+    config = AnacondaAuthConfig()
+
+    existing = TokenInfo(domain=config.domain, api_key="old-api-key")
+    existing.set_repo_token("my-org", "repo-token")
+    existing.save()
+
+    login(force=True)  # reported flow: already logged in, confirms a new login
+
+    token_info = TokenInfo.load(config.domain)
+    assert token_info.api_key == "new-api-key"
+    assert token_info.get_repo_token("my-org") == "repo-token"
+
+
 ssl_verify_options = [
     pytest.param(None, "0", False, id="configured-false"),
     pytest.param(None, "1", True, id="configured-true"),
